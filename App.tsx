@@ -52,8 +52,35 @@ const MarkdownRenderer: React.FC<{ text: string }> = React.memo(({ text }) => {
   );
 });
 
-const DEFAULT_MAX_ITERATIONS = 25; // Default for the input field and reset
+const DEFAULT_MAX_ITERATIONS = 25; 
 const API_KEY_CONFIGURED = !!process.env.API_KEY;
+
+const formatDuration = (ms: number | null): string => {
+  if (ms === null || ms < 0) return 'N/A';
+
+  let seconds = Math.floor(ms / 1000);
+  let minutes = Math.floor(seconds / 60);
+  let hours = Math.floor(minutes / 60);
+  let days = Math.floor(hours / 24);
+
+  seconds %= 60;
+  minutes %= 60;
+  hours %= 24;
+
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days} day${days > 1 ? 's' : ''}`);
+  if (hours > 0) parts.push(`${hours} hour${hours > 1 ? 's' : ''}`);
+  if (minutes > 0) parts.push(`${minutes} minute${minutes > 1 ? 's' : ''}`);
+  // Show seconds if total duration is less than a minute, or if it's the only non-zero unit remaining and minutes/hours/days are shown.
+  if (parts.length === 0 || (seconds > 0 && parts.length < 2 && days === 0 && hours === 0)) {
+     if (seconds > 0 || (days === 0 && hours === 0 && minutes === 0) ) { // Ensure "0 seconds" or "Less than a second" for very short durations
+        parts.push(`${seconds} second${seconds !== 1 ? 's' : ''}`);
+     }
+  }
+  
+  if (parts.length === 0) return ms > 0 ? "Less than a second" : "0 seconds";
+  return parts.join(' ');
+};
 
 
 const App: React.FC = () => {
@@ -61,8 +88,8 @@ const App: React.FC = () => {
   const [researchMode, setResearchMode] = useState<ResearchMode>('normal');
   const [maxIterations, setMaxIterations] = useState<number>(DEFAULT_MAX_ITERATIONS);
   const [clarificationQuestions, setClarificationQuestions] = useState<ClarificationQuestion[]>([]);
-  const [userAnswers, setUserAnswers] = useState<Record<number, string>>({}); // Answers for the current batch of questions
-  const [accumulatedAnswers, setAccumulatedAnswers] = useState<UserAnswer[]>([]); // All answers from all clarification rounds
+  const [userAnswers, setUserAnswers] = useState<Record<number, string>>({}); 
+  const [accumulatedAnswers, setAccumulatedAnswers] = useState<UserAnswer[]>([]); 
   const [researchStrategy, setResearchStrategy] = useState<string>('');
   
   const [currentPhase, setCurrentPhase] = useState<AppPhase>('INPUT');
@@ -77,6 +104,9 @@ const App: React.FC = () => {
   
   const [isLogVisible, setIsLogVisible] = useState<boolean>(true);
   const [areSourcesVisible, setAreSourcesVisible] = useState<boolean>(true);
+
+  const [researchStartTime, setResearchStartTime] = useState<number | null>(null);
+  const [researchEndTime, setResearchEndTime] = useState<number | null>(null);
 
   const researchCancelledRef = useRef<boolean>(false);
   const logEndRef = useRef<HTMLDivElement>(null);
@@ -108,6 +138,8 @@ const App: React.FC = () => {
     setError(null);
     researchCancelledRef.current = false;
     clarificationRoundRef.current = 0;
+    setResearchStartTime(null);
+    setResearchEndTime(null);
   }, []);
 
   const handleTopicSubmit = useCallback(async () => {
@@ -124,6 +156,11 @@ const App: React.FC = () => {
     setResearchLog([]); 
     setAccumulatedAnswers([]); 
     setUserAnswers({}); 
+    setExecutedSteps([]);
+    setAllSources([]);
+    setFinalReport('');
+    setResearchStartTime(null);
+    setResearchEndTime(null);
     clarificationRoundRef.current = 1;
     
     addLogEntry('system', `Topic: "${researchTopic}". Mode: ${researchMode}. Max Iterations: ${maxIterations}.`);
@@ -236,10 +273,12 @@ const App: React.FC = () => {
       return;
     }
     setError(null);
-    setExecutedSteps([]);
+    setExecutedSteps([]); // Critical: Reset steps before starting a new research execution
     setAllSources([]);
     setFinalReport('');
     researchCancelledRef.current = false;
+    setResearchStartTime(Date.now());
+    setResearchEndTime(null);
     setCurrentPhase('EXECUTING');
     addLogEntry('system', `Starting iterative research (Mode: ${researchMode}, Max Iterations: ${maxIterations}). Strategy: "${researchStrategy.substring(0,100)}..."`);
   }, [researchStrategy, addLogEntry, researchMode, maxIterations]);
@@ -248,28 +287,40 @@ const App: React.FC = () => {
     researchCancelledRef.current = true;
     addLogEntry('system', "Research cancellation requested by user.");
     setIsLoading(false); 
+    setLoadingMessage("Cancelling research...");
   };
 
   useEffect(() => {
-    if (currentPhase !== 'EXECUTING' || researchCancelledRef.current || isLoading) return; 
+    if (currentPhase !== 'EXECUTING' || researchCancelledRef.current || isLoading) {
+      if (researchCancelledRef.current && researchStartTime && !researchEndTime && currentPhase !== 'EXECUTING') {
+          setResearchEndTime(Date.now());
+      }
+      return;
+    }
 
     const runResearchLoop = async () => {
-      setIsLoading(true); 
+      setIsLoading(true);
       
-      let currentIter = 0;
+      let loopCurrentIter = 0; // Renamed to avoid confusion with any state variable
       let stopResearch = false;
       const iterationDisplaySuffix = `/${maxIterations}`; 
+      
+      // Use a local accumulator for steps within this run of the loop.
+      // Initialize with `executedSteps` from state in case this loop is ever made resumable (currently it's not, starts fresh).
+      // Since `handleStartIterativeResearch` calls `setExecutedSteps([])`, this will be empty on first run.
+      const localAccumulatedSteps: ExecutedStepOutcome[] = [...executedSteps];
 
-      while(currentIter < maxIterations && !stopResearch && !researchCancelledRef.current) {
-        setLoadingMessage(`Research Iteration ${currentIter + 1}${iterationDisplaySuffix}... Deciding next action.`);
-        addLogEntry('system', `Iteration ${currentIter + 1}: Deciding next research action...`);
+      while(loopCurrentIter < maxIterations && !stopResearch && !researchCancelledRef.current) {
+        const currentIterationNumberForDisplay = localAccumulatedSteps.length + 1;
+        setLoadingMessage(`Research Iteration ${currentIterationNumberForDisplay}${iterationDisplaySuffix}... Deciding next action.`);
+        addLogEntry('system', `Iteration ${currentIterationNumberForDisplay}: Deciding next research action...`);
         
         try {
           const decision = await decideNextResearchAction(
             researchTopic, 
             researchStrategy, 
-            executedSteps, 
-            currentIter + 1,
+            localAccumulatedSteps, // Pass the locally accumulated steps for AI decision
+            currentIterationNumberForDisplay, // Pass the logical iteration number
             maxIterations, 
             researchMode
           );
@@ -278,7 +329,7 @@ const App: React.FC = () => {
           
           if (researchCancelledRef.current) break;
 
-          setLoadingMessage(`Iteration ${currentIter + 1}${iterationDisplaySuffix}: Executing "${decision.action.substring(0, 50)}..."`);
+          setLoadingMessage(`Iteration ${currentIterationNumberForDisplay}${iterationDisplaySuffix}: Executing "${decision.action.substring(0, 50)}..."`);
           addLogEntry('action', `Executing: "${decision.action}"`);
           const stepResult = await executeResearchStep(decision.action, researchMode);
           
@@ -295,9 +346,9 @@ const App: React.FC = () => {
              });
           }
 
-          setLoadingMessage(`Iteration ${currentIter + 1}${iterationDisplaySuffix}: Summarizing findings...`);
+          setLoadingMessage(`Iteration ${currentIterationNumberForDisplay}${iterationDisplaySuffix}: Summarizing findings...`);
           const summary = await summarizeText(stepResult.text, researchMode, researchTopic);
-          addLogEntry('summary', `Summary for step ${currentIter + 1}: ${summary}`);
+          addLogEntry('summary', `Summary for step ${currentIterationNumberForDisplay}: ${summary}`);
 
           const currentOutcome: ExecutedStepOutcome = {
             action: decision.action,
@@ -306,59 +357,80 @@ const App: React.FC = () => {
             summary: summary,
             sources: stepResult.sources
           };
-          setExecutedSteps(prev => [...prev, currentOutcome]);
+          
+          localAccumulatedSteps.push(currentOutcome); // Add to local accumulator
+          setExecutedSteps(prev => [...prev, currentOutcome]); // Update global state (triggers re-render, guarded by isLoading)
+
 
           stopResearch = decision.shouldStop;
           if (decision.shouldStop) {
             addLogEntry('system', "AI determined sufficient information gathered or criteria met to stop iterative research.");
           }
-          if ((currentIter + 1) >= maxIterations && !stopResearch) { 
+          if ((loopCurrentIter + 1) >= maxIterations && !stopResearch) { 
              addLogEntry('system', `Reached max iterations (${maxIterations}). Stopping research.`);
              stopResearch = true;
           }
 
         } catch (e) {
           const errorMsg = e instanceof Error ? e.message : "An unknown error occurred during research iteration.";
-          setError(`Error in iteration ${currentIter + 1}: ${errorMsg}`);
-          addLogEntry('error', `Error in iteration ${currentIter + 1}: ${errorMsg}`);
+          // Use localAccumulatedSteps.length for error reporting as it's more accurate for current progress
+          setError(`Error in iteration ${localAccumulatedSteps.length + 1}: ${errorMsg}`);
+          addLogEntry('error', `Error in iteration ${localAccumulatedSteps.length + 1}: ${errorMsg}`);
           setCurrentPhase('ERROR'); 
+          setResearchEndTime(Date.now());
           setIsLoading(false); 
           return; 
         }
-        currentIter++;
+        loopCurrentIter++;
         if (researchCancelledRef.current) {
-            addLogEntry('system', "Research process was cancelled by the user.");
-            break;
+            addLogEntry('system', "Research process was cancelled by the user during iterations.");
+            break; 
         }
       } 
 
-      if (researchCancelledRef.current) {
-        setIsLoading(false);
-        setLoadingMessage('');
-        return;
+      // --- Post-loop processing (synthesis or handling cancellation) ---
+      // Use `localAccumulatedSteps` for decisions as it's guaranteed to be up-to-date for this run.
+      if (localAccumulatedSteps.length > 0) {
+        if (researchCancelledRef.current) {
+            addLogEntry('system', `Research cancelled. Synthesizing report from ${localAccumulatedSteps.length} completed steps...`);
+            setLoadingMessage("Synthesizing report from partial results...");
+        } else {
+            addLogEntry('system', `Iterative research completed after ${localAccumulatedSteps.length} steps. Synthesizing final report...`);
+            setLoadingMessage("Synthesizing final report...");
+        }
+        // setIsLoading(true); // Should still be true from the start of runResearchLoop
+        try {
+          const report = await synthesizeReport(researchTopic, researchStrategy, localAccumulatedSteps, researchMode);
+          setFinalReport(report);
+          setCurrentPhase('REPORT');
+          addLogEntry('system', researchCancelledRef.current ? "Partial report generated successfully." : "Final report generated successfully.");
+        } catch (e) {
+          const errorMsg = e instanceof Error ? e.message : "An unknown error occurred during report synthesis.";
+          setError(`Failed to synthesize report: ${errorMsg}`);
+          addLogEntry('error', `Report synthesis failed: ${errorMsg}`);
+          setCurrentPhase('ERROR');
+        }
+      } else { // localAccumulatedSteps.length === 0
+          if (researchCancelledRef.current) {
+              addLogEntry('system', "Research cancelled before any steps were completed in this run. No report to generate.");
+              setLoadingMessage("Research cancelled.");
+          } else {
+              addLogEntry('system', "No research steps were successfully executed or yielded results in this run. No report to generate.");
+          }
+          setCurrentPhase('STRATEGY_REVIEW'); 
       }
-
-      addLogEntry('system', `Iterative research completed after ${currentIter} steps. Synthesizing final report...`);
-      setLoadingMessage("Synthesizing final report...");
-      try {
-        const report = await synthesizeReport(researchTopic, researchStrategy, executedSteps, researchMode);
-        setFinalReport(report);
-        setCurrentPhase('REPORT');
-        addLogEntry('system', "Final report generated successfully.");
-      } catch (e) {
-        const errorMsg = e instanceof Error ? e.message : "An unknown error occurred during report synthesis.";
-        setError(`Failed to synthesize report: ${errorMsg}`);
-        addLogEntry('error', `Report synthesis failed: ${errorMsg}`);
-        setCurrentPhase('ERROR');
-      } finally {
-        setIsLoading(false);
-        setLoadingMessage('');
-      }
+      
+      setResearchEndTime(Date.now());
+      setIsLoading(false);
+      setLoadingMessage('');
     };
 
     runResearchLoop();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPhase, researchTopic, researchStrategy, researchMode, maxIterations, addLogEntry]); 
+  }, [currentPhase, researchTopic, researchStrategy, researchMode, maxIterations, addLogEntry, executedSteps]); 
+  // executedSteps is still a dependency: 
+  // 1. To initialize localAccumulatedSteps (though it's reset by handleStartIterativeResearch).
+  // 2. The `isLoading` guard handles re-entry if `setExecutedSteps` causes re-render.
 
   const ActionButton: React.FC<{ onClick: () => void; children: React.ReactNode; className?: string; disabled?: boolean }> = ({ onClick, children, className, disabled }) => (
     <button
@@ -414,15 +486,14 @@ const App: React.FC = () => {
             onChange={(e) => {
                 const val = parseInt(e.target.value, 10);
                 if (!isNaN(val)) {
-                     // Enforce min/max here if typed directly
                     if (val < 1) setMaxIterations(1);
                     else if (val > 500) setMaxIterations(500);
                     else setMaxIterations(val);
                 } else if (e.target.value === '') {
-                     setMaxIterations(0); // Allows temporary empty state for typing
+                     setMaxIterations(0); 
                 }
             }}
-            onBlur={(e) => { // Ensure a valid number is set on blur if input is empty or out of range
+            onBlur={(e) => { 
                 if (maxIterations === 0 || isNaN(maxIterations)) setMaxIterations(DEFAULT_MAX_ITERATIONS);
                 else if (maxIterations < 1) setMaxIterations(1);
                 else if (maxIterations > 500) setMaxIterations(500);
@@ -566,52 +637,62 @@ const App: React.FC = () => {
     </div>
   );
 
-  const renderReportPhase = () => (
-    <div className="space-y-6 p-2">
-      <h2 className="text-2xl font-semibold text-center text-blue-300">Deep Research Report</h2>
-      <p className="text-gray-400"><span className="font-semibold text-gray-300">Original Topic:</span> {researchTopic} ({researchMode} mode, {maxIterations} iterations)</p>
-      
-      <div className="p-4 bg-gray-800 rounded-lg prose prose-invert max-w-none prose-a:text-blue-400 hover:prose-a:text-blue-300 max-h-[60vh] overflow-y-auto">
-        <h3 className="text-xl font-semibold text-gray-200 border-b border-gray-700 pb-2 mb-3">Generated Report</h3>
-        {finalReport ? <MarkdownRenderer text={finalReport} /> : <p>No report generated.</p>}
-      </div>
+  const renderReportPhase = () => {
+    const durationMs = (researchStartTime && researchEndTime) ? researchEndTime - researchStartTime : null;
+    const researchDurationFormatted = formatDuration(durationMs);
 
-      <CollapsibleSection title="All Sources Gathered" isOpen={areSourcesVisible} setIsOpen={setAreSourcesVisible}>
-        <ul className="list-disc list-inside space-y-1 text-sm max-h-60 overflow-y-auto p-1">
-          {allSources && allSources.length > 0 ? allSources.map((source, index) => (
-            <li key={index}>
-              <a href={source.uri} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 hover:underline">
-                {source.title || source.uri}
-              </a>
-            </li>
-          )) : <li className="text-gray-500">No sources were gathered during this research.</li>}
-        </ul>
-      </CollapsibleSection>
+    return (
+      <div className="space-y-6 p-2">
+        <h2 className="text-2xl font-semibold text-center text-blue-300">Deep Research Report</h2>
+        <div className="text-gray-400 space-y-1 text-sm">
+            <p><span className="font-semibold text-gray-300">Original Topic:</span> {researchTopic} ({researchMode} mode, {maxIterations} iterations)</p>
+            {researchDurationFormatted !== 'N/A' && 
+              <p><span className="font-semibold text-gray-300">Research Duration:</span> {researchDurationFormatted}</p>
+            }
+        </div>
+        
+        <div className="p-4 bg-gray-800 rounded-lg prose prose-invert max-w-none prose-a:text-blue-400 hover:prose-a:text-blue-300 max-h-[60vh] overflow-y-auto">
+          <h3 className="text-xl font-semibold text-gray-200 border-b border-gray-700 pb-2 mb-3">Generated Report</h3>
+          {finalReport ? <MarkdownRenderer text={finalReport} /> : <p>No report generated.</p>}
+        </div>
 
-      <CollapsibleSection title="Research Strategy & Full Log" isOpen={isLogVisible} setIsOpen={setIsLogVisible}>
-        <div className="text-sm space-y-3">
-          <div>
-            <h4 className="font-semibold text-gray-300 mb-1">Guiding Strategy:</h4>
-            <p className="text-gray-400 whitespace-pre-wrap bg-gray-700 p-2 rounded-md">{researchStrategy || "N/A"}</p>
-          </div>
-          <div>
-            <h4 className="font-semibold text-gray-300 mb-1">Full Research Log:</h4>
-            <div className="max-h-80 overflow-y-auto bg-gray-700 p-2 rounded-md text-xs">
-              {researchLog.map((log) => (
-                <div key={log.id} className="mb-1 border-b border-gray-600 pb-1">
-                    <span className="text-gray-500">{new Date(log.timestamp).toLocaleTimeString()} [{log.type.replace(/_/g, ' ').toUpperCase()}]: </span> 
-                    <span className="whitespace-pre-wrap break-words">{log.content}</span>
-                </div>))}
+        <CollapsibleSection title={`All Sources Gathered (${allSources.length})`} isOpen={areSourcesVisible} setIsOpen={setAreSourcesVisible}>
+          <ul className="list-disc list-inside space-y-1 text-sm max-h-60 overflow-y-auto p-1">
+            {allSources && allSources.length > 0 ? allSources.map((source, index) => (
+              <li key={index}>
+                <a href={source.uri} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 hover:underline">
+                  {source.title || source.uri}
+                </a>
+              </li>
+            )) : <li className="text-gray-500">No sources were gathered during this research.</li>}
+          </ul>
+        </CollapsibleSection>
+
+        <CollapsibleSection title="Research Strategy & Full Log" isOpen={isLogVisible} setIsOpen={setIsLogVisible}>
+          <div className="text-sm space-y-3">
+            <div>
+              <h4 className="font-semibold text-gray-300 mb-1">Guiding Strategy:</h4>
+              <p className="text-gray-400 whitespace-pre-wrap bg-gray-700 p-2 rounded-md">{researchStrategy || "N/A"}</p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-300 mb-1">Full Research Log:</h4>
+              <div className="max-h-80 overflow-y-auto bg-gray-700 p-2 rounded-md text-xs">
+                {researchLog.map((log) => (
+                  <div key={log.id} className="mb-1 border-b border-gray-600 pb-1">
+                      <span className="text-gray-500">{new Date(log.timestamp).toLocaleTimeString()} [{log.type.replace(/_/g, ' ').toUpperCase()}]: </span> 
+                      <span className="whitespace-pre-wrap break-words">{log.content}</span>
+                  </div>))}
+              </div>
             </div>
           </div>
-        </div>
-      </CollapsibleSection>
-      
-      <ActionButton onClick={resetState} className="w-full flex items-center justify-center space-x-2">
-        <ArrowPathIcon /> <span>Start New Research</span>
-      </ActionButton>
-    </div>
-  );
+        </CollapsibleSection>
+        
+        <ActionButton onClick={resetState} className="w-full flex items-center justify-center space-x-2">
+          <ArrowPathIcon /> <span>Start New Research</span>
+        </ActionButton>
+      </div>
+    );
+  };
   
   const CollapsibleSection: React.FC<{title: string, isOpen: boolean, setIsOpen: (isOpen: boolean) => void, children: React.ReactNode}> = ({ title, isOpen, setIsOpen, children }) => (
     <div className="bg-gray-800 rounded-lg">
@@ -673,7 +754,7 @@ const App: React.FC = () => {
 
     if (error && currentPhase === 'ERROR') return renderErrorState(); 
     
-    if (isLoading && currentPhase !== 'EXECUTING') { 
+    if (isLoading && (currentPhase !== 'EXECUTING' || !loadingMessage.toLowerCase().includes("iteration"))) { 
         return <div className="flex flex-col justify-center items-center h-64 space-y-3">
                     <LoadingSpinner message={loadingMessage} />
                 </div>;
