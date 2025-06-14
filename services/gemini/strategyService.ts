@@ -18,8 +18,9 @@ Research Topic: "${topic}"
 User's answers to clarifying questions:
 ${formattedAnswers || "No specific clarifications provided beyond the initial topic."}
 
-Outline a high-level research strategy (concise paragraph, 3-5 sentences).
-Describe overall direction, key areas to investigate, types of info to look for.
+Task: Based SOLELY on the topic and user's answers, outline a high-level research strategy.
+The strategy should be a concise paragraph (3-5 sentences) describing the overall direction, key areas to investigate, and types of information to seek.
+DO NOT include any summary of the topic itself, or repeat information already provided in the topic or answers. Focus ONLY on the plan forward.
 This is NOT a list of specific search queries or step-by-step tasks.
 Output ONLY the research strategy as a single block of text. No extra formatting, titles, or markdown.`;
 

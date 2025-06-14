@@ -33,7 +33,7 @@ export interface ExecutedStepOutcome {
   sources: Source[];
 }
 
-export type AppPhase = 'INPUT' | 'ITERATIVE_CLARIFICATION' | 'STRATEGY_REVIEW' | 'EXECUTING' | 'REPORT' | 'ERROR';
+export type AppPhase = 'INPUT' | 'ITERATIVE_CLARIFICATION' | 'STRATEGY_REVIEW' | 'ACTION_REVIEW' | 'EXECUTING' | 'REPORT' | 'ERROR';
 
 // Raw grounding chunk structure from Gemini API when using Google Search
 export interface GroundingChunkWeb {
@@ -55,3 +55,9 @@ export interface GeminiResponseForSearch {
 }
 
 export type ResearchMode = 'normal' | 'deeper';
+
+export interface ProposedActionDetails {
+  action: string;
+  reason: string;
+  shouldStop: boolean; // From decideNextResearchAction
+}

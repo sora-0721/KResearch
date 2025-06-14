@@ -1,8 +1,8 @@
 import { ResearchMode } from '../../types';
 
 // Define model names based on user's specific guidelines for research modes
-export const NORMAL_MODE_MODEL = "gemini-2.5-flash-preview-05-20"; // Updated as per new guidelines
-export const DEEPER_MODE_MODEL = "gemini-2.5-pro-preview-06-05"; // Updated as per new guidelines
+export const NORMAL_MODE_MODEL = "gemini-2.5-flash-preview-05-20"; 
+export const DEEPER_MODE_MODEL = "gemini-2.5-pro-preview-06-05"; 
 
 export const MAX_RETRIES = 3;
 export const BASE_RETRY_DELAY_MS = 1000;

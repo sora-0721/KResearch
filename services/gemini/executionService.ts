@@ -1,7 +1,9 @@
 
-import { Source, GroundingChunk, ExecutedStepOutcome, ResearchMode } from '../../types';
-import { getModelNameForMode, MAX_CONTEXT_TOKENS_APPROX } from './constants';
+import { Source, GroundingChunk, ExecutedStepOutcome, ResearchMode, GeminiResponseForSearch } from '../../types';
+import { getModelNameForMode, MAX_CONTEXT_TOKENS_APPROX } from './constants'; 
 import { geminiApiCallWithRetry, parseJsonFromString, summarizeHistoryForContext } from './utils';
+import { GenerateContentResponse } from '@google/genai';
+
 
 const API_KEY = process.env.API_KEY;
 
@@ -25,7 +27,7 @@ export const decideNextResearchAction = async (
   const prompt = `
 Topic: "${topic}"
 Strategy: "${strategy}"
-Iteration: ${iteration}
+Iteration: ${iteration} 
 Note: ${iterationLimitNote}
 Previous Actions & Findings Summary:
 ${historySummary || "No actions yet."}
@@ -67,18 +69,18 @@ Output Format (Strictly JSON only):
 
 export const executeResearchStep = async (stepQuery: string, researchMode: ResearchMode): Promise<{ text: string; sources: Source[] }> => {
   if (!API_KEY) throw new Error("API Key not configured.");
-  const modelName = getModelNameForMode(researchMode); // Using the mode-specific model
+  // Use the model specific to the current researchMode for search grounding, as per new guidelines.
+  const modelForSearch = getModelNameForMode(researchMode);
 
   try {
-    // Guidelines state 'gemini-2.5-flash-preview-04-17' for general text.
-    // Assuming this model also handles search grounding well.
-    const response = await geminiApiCallWithRetry({
-      model: modelName, // Use the selected research mode's model
+    const response: GenerateContentResponse = await geminiApiCallWithRetry({
+      model: modelForSearch,
       contents: `Perform a web search and provide a comprehensive answer for: "${stepQuery}". Focus on facts, cite sources.`,
-      config: { tools: [{ googleSearch: {} }] }
+      // Adhering to guideline: "DO NOT add other configs except for tools googleSearch."
+      config: { tools: [{ googleSearch: {} }] } 
     });
 
-    const geminiResponse = response;
+    const geminiResponse = response as unknown as GeminiResponseForSearch; // Cast to access .text and .candidates more easily
     const text = geminiResponse.text || "";
     let sources: Source[] = [];
 
@@ -93,7 +95,7 @@ export const executeResearchStep = async (stepQuery: string, researchMode: Resea
     }
     return { text, sources };
   } catch (error) {
-    console.error(`Error executing research step "${stepQuery}":`, error);
+    console.error(`Error executing research step "${stepQuery}" (model: ${modelForSearch}):`, error);
     throw new Error(`Failed step "${stepQuery}": ${error instanceof Error ? error.message : String(error)}`);
   }
 };
