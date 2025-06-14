@@ -31,12 +31,10 @@ async function geminiApiCallWithRetry(
   let attempts = 0;
   while (attempts < MAX_RETRIES) {
     try {
-      // thinkingConfig consideration:
-      // For "gemini-2.5-flash-preview-05-20" (normal mode model), thinkingConfig can be used.
-      // For "gemini-2.5-pro-preview-06-05" (deeper mode model), thinkingConfig is not applicable based on current general Gemini guidelines.
-      // We will omit thinkingConfig by default here; if specific tasks need it (e.g., low latency for flash),
-      // it would need to be added to the params.config for that specific call.
-      // For now, defaulting to higher quality for both by omitting it (flash enables it by default).
+      // thinkingConfig is intentionally omitted here as the specified models
+      // (gemini-2.5-flash-preview-05-20 and gemini-2.5-pro-preview-06-05)
+      // are not gemini-2.5-flash-preview-04-17, for which thinkingConfig is specifically mentioned.
+      // Omitting it defaults to higher quality for these models.
       const response = await ai.models.generateContent(params);
       return response;
     } catch (error: any) {
@@ -84,22 +82,53 @@ const parseJsonFromString = <T,>(text: string, originalTextForError?: string): T
   }
 };
 
-export const generateInitialClarificationQuestions = async (topic: string, researchMode: ResearchMode): Promise<string[]> => {
+export const getInitialTopicContext = async (topic: string, researchMode: ResearchMode): Promise<string> => {
+  if (!API_KEY || !ai) throw new Error("API Key not configured or Gemini client not initialized.");
+  try {
+    const searchResult = await executeResearchStep(`Provide a brief overview of the current understanding or key aspects of the topic: "${topic}"`, researchMode);
+    if (!searchResult.text && searchResult.sources.length === 0) {
+        return "No initial context could be found for this topic via search.";
+    }
+    const contextSummary = await summarizeText(searchResult.text, researchMode, `Initial context for: ${topic}`);
+    return contextSummary || "Could not summarize initial context.";
+  } catch (error) {
+    console.error("Error fetching initial topic context:", error);
+    // Return a non-breaking message rather than throwing, so clarification can still proceed
+    return `Could not fetch initial context due to an error: ${error instanceof Error ? error.message : String(error)}`;
+  }
+};
+
+export const generateInitialClarificationQuestions = async (topic: string, researchMode: ResearchMode, initialContext: string): Promise<string[]> => {
   if (!API_KEY || !ai) throw new Error("API Key not configured or Gemini client not initialized.");
   const modelName = getModelNameForMode(researchMode);
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
   const prompt = `
 Given the research topic: "${topic}"
+Today's date is: ${today}.
 
-Generate 3-4 concise initial clarifying questions to help narrow down the scope, understand user intent, and focus the research.
+Here is some initial context found about the topic:
+<context>
+${initialContext}
+</context>
+
+Based on this context, the topic, and today's date, generate 3-4 concise initial clarifying questions to help narrow down the scope, understand user intent, and focus the research.
 These questions should prompt the user for specific aspects they are interested in, or constraints they might have.
+
+Important Instructions:
+- Use the provided context to avoid asking questions whose answers are already obvious from the information given.
+- Use today's date (${today}) to avoid asking about future events that have not yet occurred or are not yet publicly known (e.g., details of product releases if not yet announced, or specific outcomes of events scheduled for the future).
+- Focus on questions that genuinely help narrow down the scope for effective research. Do not ask "stupid" or unhelpful questions.
+- If the context already provides significant detail on an aspect, try to ask questions that delve deeper or explore related unmentioned areas.
+
 Output ONLY a JSON array of strings, where each string is a question. Do not include any other text, explanation, or markdown.
 
-Example for topic "Renewable Energy Impact":
+Example for topic "Renewable Energy Impact" (assuming context mentioned general types and benefits):
 [
-  "Are you interested in the economic, environmental, or technological impact of renewable energy?",
-  "Which specific types of renewable energy (e.g., solar, wind, geothermal) are you most interested in?",
-  "Is there a particular geographical region or timeframe you want to focus on?",
-  "Are you looking for information on policy, current research, or market trends?"
+  "Are you interested in the specific economic impacts on developing countries, or more broadly on global markets?",
+  "Given that solar and wind are common, are you interested in less common renewables like tidal or advanced geothermal energy?",
+  "Is there a particular policy angle, such as government incentives or international agreements, you want to focus on for the period after ${parseInt(today.substring(0,4)) - 2}?",
+  "Are you looking for information on challenges and limitations, or primarily success stories and future potential?"
 ]`;
 
   try {
@@ -112,12 +141,15 @@ Example for topic "Renewable Energy Impact":
     });
     const questions = parseJsonFromString<string[]>(response.text, response.text);
     if (questions && Array.isArray(questions) && questions.every(item => typeof item === 'string')) {
-      return questions;
+      return questions.length > 0 ? questions : ["No specific clarification questions were generated based on the context. What aspect of the topic are you most interested in?"];
     }
-    throw new Error("Failed to generate valid initial clarification questions. Model did not return a JSON array of strings.");
+    console.warn("Failed to generate valid initial clarification questions. Model did not return a JSON array of strings. Response:", response.text);
+    // Fallback question if parsing fails or returns empty
+    return ["The AI could not generate specific questions. Could you please specify what aspects of the topic you are most interested in?"];
   } catch (error) {
     console.error("Error generating initial clarification questions:", error);
-    throw new Error(`Failed to generate initial clarification questions: ${error instanceof Error ? error.message : String(error)}`);
+    // Provide a generic fallback question on error
+    return [`Failed to generate clarification questions due to an error. What specific area of "${topic}" would you like to explore?`];
   }
 };
 
@@ -314,11 +346,10 @@ Also, provide:
 
 export const executeResearchStep = async (stepQuery: string, researchMode: ResearchMode): Promise<{ text: string; sources: Source[] }> => {
   if (!API_KEY || !ai) throw new Error("API Key not configured or Gemini client not initialized.");
-  const modelName = getModelNameForMode(researchMode); // This model is used for the "instruction" part of the Google Search call.
-                                                // The actual search capability is a tool, not tied to this model's text generation directly.
+  const modelName = getModelNameForMode(researchMode); 
   try {
     const response = await geminiApiCallWithRetry({
-      model: modelName, // As per guidelines, this should be a text model that supports tools. Both selected models should support this.
+      model: modelName, 
       contents: `Perform a web search and provide a comprehensive answer for the following query: "${stepQuery}". Focus on factual information and cite sources.`,
       config: {
         tools: [{ googleSearch: {} }],
@@ -382,7 +413,7 @@ export const synthesizeReport = async (
   researchMode: ResearchMode
 ): Promise<string> => {
   if (!API_KEY || !ai) throw new Error("API Key not configured or Gemini client not initialized.");
-  const modelName = getModelNameForMode(researchMode); // Model for both report generation steps
+  const modelName = getModelNameForMode(researchMode); 
 
   const findingsDetails = executedSteps.map((s, index) => 
     `Step ${index + 1}: Action Taken: ${s.action}\nReasoning: ${s.reason || 'N/A'}\nSummary of Findings: ${s.summary}\nSources: ${s.sources.map(src => `[${src.title || src.uri}](${src.uri})`).join(', ') || 'None'}`

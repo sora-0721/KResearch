@@ -5,7 +5,8 @@ import {
   ResearchLogEntry, ResearchLogEntryType, ExecutedStepOutcome, ResearchMode 
 } from './types';
 import { 
-  generateInitialClarificationQuestions, evaluateAnswersAndGenerateFollowUps, generateResearchStrategy, 
+  getInitialTopicContext, generateInitialClarificationQuestions, 
+  evaluateAnswersAndGenerateFollowUps, generateResearchStrategy, 
   decideNextResearchAction, executeResearchStep, summarizeText, synthesizeReport 
 } from './services/geminiService';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -119,26 +120,35 @@ const App: React.FC = () => {
       return;
     }
     setIsLoading(true);
-    setLoadingMessage("Generating initial clarification questions...");
     setError(null);
     setResearchLog([]); 
     setAccumulatedAnswers([]); 
     setUserAnswers({}); 
     clarificationRoundRef.current = 1;
-    addLogEntry('system', `Topic: "${researchTopic}". Mode: ${researchMode}. Max Iterations: ${maxIterations}. Generating initial clarification questions (Round ${clarificationRoundRef.current})...`);
+    
+    addLogEntry('system', `Topic: "${researchTopic}". Mode: ${researchMode}. Max Iterations: ${maxIterations}.`);
     
     try {
-      const questions = await generateInitialClarificationQuestions(researchTopic, researchMode);
+      setLoadingMessage("Performing preliminary search for context...");
+      addLogEntry('system', `Fetching initial context for topic: "${researchTopic}"...`);
+      const initialContext = await getInitialTopicContext(researchTopic, researchMode);
+      addLogEntry('summary', `Initial context summary: ${initialContext.substring(0, 200)}${initialContext.length > 200 ? '...' : ''}`);
+
+      setLoadingMessage("Generating initial clarification questions with context...");
+      addLogEntry('system', `Generating initial clarification questions (Round ${clarificationRoundRef.current})...`);
+      const questions = await generateInitialClarificationQuestions(researchTopic, researchMode, initialContext);
+      
       setClarificationQuestions(questions.map((q, i) => ({ id: i, question: q })));
       setCurrentPhase('ITERATIVE_CLARIFICATION');
       addLogEntry('clarification_q', `Generated ${questions.length} initial questions:\n${questions.map((q,i) => `${i+1}. ${q}`).join('\n')}`);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Failed to generate initial clarification questions.";
+      const msg = e instanceof Error ? e.message : "Failed during initial topic processing.";
       setError(msg);
       addLogEntry('error', msg);
       setCurrentPhase('ERROR');
     } finally {
       setIsLoading(false);
+      setLoadingMessage('');
     }
   }, [researchTopic, researchMode, maxIterations, addLogEntry]);
 
@@ -324,6 +334,7 @@ const App: React.FC = () => {
 
       if (researchCancelledRef.current) {
         setIsLoading(false);
+        setLoadingMessage('');
         return;
       }
 
