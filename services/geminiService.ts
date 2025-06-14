@@ -21,7 +21,7 @@ const getModelNameForMode = (mode: ResearchMode): string => {
   if (mode === 'deeper') {
     return DEEPER_MODE_MODEL;
   }
-  return NORMAL_MODE_MODEL; // Default to normal mode model
+  return NORMAL_MODE_MODEL;
 };
 
 async function geminiApiCallWithRetry(
@@ -31,10 +31,9 @@ async function geminiApiCallWithRetry(
   let attempts = 0;
   while (attempts < MAX_RETRIES) {
     try {
-      // thinkingConfig is intentionally omitted here as the specified models
-      // (gemini-2.5-flash-preview-05-20 and gemini-2.5-pro-preview-06-05)
-      // are not gemini-2.5-flash-preview-04-17, for which thinkingConfig is specifically mentioned.
-      // Omitting it defaults to higher quality for these models.
+      // For the specified models (gemini-2.5-flash-preview-05-20, gemini-2.5-pro-preview-06-05),
+      // omitting thinkingConfig defaults to enabling thinking for higher quality, which is appropriate for these tasks.
+      // No explicit thinkingConfig or thinkingBudget: 0 is set.
       const response = await ai.models.generateContent(params);
       return response;
     } catch (error: any) {
@@ -85,6 +84,8 @@ const parseJsonFromString = <T,>(text: string, originalTextForError?: string): T
 export const getInitialTopicContext = async (topic: string, researchMode: ResearchMode): Promise<string> => {
   if (!API_KEY || !ai) throw new Error("API Key not configured or Gemini client not initialized.");
   try {
+    // For initial context, using the search capability, which is often tied to a specific model that supports tooling well.
+    // We can use the normal mode model here, or a general text model if search result processing is complex.
     const searchResult = await executeResearchStep(`Provide a brief overview of the current understanding or key aspects of the topic: "${topic}"`, researchMode);
     if (!searchResult.text && searchResult.sources.length === 0) {
         return "No initial context could be found for this topic via search.";
@@ -346,6 +347,10 @@ Also, provide:
 
 export const executeResearchStep = async (stepQuery: string, researchMode: ResearchMode): Promise<{ text: string; sources: Source[] }> => {
   if (!API_KEY || !ai) throw new Error("API Key not configured or Gemini client not initialized.");
+  // For executeResearchStep, use the specific model recommended for search grounding if available,
+  // or default to the current researchMode's model. The guidelines suggest 'gemini-2.5-flash-preview-04-17' 
+  // can be used with Google Search. We will use the model for the current mode, 
+  // assuming it's capable or the general 'flash' model is implicitly preferred by the API for tool use.
   const modelName = getModelNameForMode(researchMode); 
   try {
     const response = await geminiApiCallWithRetry({

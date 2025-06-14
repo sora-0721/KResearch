@@ -54,3 +54,15 @@ export const StopIcon: React.FC<{ className?: string }> = ({ className }) => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 7.5A2.25 2.25 0 0 1 7.5 5.25h9a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25h-9a2.25 2.25 0 0 1-2.25-2.25v-9Z" />
   </svg>
 );
+
+export const ClipboardDocumentIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className || "w-5 h-5"}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a8.25 8.25 0 0 1-8.25 8.25h-1.5A2.25 2.25 0 0 1 2.25 9.75V7.5A2.25 2.25 0 0 1 4.5 5.25h1.5c.612 0 1.158-.255 1.587-.674L8.125 3.51a2.25 2.25 0 0 1 .52-.519C9.132 2.454 9.807 2.25 10.5 2.25H13.5c.989 0 1.842.607 2.166 1.638m-7.332 0c.055.194.084.4.084.612v0a8.25 8.25 0 0 1-8.25 8.25h-1.5A2.25 2.25 0 0 1 2.25 9.75V7.5A2.25 2.25 0 0 1 4.5 5.25h1.5c.612 0 1.158-.255 1.587-.674L8.125 3.51a2.25 2.25 0 0 1 .52-.519C9.132 2.454 9.807 2.25 10.5 2.25H13.5M9 11.25h6M9 13.5h6m-6.01 2.25h4.5" />
+  </svg>
+);
+
+export const ArrowDownTrayIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className || "w-5 h-5"}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+  </svg>
+);
