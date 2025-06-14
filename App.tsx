@@ -52,7 +52,7 @@ const MarkdownRenderer: React.FC<{ text: string }> = React.memo(({ text }) => {
 });
 
 const NORMAL_MODE_MAX_ITERATIONS = 25;
-const DEEPER_MODE_MAX_ITERATIONS = 100; // A high number, effectively "unlimited" for most practical cases
+const DEEPER_MODE_MAX_ITERATIONS = 25; 
 const API_KEY_CONFIGURED = !!process.env.API_KEY;
 
 
@@ -123,7 +123,7 @@ const App: React.FC = () => {
     addLogEntry('system', `Topic: "${researchTopic}". Mode: ${researchMode}. Generating initial clarification questions (Round ${clarificationRoundRef.current})...`);
     
     try {
-      const questions = await generateInitialClarificationQuestions(researchTopic);
+      const questions = await generateInitialClarificationQuestions(researchTopic, researchMode);
       setClarificationQuestions(questions.map((q, i) => ({ id: i, question: q })));
       setCurrentPhase('ITERATIVE_CLARIFICATION');
       addLogEntry('clarification_q', `Generated ${questions.length} initial questions:\n${questions.map((q,i) => `${i+1}. ${q}`).join('\n')}`);
@@ -160,12 +160,12 @@ const App: React.FC = () => {
     setAccumulatedAnswers(newAccumulatedAnswers);
 
     try {
-      const evaluation = await evaluateAnswersAndGenerateFollowUps(researchTopic, clarificationQuestions, currentAnswersArray);
+      const evaluation = await evaluateAnswersAndGenerateFollowUps(researchTopic, clarificationQuestions, currentAnswersArray, researchMode);
       
       if (evaluation.areAnswersSufficient) {
         addLogEntry('system', "AI determined answers are sufficient. Generating research strategy...");
         setLoadingMessage("Generating research strategy...");
-        const strategy = await generateResearchStrategy(researchTopic, newAccumulatedAnswers);
+        const strategy = await generateResearchStrategy(researchTopic, newAccumulatedAnswers, researchMode);
         setResearchStrategy(strategy);
         setCurrentPhase('STRATEGY_REVIEW');
         addLogEntry('system', `Research strategy generated: "${strategy.substring(0,150)}..."`);
@@ -179,7 +179,7 @@ const App: React.FC = () => {
       } else {
         addLogEntry('system', "AI determined answers sufficient (or no further questions provided). Generating research strategy.");
         setLoadingMessage("Generating research strategy...");
-        const strategy = await generateResearchStrategy(researchTopic, newAccumulatedAnswers);
+        const strategy = await generateResearchStrategy(researchTopic, newAccumulatedAnswers, researchMode);
         setResearchStrategy(strategy);
         setCurrentPhase('STRATEGY_REVIEW');
         addLogEntry('system', `Research strategy generated: "${strategy.substring(0,150)}..."`);
@@ -192,7 +192,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [userAnswers, clarificationQuestions, researchTopic, addLogEntry, accumulatedAnswers]);
+  }, [userAnswers, clarificationQuestions, researchTopic, researchMode, addLogEntry, accumulatedAnswers]);
 
   const handleSkipClarification = useCallback(async () => {
     setIsLoading(true);
@@ -201,7 +201,7 @@ const App: React.FC = () => {
     addLogEntry('system', 'User skipped clarification. Proceeding to generate research strategy based on available information.');
 
     try {
-      const strategy = await generateResearchStrategy(researchTopic, accumulatedAnswers); // Use existing accumulated answers
+      const strategy = await generateResearchStrategy(researchTopic, accumulatedAnswers, researchMode); 
       setResearchStrategy(strategy);
       setCurrentPhase('STRATEGY_REVIEW');
       addLogEntry('system', `Research strategy generated: "${strategy.substring(0,150)}..."`);
@@ -213,7 +213,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [researchTopic, accumulatedAnswers, addLogEntry]);
+  }, [researchTopic, accumulatedAnswers, researchMode, addLogEntry]);
 
   const handleStartIterativeResearch = useCallback(() => {
     if (!researchStrategy) {
@@ -244,7 +244,7 @@ const App: React.FC = () => {
       let currentIter = 0;
       let stopResearch = false;
       const maxIterations = researchMode === 'deeper' ? DEEPER_MODE_MAX_ITERATIONS : NORMAL_MODE_MAX_ITERATIONS;
-      const iterationDisplaySuffix = researchMode === 'deeper' ? "(Deeper Mode)" : `/${maxIterations}`;
+      const iterationDisplaySuffix = `/${maxIterations}`; // Both modes have same max iteration now
 
       while(currentIter < maxIterations && !stopResearch && !researchCancelledRef.current) {
         setLoadingMessage(`Research Iteration ${currentIter + 1}${iterationDisplaySuffix}... Deciding next action.`);
@@ -266,7 +266,7 @@ const App: React.FC = () => {
 
           setLoadingMessage(`Iteration ${currentIter + 1}${iterationDisplaySuffix}: Executing "${decision.action.substring(0, 50)}..."`);
           addLogEntry('action', `Executing: "${decision.action}"`);
-          const stepResult = await executeResearchStep(decision.action);
+          const stepResult = await executeResearchStep(decision.action, researchMode);
           
           if (researchCancelledRef.current) break;
 
@@ -282,7 +282,7 @@ const App: React.FC = () => {
           }
 
           setLoadingMessage(`Iteration ${currentIter + 1}${iterationDisplaySuffix}: Summarizing findings...`);
-          const summary = await summarizeText(stepResult.text, researchTopic);
+          const summary = await summarizeText(stepResult.text, researchMode, researchTopic);
           addLogEntry('summary', `Summary for step ${currentIter + 1}: ${summary}`);
 
           const currentOutcome: ExecutedStepOutcome = {
@@ -298,11 +298,10 @@ const App: React.FC = () => {
           if (decision.shouldStop) {
             addLogEntry('system', "AI determined sufficient information gathered or criteria met to stop iterative research.");
           }
-          if (researchMode === 'normal' && (currentIter + 1) >= maxIterations && !stopResearch) {
-             addLogEntry('system', `Reached max iterations (${maxIterations}) in Normal Mode. Stopping research.`);
+          if ((currentIter + 1) >= maxIterations && !stopResearch) { // Check applicable to both modes
+             addLogEntry('system', `Reached max iterations (${maxIterations}). Stopping research.`);
              stopResearch = true;
           }
-
 
         } catch (e) {
           const errorMsg = e instanceof Error ? e.message : "An unknown error occurred during research iteration.";
@@ -327,7 +326,7 @@ const App: React.FC = () => {
       addLogEntry('system', `Iterative research completed after ${currentIter} steps. Synthesizing final report...`);
       setLoadingMessage("Synthesizing final report...");
       try {
-        const report = await synthesizeReport(researchTopic, researchStrategy, executedSteps);
+        const report = await synthesizeReport(researchTopic, researchStrategy, executedSteps, researchMode);
         setFinalReport(report);
         setCurrentPhase('REPORT');
         addLogEntry('system', "Final report generated successfully.");
@@ -383,11 +382,12 @@ const App: React.FC = () => {
                 className="form-radio h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-500"
                 disabled={isLoading}
               />
-              <span className="text-gray-300 capitalize">{mode} Mode {mode === 'normal' ? `(~${NORMAL_MODE_MAX_ITERATIONS} iterations)` : '(No iteration limit)'}</span>
+              <span className="text-gray-300 capitalize">{mode} Mode (~{NORMAL_MODE_MAX_ITERATIONS} iterations)</span>
             </label>
           ))}
         </div>
-         {researchMode === 'deeper' && <p className="text-xs text-gray-500 mt-1">Deeper mode may take significantly longer.</p>}
+         {researchMode === 'deeper' && <p className="text-xs text-gray-500 mt-1">Deeper mode uses a more advanced model ('gemini-2.5-pro') for higher quality analysis.</p>}
+         {researchMode === 'normal' && <p className="text-xs text-gray-500 mt-1">Normal mode uses a fast model ('gemini-2.5-flash') for quicker results.</p>}
       </div>
       <ActionButton onClick={handleTopicSubmit} className="w-full flex items-center justify-center space-x-2">
         <PencilIcon /> <span>Next: Clarify Topic</span>

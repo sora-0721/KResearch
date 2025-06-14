@@ -3,12 +3,12 @@ import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { Source, GroundingChunk, UserAnswer, ExecutedStepOutcome, ClarificationQuestion, ResearchMode } from '../types';
 
 const API_KEY = process.env.API_KEY;
-// IMPORTANT: Use the guideline-specified model name for general text tasks.
-const GEMINI_MODEL_NAME = "gemini-2.5-pro-preview-06-05"; 
+
+// Define model names based on research mode
+const NORMAL_MODEL_NAME = "gemini-2.5-flash-preview-05-20";
+const DEEPER_MODEL_NAME = "gemini-2.5-pro-preview-06-05";
 
 if (!API_KEY) {
-  // Log an error, but don't throw here, as the App component will handle API key display if not set.
-  // The individual service functions will throw if API_KEY is missing when they are called.
   console.error("API_KEY is not set. Please ensure the process.env.API_KEY environment variable is configured. The app may not function correctly.");
 }
 
@@ -17,6 +17,10 @@ const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
 const MAX_RETRIES = 3;
 const BASE_RETRY_DELAY_MS = 1000;
 
+const getModelNameForMode = (mode: ResearchMode): string => {
+  return mode === 'deeper' ? DEEPER_MODEL_NAME : NORMAL_MODEL_NAME;
+};
+
 async function geminiApiCallWithRetry(
   params: { model: string; contents: any; config?: any }
 ): Promise<GenerateContentResponse> {
@@ -24,12 +28,14 @@ async function geminiApiCallWithRetry(
   let attempts = 0;
   while (attempts < MAX_RETRIES) {
     try {
-      // If params.model is the flash model, thinkingConfig should be omitted for quality tasks (default enabled)
-      // or set to { thinkingBudget: 0 } for low latency tasks.
-      // This generic retry wrapper doesn't impose thinkingConfig; calling functions should set it if needed.
-      const finalParams = params; // Simplified: specific thinkingConfigs handled by calling functions or default behavior.
-
-      const response = await ai.models.generateContent(finalParams);
+      // ThinkingConfig considerations:
+      // For flash models (like NORMAL_MODEL_NAME):
+      // - Quality tasks (most non-search tasks): Omit thinkingConfig (default enabled for higher quality).
+      // - Low latency tasks (not applicable here): Use { thinkingBudget: 0 }.
+      // - Google Search tasks: Omit thinkingConfig.
+      // For pro models (like DEEPER_MODEL_NAME): thinkingConfig is not applicable/ignored.
+      // The calling functions are responsible for setting the config object correctly.
+      const response = await ai.models.generateContent(params);
       return response;
     } catch (error: any) {
       attempts++;
@@ -76,8 +82,9 @@ const parseJsonFromString = <T,>(text: string, originalTextForError?: string): T
   }
 };
 
-export const generateInitialClarificationQuestions = async (topic: string): Promise<string[]> => {
+export const generateInitialClarificationQuestions = async (topic: string, researchMode: ResearchMode): Promise<string[]> => {
   if (!API_KEY || !ai) throw new Error("API Key not configured or Gemini client not initialized.");
+  const modelName = getModelNameForMode(researchMode);
   const prompt = `
 Given the research topic: "${topic}"
 
@@ -95,11 +102,11 @@ Example for topic "Renewable Energy Impact":
 
   try {
     const response = await geminiApiCallWithRetry({
-      model: GEMINI_MODEL_NAME,
+      model: modelName,
       contents: prompt,
       config: {
         responseMimeType: "application/json",
-        // For gemini-2.5-flash-preview-04-17, omit thinkingConfig for higher quality (default enabled)
+        // Omit thinkingConfig for quality tasks (default enabled for flash models)
       }
     });
     const questions = parseJsonFromString<string[]>(response.text, response.text);
@@ -121,10 +128,11 @@ export interface EvaluatedAnswers {
 export const evaluateAnswersAndGenerateFollowUps = async (
   topic: string,
   questionsAsked: ClarificationQuestion[],
-  userAnswers: UserAnswer[] 
+  userAnswers: UserAnswer[],
+  researchMode: ResearchMode
 ): Promise<EvaluatedAnswers> => {
   if (!API_KEY || !ai) throw new Error("API Key not configured or Gemini client not initialized.");
-
+  const modelName = getModelNameForMode(researchMode);
   const formattedPrevQA = userAnswers.map(ua => {
     const question = questionsAsked.find(q => q.id === ua.questionId);
     return `Q: ${question ? question.question : `ID ${ua.questionId}`}\nA: ${ua.answer}`;
@@ -166,11 +174,11 @@ Example (if answers are sufficient):
 
   try {
     const response = await geminiApiCallWithRetry({
-      model: GEMINI_MODEL_NAME,
+      model: modelName,
       contents: prompt,
       config: {
         responseMimeType: "application/json",
-        // For gemini-2.5-flash-preview-04-17, omit thinkingConfig for higher quality (default enabled)
+        // Omit thinkingConfig for quality tasks (default enabled for flash models)
       }
     });
     const evaluation = parseJsonFromString<EvaluatedAnswers>(response.text, response.text);
@@ -189,8 +197,9 @@ Example (if answers are sufficient):
 };
 
 
-export const generateResearchStrategy = async (topic: string, accumulatedAnswers: UserAnswer[]): Promise<string> => {
+export const generateResearchStrategy = async (topic: string, accumulatedAnswers: UserAnswer[], researchMode: ResearchMode): Promise<string> => {
   if (!API_KEY || !ai) throw new Error("API Key not configured or Gemini client not initialized.");
+  const modelName = getModelNameForMode(researchMode);
   const formattedAnswers = accumulatedAnswers.map(ans => `- Question: ${ans.questionText}\n  Answer: ${ans.answer}`).join("\n\n");
 
   const prompt = `
@@ -206,9 +215,9 @@ Output ONLY the research strategy as a single block of text. No extra formatting
 `;
   try {
     const response = await geminiApiCallWithRetry({
-      model: GEMINI_MODEL_NAME,
+      model: modelName,
       contents: prompt,
-      // For gemini-2.5-flash-preview-04-17, omit thinkingConfig for higher quality (default enabled)
+      // Omit thinkingConfig for quality tasks (default enabled for flash models)
     });
     return (response.text || "").trim();
   } catch (error) {
@@ -239,11 +248,13 @@ export const decideNextResearchAction = async (
   researchMode: ResearchMode
 ): Promise<{ action: string; reason: string; shouldStop: boolean }> => {
   if (!API_KEY || !ai) throw new Error("API Key not configured or Gemini client not initialized.");
+  const modelName = getModelNameForMode(researchMode);
   
   const historySummary = summarizeHistoryForContext(executedSteps);
   const iterationLimitNote = researchMode === 'deeper' 
-    ? "You are in 'Deeper Research Mode'. Continue as long as valuable new information relevant to the strategy can be found. The iteration count is not a strict limit; focus on comprehensive coverage or diminishing returns."
-    : `You are in 'Normal Mode'. Aim for thorough coverage within approximately ${maxIterations} iterations.`;
+    ? `You are in 'Deeper Research Mode' using the ${DEEPER_MODEL_NAME} model. Aim for comprehensive coverage within approximately ${maxIterations} iterations, focusing on depth and quality.`
+    : `You are in 'Normal Mode' using the ${NORMAL_MODEL_NAME} model. Aim for thorough coverage within approximately ${maxIterations} iterations.`;
+
 
   const prompt = `
 You are an AI research agent driving an iterative investigation.
@@ -263,21 +274,14 @@ Your goal is to progressively deepen the understanding of the topic, explore var
 **CRITICAL: Avoid Redundancy and Seek Genuine Novelty:**
 1.  **Thoroughly Analyze Past Actions:** Critically review the 'Summary of Previous Research Actions and Key Findings'. Pay close attention to the *intent* and *scope* of each past action and its outcome.
 2.  **Strictly Prohibit Semantic Duplicates:** Do NOT generate an action (search query or question) that is essentially a rephrasing or a slight variation of a previous action IF that previous action already yielded relevant information or addressed that specific information need.
-    *   **Example of WHAT TO AVOID for a topic like "Apple M5 chip":** If a previous action was "Latest rumors and analyst predictions for Apple M5 chip specifications" and it returned useful data on specs, DO NOT then generate "Apple M5 chip rumors specifications and release date predictions" or "Apple M5 chip leaks, rumors, and analyst predictions on architecture, performance, and release date" if these are just covering the same ground on 'specifications' or 'rumors'. The goal is not to get more of the same, but to get NEW information.
-3.  **Prioritize New Angles:** If a general area (e.g., 'M5 chip specifications') has been touched upon, your new action **MUST** aim to:
-    *   Explore a **distinctly different aspect** or sub-topic (e.g., if specs covered, now ask "Potential manufacturing challenges for Apple M5 chip" or "Expected impact of M5 chip on specific Mac models").
-    *   Seek **contrasting viewpoints, alternative perspectives, or comparative analysis** (e.g., "Analyst A's M5 predictions vs Analyst B's M5 predictions" or "How might M5 compare to competitor X's upcoming chip?").
-    *   Delve into a **related sub-topic not yet covered in depth** (e.g., "M5 chip power efficiency targets" or "M5 Neural Engine improvements focus").
-    *   Find **more recent information** ONLY if previous findings are explicitly outdated and the topic is highly time-sensitive.
-    *   Synthesize or compare findings from multiple previous steps if a higher-level understanding is now appropriate and hasn't been done.
-4.  **Objective:** Expand the knowledge base and build a comprehensive understanding by uncovering *new facets* of the topic. Do not re-query for slight variations of already explored information. Your reasoning should explicitly state how the new action seeks novel information.
+3.  **Prioritize New Angles:** If a general area has been touched upon, your new action **MUST** aim to explore a **distinctly different aspect**, delve into a **related sub-topic not yet covered in depth**, or seek **contrasting viewpoints**.
+4.  **Objective:** Expand the knowledge base and build a comprehensive understanding by uncovering *new facets* of the topic. Your reasoning should explicitly state how the new action seeks novel information.
 
 Also, provide:
 1.  A brief **reason** for choosing this action (1-2 sentences), explaining how it builds upon or DIVERGES from previous findings to gather NEW insights.
 2.  A boolean flag **shouldStop**: 
-    - Set to \`true\` if you believe sufficient information has been gathered across multiple dimensions of the topic to synthesize a comprehensive report, OR if further specific actions, even when aiming for novelty, are unlikely to yield significantly new insights according to the strategy and the novelty guidelines above.
-    - If in 'Normal Mode' and approaching \`maxIterations\` (\`${maxIterations}\`), consider stopping if broad coverage is achieved.
-    - If in 'Deeper Mode', \`shouldStop\` should generally be \`false\` unless the topic is truly comprehensively covered or returns are clearly diminishing even when attempting diverse new angles.
+    - Set to \`true\` if you believe sufficient information has been gathered across multiple dimensions of the topic to synthesize a comprehensive report, OR if further specific actions are unlikely to yield significantly new insights according to the strategy and novelty guidelines.
+    - If approaching \`maxIterations\` (\`${maxIterations}\`), consider stopping if broad coverage is achieved.
     - If it's very early (e.g., less than 5-10 iterations for normal topics, or 15-20 for complex ones unless the topic is very narrow and strategy fully covered quickly), \`shouldStop\` should generally be \`false\`.
     Otherwise, set to \`false\`.
 
@@ -290,17 +294,17 @@ Also, provide:
 `; 
   try {
     const response = await geminiApiCallWithRetry({
-      model: GEMINI_MODEL_NAME, 
+      model: modelName, 
       contents: prompt,
       config: {
         responseMimeType: "application/json",
-        // For gemini-2.5-flash-preview-04-17, omit thinkingConfig for higher quality (default enabled)
+        // Omit thinkingConfig for quality tasks (default enabled for flash models)
       }
     });
     const decision = parseJsonFromString<{ action: string; reason: string; shouldStop: boolean }>(response.text, response.text);
     if (decision && typeof decision.action === 'string' && typeof decision.reason === 'string' && typeof decision.shouldStop === 'boolean') {
-      if (researchMode === 'normal' && iteration >= maxIterations && !decision.shouldStop) {
-        return { ...decision, shouldStop: true, reason: decision.reason + " (Forced stop due to max iterations in Normal Mode)" };
+      if (iteration >= maxIterations && !decision.shouldStop) { // Applies to both modes now
+        return { ...decision, shouldStop: true, reason: decision.reason + ` (Forced stop due to max iterations limit of ${maxIterations})` };
       }
       return decision;
     }
@@ -312,15 +316,19 @@ Also, provide:
   }
 };
 
-export const executeResearchStep = async (stepQuery: string): Promise<{ text: string; sources: Source[] }> => {
+export const executeResearchStep = async (stepQuery: string, researchMode: ResearchMode): Promise<{ text: string; sources: Source[] }> => {
   if (!API_KEY || !ai) throw new Error("API Key not configured or Gemini client not initialized.");
+  const modelName = getModelNameForMode(researchMode); // Model choice might influence search capabilities if API evolves
   try {
+    // For Google Search, the model primarily orchestrates the search.
+    // The specific text generation capabilities of flash vs pro might matter less here
+    // than for synthesis tasks, but we use the mode-specific model for consistency.
     const response = await geminiApiCallWithRetry({
-      model: GEMINI_MODEL_NAME, 
+      model: modelName, 
       contents: `Perform a web search and provide a comprehensive answer for the following query: "${stepQuery}". Focus on factual information and cite sources.`,
       config: {
         tools: [{ googleSearch: {} }],
-        // For gemini-2.5-flash-preview-04-17 with Google Search, omit thinkingConfig.
+        // Per guidelines: DO NOT add other configs (like thinkingConfig or responseMimeType) when using googleSearch.
       }
     });
     
@@ -345,9 +353,10 @@ export const executeResearchStep = async (stepQuery: string): Promise<{ text: st
   }
 };
 
-export const summarizeText = async (textToSummarize: string, topic?: string): Promise<string> => {
+export const summarizeText = async (textToSummarize: string, researchMode: ResearchMode, topic?: string): Promise<string> => {
   if (!API_KEY || !ai) throw new Error("API Key not configured or Gemini client not initialized.");
   if (!(textToSummarize || "").trim()) return "No content to summarize.";
+  const modelName = getModelNameForMode(researchMode);
   
   const prompt = `
 Summarize the key information from the following text in 2-4 concise sentences.
@@ -363,9 +372,9 @@ Output ONLY the summary. Do not include any introductory phrases like "The summa
 `;
   try {
     const response = await geminiApiCallWithRetry({
-      model: GEMINI_MODEL_NAME, 
+      model: modelName, 
       contents: prompt,
-      // For gemini-2.5-flash-preview-04-17, omit thinkingConfig for higher quality (default enabled)
+      // Omit thinkingConfig for quality tasks (default enabled for flash models)
     });
     return (response.text || "").trim();
   } catch (error) {
@@ -377,19 +386,22 @@ Output ONLY the summary. Do not include any introductory phrases like "The summa
 export const synthesizeReport = async (
   topic: string,
   strategy: string,
-  executedSteps: ExecutedStepOutcome[]
+  executedSteps: ExecutedStepOutcome[],
+  researchMode: ResearchMode
 ): Promise<string> => {
   if (!API_KEY || !ai) throw new Error("API Key not configured or Gemini client not initialized.");
+  const modelName = getModelNameForMode(researchMode);
 
   const findingsDetails = executedSteps.map((s, index) => 
     `Step ${index + 1}: Action Taken: ${s.action}\nReasoning: ${s.reason || 'N/A'}\nSummary of Findings: ${s.summary}\nSources: ${s.sources.map(src => `[${src.title || src.uri}](${src.uri})`).join(', ') || 'None'}`
   ).join('\n\n---\n\n');
 
   const prompt = `
-You are a professional research analyst tasked with writing an exceptionally detailed and comprehensive final report. Your goal is to synthesize ALL learnings from the research into a human-readable, extensive document.
+You are a professional research analyst tasked with writing an exceptionally detailed and comprehensive final report using the ${modelName} model. Your goal is to synthesize ALL learnings from the research into a human-readable, extensive document.
 
 **Main Research Topic (User's Query):** "${topic}"
 **Guiding Research Strategy (Developed Approach):** "${strategy}"
+**Research Mode Used:** ${researchMode} (using model: ${modelName})
 
 **Learnings from Previous Research (Detailed Log of Actions, Findings, and Sources):**
 ${findingsDetails || "No research steps were executed or no findings were recorded."}
@@ -409,7 +421,7 @@ ${findingsDetails || "No research steps were executed or no findings were record
 3.  **Structure and Markdown Usage:**
     *   Follow a standard report structure:
         *   **Title:** A clear, descriptive title (e.g., \`# Report Title\`).
-        *   **Introduction:** (Use \`## Introduction\`) Briefly introduce the topic, the research strategy, and the report's purpose.
+        *   **Introduction:** (Use \`## Introduction\`) Briefly introduce the topic, the research strategy, the research mode used, and the report's purpose.
         *   **Main Body:** Organize findings thematically or chronologically using \`## Section Title\` and \`### Subsection Title\`.
             *   Synthesize, do not just list summaries. Discuss key insights, evidence, and data points.
             *   **If the research topic/findings are comparative,** a detailed markdown comparison table is highly encouraged.
@@ -433,7 +445,7 @@ ${findingsDetails || "No research steps were executed or no findings were record
 
 ---
 **Markdown Table Example (for comparative topics):**
-This illustrates how to structure a comparison. Adapt based on the actual research topic. If the topic is "Analysis of Apple M5 Chip", your sections would be like "## Architecture Predictions", "## Performance", not necessarily a direct A vs B table unless comparing M5 to M4.
+This illustrates how to structure a comparison. Adapt based on the actual research topic.
 
 If comparing "Agent X" vs "Agent Y":
 \`\`\`markdown
@@ -447,10 +459,7 @@ This report compares Agent X and Agent Y based on research into their workflow c
 | Workflow Component      | Agent X Details & Analysis                                                                 | Agent Y Details & Analysis                                                                          |
 |-------------------------|--------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
 | **Input Handling**      | Agent X accepts text prompts and allows file uploads for context. It may ask initial clarifying questions. [Relevant Source A](URL_A_1) | Agent Y uses a web interface for prompts, also supporting file uploads. It auto-generates a research plan for user review. [Source B](URL_B_1) |
-| **Task Decomposition**  | Internally breaks down complex queries. This plan is not typically user-visible. [Source A2](URL_A_2)      | Explicitly formulates a multi-step plan which the user can edit before execution. [Relevant Source C](URL_C_1) |
-| *Sub-aspect of Task*  | Further details on Agent X's decomposition... [Source A3](URL_A_3)                             | Details on how Agent Y handles sub-tasks in its plan... [Source D](URL_D_1)                             |
-| **Query Generation**    | Autonomously formulates web search queries based on evolving understanding. [Source E](URL_E_1)         | Leverages existing search infrastructure, iteratively refining queries. [Source F](URL_F_1)                 |
-| ... (other components like Information Retrieval, Reasoning, Output Structuring, etc.) ... | ...                                                                                        | ...                                                                                                 |
+| ... (other components) ... | ...                                                                                        | ...                                                                                                 |
 
 ## Conclusion
 In summary, Agent X excels in ..., while Agent Y offers strengths in ...
@@ -463,9 +472,9 @@ Your entire response must be the raw markdown content of the report. No other te
 
   try {
     const response = await geminiApiCallWithRetry({
-      model: GEMINI_MODEL_NAME, 
+      model: modelName, 
       contents: prompt,
-      // For gemini-2.5-flash-preview-04-17 (report synthesis), omit thinkingConfig for higher quality (default enabled).
+      // Omit thinkingConfig for quality tasks (default enabled for flash models)
     });
     return response.text || "";
   } catch (error) {
