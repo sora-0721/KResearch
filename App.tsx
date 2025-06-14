@@ -51,14 +51,14 @@ const MarkdownRenderer: React.FC<{ text: string }> = React.memo(({ text }) => {
   );
 });
 
-const NORMAL_MODE_MAX_ITERATIONS = 25;
-const DEEPER_MODE_MAX_ITERATIONS = 25; 
+const DEFAULT_MAX_ITERATIONS = 25; // Default for the input field and reset
 const API_KEY_CONFIGURED = !!process.env.API_KEY;
 
 
 const App: React.FC = () => {
   const [researchTopic, setResearchTopic] = useState<string>('');
   const [researchMode, setResearchMode] = useState<ResearchMode>('normal');
+  const [maxIterations, setMaxIterations] = useState<number>(DEFAULT_MAX_ITERATIONS);
   const [clarificationQuestions, setClarificationQuestions] = useState<ClarificationQuestion[]>([]);
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({}); // Answers for the current batch of questions
   const [accumulatedAnswers, setAccumulatedAnswers] = useState<UserAnswer[]>([]); // All answers from all clarification rounds
@@ -92,6 +92,7 @@ const App: React.FC = () => {
   const resetState = useCallback(() => {
     setResearchTopic('');
     setResearchMode('normal');
+    setMaxIterations(DEFAULT_MAX_ITERATIONS);
     setClarificationQuestions([]);
     setUserAnswers({});
     setAccumulatedAnswers([]);
@@ -113,6 +114,10 @@ const App: React.FC = () => {
       setError("Please enter a research topic.");
       return;
     }
+    if (maxIterations < 1 || maxIterations > 500) { 
+      setError("Please enter a maximum iteration count between 1 and 500.");
+      return;
+    }
     setIsLoading(true);
     setLoadingMessage("Generating initial clarification questions...");
     setError(null);
@@ -120,7 +125,7 @@ const App: React.FC = () => {
     setAccumulatedAnswers([]); 
     setUserAnswers({}); 
     clarificationRoundRef.current = 1;
-    addLogEntry('system', `Topic: "${researchTopic}". Mode: ${researchMode}. Generating initial clarification questions (Round ${clarificationRoundRef.current})...`);
+    addLogEntry('system', `Topic: "${researchTopic}". Mode: ${researchMode}. Max Iterations: ${maxIterations}. Generating initial clarification questions (Round ${clarificationRoundRef.current})...`);
     
     try {
       const questions = await generateInitialClarificationQuestions(researchTopic, researchMode);
@@ -135,7 +140,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [researchTopic, researchMode, addLogEntry]);
+  }, [researchTopic, researchMode, maxIterations, addLogEntry]);
 
   const handleAnswersSubmit = useCallback(async () => {
     const currentAnswersArray: UserAnswer[] = clarificationQuestions
@@ -226,8 +231,8 @@ const App: React.FC = () => {
     setFinalReport('');
     researchCancelledRef.current = false;
     setCurrentPhase('EXECUTING');
-    addLogEntry('system', `Starting iterative research (Mode: ${researchMode}). Strategy: "${researchStrategy.substring(0,100)}..."`);
-  }, [researchStrategy, addLogEntry, researchMode]);
+    addLogEntry('system', `Starting iterative research (Mode: ${researchMode}, Max Iterations: ${maxIterations}). Strategy: "${researchStrategy.substring(0,100)}..."`);
+  }, [researchStrategy, addLogEntry, researchMode, maxIterations]);
   
   const handleCancelResearch = () => {
     researchCancelledRef.current = true;
@@ -243,8 +248,7 @@ const App: React.FC = () => {
       
       let currentIter = 0;
       let stopResearch = false;
-      const maxIterations = researchMode === 'deeper' ? DEEPER_MODE_MAX_ITERATIONS : NORMAL_MODE_MAX_ITERATIONS;
-      const iterationDisplaySuffix = `/${maxIterations}`; // Both modes have same max iteration now
+      const iterationDisplaySuffix = `/${maxIterations}`; 
 
       while(currentIter < maxIterations && !stopResearch && !researchCancelledRef.current) {
         setLoadingMessage(`Research Iteration ${currentIter + 1}${iterationDisplaySuffix}... Deciding next action.`);
@@ -256,7 +260,7 @@ const App: React.FC = () => {
             researchStrategy, 
             executedSteps, 
             currentIter + 1,
-            maxIterations,
+            maxIterations, 
             researchMode
           );
 
@@ -298,7 +302,7 @@ const App: React.FC = () => {
           if (decision.shouldStop) {
             addLogEntry('system', "AI determined sufficient information gathered or criteria met to stop iterative research.");
           }
-          if ((currentIter + 1) >= maxIterations && !stopResearch) { // Check applicable to both modes
+          if ((currentIter + 1) >= maxIterations && !stopResearch) { 
              addLogEntry('system', `Reached max iterations (${maxIterations}). Stopping research.`);
              stopResearch = true;
           }
@@ -343,7 +347,7 @@ const App: React.FC = () => {
 
     runResearchLoop();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPhase, researchTopic, researchStrategy, researchMode, addLogEntry]);
+  }, [currentPhase, researchTopic, researchStrategy, researchMode, maxIterations, addLogEntry]); 
 
   const ActionButton: React.FC<{ onClick: () => void; children: React.ReactNode; className?: string; disabled?: boolean }> = ({ onClick, children, className, disabled }) => (
     <button
@@ -368,28 +372,64 @@ const App: React.FC = () => {
         disabled={isLoading}
         aria-label="Research Topic Input"
       />
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-300">Research Mode:</label>
-        <div className="flex space-x-4">
-          {(['normal', 'deeper'] as ResearchMode[]).map(mode => (
-            <label key={mode} className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="radio"
-                name="researchMode"
-                value={mode}
-                checked={researchMode === mode}
-                onChange={() => setResearchMode(mode)}
-                className="form-radio h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-500"
-                disabled={isLoading}
-              />
-              <span className="text-gray-300 capitalize">{mode} Mode (~{NORMAL_MODE_MAX_ITERATIONS} iterations)</span>
-            </label>
-          ))}
+      <div className="space-y-3">
+        <div>
+          <label className="block text-sm font-medium text-gray-300">Research Mode:</label>
+          <div className="flex space-x-4 mt-1">
+            {(['normal', 'deeper'] as ResearchMode[]).map(mode => (
+              <label key={mode} className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="researchMode"
+                  value={mode}
+                  checked={researchMode === mode}
+                  onChange={() => setResearchMode(mode)}
+                  className="form-radio h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-500"
+                  disabled={isLoading}
+                />
+                <span className="text-gray-300 capitalize">{mode} Mode</span>
+              </label>
+            ))}
+          </div>
+          {researchMode === 'deeper' && <p className="text-xs text-gray-500 mt-1">Deeper mode uses a more advanced model for higher quality analysis.</p>}
         </div>
-         {researchMode === 'deeper' && <p className="text-xs text-gray-500 mt-1">Deeper mode uses a more advanced model ('gemini-2.5-pro') for higher quality analysis.</p>}
-         {researchMode === 'normal' && <p className="text-xs text-gray-500 mt-1">Normal mode uses a fast model ('gemini-2.5-flash') for quicker results.</p>}
+        
+        <div>
+          <label htmlFor="max-iterations" className="block text-sm font-medium text-gray-300">Maximum Research Iterations:</label>
+          <input
+            type="number"
+            id="max-iterations"
+            value={maxIterations}
+            onChange={(e) => {
+                const val = parseInt(e.target.value, 10);
+                if (!isNaN(val)) {
+                     // Enforce min/max here if typed directly
+                    if (val < 1) setMaxIterations(1);
+                    else if (val > 500) setMaxIterations(500);
+                    else setMaxIterations(val);
+                } else if (e.target.value === '') {
+                     setMaxIterations(0); // Allows temporary empty state for typing
+                }
+            }}
+            onBlur={(e) => { // Ensure a valid number is set on blur if input is empty or out of range
+                if (maxIterations === 0 || isNaN(maxIterations)) setMaxIterations(DEFAULT_MAX_ITERATIONS);
+                else if (maxIterations < 1) setMaxIterations(1);
+                else if (maxIterations > 500) setMaxIterations(500);
+            }}
+            min="1"
+            max="500" 
+            className="mt-1 w-24 p-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:bg-gray-600"
+            disabled={isLoading}
+            aria-label="Maximum Research Iterations"
+          />
+           <p className="text-xs text-gray-500 mt-1">Defines how many research steps the AI can take (1-500).</p>
+        </div>
       </div>
-      <ActionButton onClick={handleTopicSubmit} className="w-full flex items-center justify-center space-x-2">
+      <ActionButton 
+        onClick={handleTopicSubmit} 
+        className="w-full flex items-center justify-center space-x-2"
+        disabled={isLoading || !researchTopic.trim() || maxIterations < 1 || maxIterations > 500}
+      >
         <PencilIcon /> <span>Next: Clarify Topic</span>
       </ActionButton>
     </div>
@@ -455,7 +495,7 @@ const App: React.FC = () => {
         <p className="text-gray-400 whitespace-pre-wrap">{researchStrategy}</p>
       </div>
       <ActionButton onClick={handleStartIterativeResearch} className="w-full flex items-center justify-center space-x-2">
-        <PlayIcon /> <span>Start Deep Research ({researchMode} mode)</span>
+        <PlayIcon /> <span>Start Deep Research ({researchMode} mode, {maxIterations} iter.)</span>
       </ActionButton>
        <button onClick={() => { 
            setCurrentPhase('ITERATIVE_CLARIFICATION'); 
@@ -476,7 +516,7 @@ const App: React.FC = () => {
       </div>
       {(isLoading || (researchCancelledRef.current && loadingMessage)) && <LoadingSpinner message={loadingMessage || (researchCancelledRef.current ? "Cancelling research..." : "Processing...")} />}
       <div className="mt-4 p-3 bg-gray-800 rounded-lg max-h-[60vh] overflow-y-auto text-sm" ref={logEndRef}>
-        <h3 className="text-lg font-semibold text-gray-300 mb-2 sticky top-0 bg-gray-800 py-1 z-10">Live Research Log ({researchMode} mode):</h3>
+        <h3 className="text-lg font-semibold text-gray-300 mb-2 sticky top-0 bg-gray-800 py-1 z-10">Live Research Log (Mode: {researchMode}, Max Iterations: {maxIterations}):</h3>
         {researchLog.map((log) => (
           <div key={log.id} className={`mb-2 p-1.5 rounded-md border-l-4 ${
             log.type === 'error' ? 'border-red-500 bg-red-900 bg-opacity-30' : 
@@ -518,7 +558,7 @@ const App: React.FC = () => {
   const renderReportPhase = () => (
     <div className="space-y-6 p-2">
       <h2 className="text-2xl font-semibold text-center text-blue-300">Deep Research Report</h2>
-      <p className="text-gray-400"><span className="font-semibold text-gray-300">Original Topic:</span> {researchTopic} ({researchMode} mode)</p>
+      <p className="text-gray-400"><span className="font-semibold text-gray-300">Original Topic:</span> {researchTopic} ({researchMode} mode, {maxIterations} iterations)</p>
       
       <div className="p-4 bg-gray-800 rounded-lg prose prose-invert max-w-none prose-a:text-blue-400 hover:prose-a:text-blue-300 max-h-[60vh] overflow-y-auto">
         <h3 className="text-xl font-semibold text-gray-200 border-b border-gray-700 pb-2 mb-3">Generated Report</h3>
