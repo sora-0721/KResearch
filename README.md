@@ -1,4 +1,3 @@
-
 # KResearch
 
 KResearch is an advanced web application that leverages the Google Gemini API to conduct in-depth research on a user-specified topic. It features an iterative process that includes clarifying the research scope with the user, devising a research strategy, performing automated research actions using Google Search, and finally, synthesizing a comprehensive, well-cited report. The entire research process is streamed live to the user.
