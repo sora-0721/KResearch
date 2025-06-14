@@ -4,9 +4,9 @@ import { Source, GroundingChunk, UserAnswer, ExecutedStepOutcome, ClarificationQ
 
 const API_KEY = process.env.API_KEY;
 
-// Define model names based on research mode
-const NORMAL_MODEL_NAME = "gemini-2.5-flash-preview-05-20";
-const DEEPER_MODEL_NAME = "gemini-2.5-pro-preview-06-05";
+// Define model names based on user's specific guidelines for research modes
+const NORMAL_MODE_MODEL = "gemini-2.5-flash-preview-05-20";
+const DEEPER_MODE_MODEL = "gemini-2.5-pro-preview-06-05";
 
 if (!API_KEY) {
   console.error("API_KEY is not set. Please ensure the process.env.API_KEY environment variable is configured. The app may not function correctly.");
@@ -18,7 +18,10 @@ const MAX_RETRIES = 3;
 const BASE_RETRY_DELAY_MS = 1000;
 
 const getModelNameForMode = (mode: ResearchMode): string => {
-  return mode === 'deeper' ? DEEPER_MODEL_NAME : NORMAL_MODEL_NAME;
+  if (mode === 'deeper') {
+    return DEEPER_MODE_MODEL;
+  }
+  return NORMAL_MODE_MODEL; // Default to normal mode model
 };
 
 async function geminiApiCallWithRetry(
@@ -28,13 +31,12 @@ async function geminiApiCallWithRetry(
   let attempts = 0;
   while (attempts < MAX_RETRIES) {
     try {
-      // ThinkingConfig considerations:
-      // For flash models (like NORMAL_MODEL_NAME):
-      // - Quality tasks (most non-search tasks): Omit thinkingConfig (default enabled for higher quality).
-      // - Low latency tasks (not applicable here): Use { thinkingBudget: 0 }.
-      // - Google Search tasks: Omit thinkingConfig.
-      // For pro models (like DEEPER_MODEL_NAME): thinkingConfig is not applicable/ignored.
-      // The calling functions are responsible for setting the config object correctly.
+      // thinkingConfig consideration:
+      // For "gemini-2.5-flash-preview-05-20" (normal mode model), thinkingConfig can be used.
+      // For "gemini-2.5-pro-preview-06-05" (deeper mode model), thinkingConfig is not applicable based on current general Gemini guidelines.
+      // We will omit thinkingConfig by default here; if specific tasks need it (e.g., low latency for flash),
+      // it would need to be added to the params.config for that specific call.
+      // For now, defaulting to higher quality for both by omitting it (flash enables it by default).
       const response = await ai.models.generateContent(params);
       return response;
     } catch (error: any) {
@@ -106,7 +108,6 @@ Example for topic "Renewable Energy Impact":
       contents: prompt,
       config: {
         responseMimeType: "application/json",
-        // Omit thinkingConfig for quality tasks (default enabled for flash models)
       }
     });
     const questions = parseJsonFromString<string[]>(response.text, response.text);
@@ -178,7 +179,6 @@ Example (if answers are sufficient):
       contents: prompt,
       config: {
         responseMimeType: "application/json",
-        // Omit thinkingConfig for quality tasks (default enabled for flash models)
       }
     });
     const evaluation = parseJsonFromString<EvaluatedAnswers>(response.text, response.text);
@@ -217,7 +217,6 @@ Output ONLY the research strategy as a single block of text. No extra formatting
     const response = await geminiApiCallWithRetry({
       model: modelName,
       contents: prompt,
-      // Omit thinkingConfig for quality tasks (default enabled for flash models)
     });
     return (response.text || "").trim();
   } catch (error) {
@@ -251,9 +250,7 @@ export const decideNextResearchAction = async (
   const modelName = getModelNameForMode(researchMode);
   
   const historySummary = summarizeHistoryForContext(executedSteps);
-  const iterationLimitNote = researchMode === 'deeper' 
-    ? `You are in 'Deeper Research Mode' using the ${DEEPER_MODEL_NAME} model. Aim for comprehensive coverage within approximately ${maxIterations} iterations, focusing on depth and quality.`
-    : `You are in 'Normal Mode' using the ${NORMAL_MODEL_NAME} model. Aim for thorough coverage within approximately ${maxIterations} iterations.`;
+  const iterationLimitNote = `You are in '${researchMode} Mode'. Aim for thorough coverage within approximately ${maxIterations} iterations. Model used: ${modelName}.`;
 
 
   const prompt = `
@@ -298,12 +295,11 @@ Also, provide:
       contents: prompt,
       config: {
         responseMimeType: "application/json",
-        // Omit thinkingConfig for quality tasks (default enabled for flash models)
       }
     });
     const decision = parseJsonFromString<{ action: string; reason: string; shouldStop: boolean }>(response.text, response.text);
     if (decision && typeof decision.action === 'string' && typeof decision.reason === 'string' && typeof decision.shouldStop === 'boolean') {
-      if (iteration >= maxIterations && !decision.shouldStop) { // Applies to both modes now
+      if (iteration >= maxIterations && !decision.shouldStop) { 
         return { ...decision, shouldStop: true, reason: decision.reason + ` (Forced stop due to max iterations limit of ${maxIterations})` };
       }
       return decision;
@@ -318,17 +314,14 @@ Also, provide:
 
 export const executeResearchStep = async (stepQuery: string, researchMode: ResearchMode): Promise<{ text: string; sources: Source[] }> => {
   if (!API_KEY || !ai) throw new Error("API Key not configured or Gemini client not initialized.");
-  const modelName = getModelNameForMode(researchMode); // Model choice might influence search capabilities if API evolves
+  const modelName = getModelNameForMode(researchMode); // This model is used for the "instruction" part of the Google Search call.
+                                                // The actual search capability is a tool, not tied to this model's text generation directly.
   try {
-    // For Google Search, the model primarily orchestrates the search.
-    // The specific text generation capabilities of flash vs pro might matter less here
-    // than for synthesis tasks, but we use the mode-specific model for consistency.
     const response = await geminiApiCallWithRetry({
-      model: modelName, 
+      model: modelName, // As per guidelines, this should be a text model that supports tools. Both selected models should support this.
       contents: `Perform a web search and provide a comprehensive answer for the following query: "${stepQuery}". Focus on factual information and cite sources.`,
       config: {
         tools: [{ googleSearch: {} }],
-        // Per guidelines: DO NOT add other configs (like thinkingConfig or responseMimeType) when using googleSearch.
       }
     });
     
@@ -374,7 +367,6 @@ Output ONLY the summary. Do not include any introductory phrases like "The summa
     const response = await geminiApiCallWithRetry({
       model: modelName, 
       contents: prompt,
-      // Omit thinkingConfig for quality tasks (default enabled for flash models)
     });
     return (response.text || "").trim();
   } catch (error) {
@@ -390,95 +382,73 @@ export const synthesizeReport = async (
   researchMode: ResearchMode
 ): Promise<string> => {
   if (!API_KEY || !ai) throw new Error("API Key not configured or Gemini client not initialized.");
-  const modelName = getModelNameForMode(researchMode);
+  const modelName = getModelNameForMode(researchMode); // Model for both report generation steps
 
   const findingsDetails = executedSteps.map((s, index) => 
     `Step ${index + 1}: Action Taken: ${s.action}\nReasoning: ${s.reason || 'N/A'}\nSummary of Findings: ${s.summary}\nSources: ${s.sources.map(src => `[${src.title || src.uri}](${src.uri})`).join(', ') || 'None'}`
   ).join('\n\n---\n\n');
 
-  const prompt = `
-You are a professional research analyst tasked with writing an exceptionally detailed and comprehensive final report using the ${modelName} model. Your goal is to synthesize ALL learnings from the research into a human-readable, extensive document.
+  // Step 1: Generate Initial Report
+  const initialReportPrompt = `Given the following query from the user, write a final report on the topic using the learnings from research. Make it as as detailed as possible, aim for 3 or more pages, include ALL the learnings from research:\n<query>${topic}</query>
+Here are all the learnings from previous research:\n<learnings>\n${findingsDetails || "No research steps were executed or no findings were recorded."}\n</learnings>
+You need to write this report like a human researcher. Humans don not wrap their writing in markdown blocks. Contains diverse data information such as table, katex formulas, mermaid diagrams, etc. in the form of markdown syntax. **DO NOT** output anything other than report.`;
 
-**Main Research Topic (User's Query):** "${topic}"
-**Guiding Research Strategy (Developed Approach):** "${strategy}"
-**Research Mode Used:** ${researchMode} (using model: ${modelName})
+  let initialReportText = "";
+  try {
+    console.log(`Synthesizing initial report using model: ${modelName}...`);
+    const initialResponse = await geminiApiCallWithRetry({
+      model: modelName, 
+      contents: initialReportPrompt,
+    });
+    initialReportText = (initialResponse.text || "").trim();
+    if (!initialReportText) {
+        console.warn("Initial report generation resulted in empty text. Using a placeholder.");
+        initialReportText = `# ${topic}\n\nInitial report generation failed to produce content. Learnings:\n${findingsDetails}`;
+    }
+    console.log("Initial report generated, length:", initialReportText.length);
+  } catch (error) {
+    console.error("Error synthesizing initial report:", error);
+    throw new Error(`Failed to synthesize initial report: ${error instanceof Error ? error.message : String(error)}`);
+  }
 
-**Learnings from Previous Research (Detailed Log of Actions, Findings, and Sources):**
-${findingsDetails || "No research steps were executed or no findings were recorded."}
+  // Step 2: Elaborate Report
+  const systemInstructionForElaboration = `Focus on elaborating the existing points, adding more detail, examples, and explanations where appropriate, while strictly adhering to the information presented in the research findings detailed in the initial artifact. Ensure the report remains coherent and well-structured. The original research topic was: "${topic}". The guiding research strategy was: "${strategy}". Avoid introducing new information not present in the initial artifact or the original research learnings.`;
+  
+  const elaborationPrompt = `You are tasked with re-writing the following artifact to be longest.
+Ensure you do not change the meaning or story behind the artifact, simply update the artifacts length to be longest.
 
-**CRITICAL INSTRUCTIONS FOR REPORT GENERATION:**
+Here is the current content of the artifact:
+<artifact>
+${initialReportText}
+</artifact>
 
-1.  **Length and Detail:**
-    *   The report must be **as detailed and comprehensive as possible**. Aim for an extensive document, potentially spanning the equivalent of several pages if the gathered information supports this depth. Elucidate on all facets of the topic covered by the research.
-    *   **Thoroughly incorporate ALL learnings** presented in the "Learnings from Previous Research" section. No piece of information should be omitted if it's relevant. Expand on summaries, connect disparate findings, and provide a holistic view.
+When the following systemInstruction is not empty, you can also think further about artifacts in conjunction with systemInstruction.
+<systemInstruction>
+${systemInstructionForElaboration}
+</systemInstruction>
 
-2.  **Human-like Tone and Formatting:**
-    *   Write this report as a human researcher would. The tone should be objective, analytical, and informative.
-    *   The output **must be ONLY the report content itself**.
-    *   **DO NOT** wrap your entire response in markdown code fences (e.g., \`\`\`markdown ... \`\`\`).
-    *   **DO NOT** include any explanatory text, preambles, or postscripts before or after the report. Just the report.
-
-3.  **Structure and Markdown Usage:**
-    *   Follow a standard report structure:
-        *   **Title:** A clear, descriptive title (e.g., \`# Report Title\`).
-        *   **Introduction:** (Use \`## Introduction\`) Briefly introduce the topic, the research strategy, the research mode used, and the report's purpose.
-        *   **Main Body:** Organize findings thematically or chronologically using \`## Section Title\` and \`### Subsection Title\`.
-            *   Synthesize, do not just list summaries. Discuss key insights, evidence, and data points.
-            *   **If the research topic/findings are comparative,** a detailed markdown comparison table is highly encouraged.
-        *   **Conclusion:** (Use \`## Conclusion\`) Summarize key findings, offer concluding perspectives, and note any limitations or areas for further research.
-        *   **(Optional) Consolidated List of Sources:** (Use \`## All Sources\`) If not fully covered by inline citations or for an overview.
-    *   Use proper markdown for all structural elements (headings, lists, bold/italic, etc.).
-
-4.  **Rich Content (Data Representation):**
-    *   Where the information lends itself to it, **incorporate diverse data representations using markdown syntax**. This includes, but is not limited to:
-        *   **Detailed Tables:** For comparisons, structured data, etc. (Use standard markdown table syntax).
-        *   **KaTeX Formulas:** For mathematical or scientific notations (e.g., wrap with \`$$\` for block: \`$$E=mc^2$$\` or \`$\` for inline: \`$ax^2+bx+c=0$\`). Ensure correct KaTeX syntax.
-        *   **Mermaid Diagrams:** For processes, flowcharts, hierarchies, etc. (e.g., \`\`\`mermaid\ngraph TD;\nA[Start] --> B{Decision};\nB -- Yes --> C[End];\nB -- No --> D[Recycle];\n\`\`\`). Ensure correct Mermaid syntax.
-
-5.  **Citations:**
-    *   **Crucially, cite sources for claims made.** Use markdown link format: \`[Source Title or Domain](URL)\`.
-    *   Refer to sources provided in the 'Learnings from Previous Research'. If a title is missing, use the domain.
-    *   Attribute all significant information from sources directly within the report body.
-
-6.  **Content Focus:**
-    *   Base the report **solely** on the "Learnings from Previous Research". Do not introduce external knowledge. The quality and extensiveness of the report depend on your ability to synthesize and elaborate on the provided data.
-
----
-**Markdown Table Example (for comparative topics):**
-This illustrates how to structure a comparison. Adapt based on the actual research topic.
-
-If comparing "Agent X" vs "Agent Y":
-\`\`\`markdown
-# Comparison of AI Research Agents X and Y
-
-## Introduction
-This report compares Agent X and Agent Y based on research into their workflow components...
-
-## Workflow Component Comparison
-
-| Workflow Component      | Agent X Details & Analysis                                                                 | Agent Y Details & Analysis                                                                          |
-|-------------------------|--------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
-| **Input Handling**      | Agent X accepts text prompts and allows file uploads for context. It may ask initial clarifying questions. [Relevant Source A](URL_A_1) | Agent Y uses a web interface for prompts, also supporting file uploads. It auto-generates a research plan for user review. [Source B](URL_B_1) |
-| ... (other components) ... | ...                                                                                        | ...                                                                                                 |
-
-## Conclusion
-In summary, Agent X excels in ..., while Agent Y offers strengths in ...
-\`\`\`
----
-
-**Final Output Reminder:**
-Your entire response must be the raw markdown content of the report. No other text, no wrappers.
-`;
+Rules and guidelines:
+</rules-guidelines>
+- Respond with ONLY the updated artifact, and no additional text before or after.
+- Do not wrap it in \`<artifact></artifact>\`, \`<systemInstruction></systemInstruction>\`, \`<rules-guidelines></rules-guidelines>\`. Ensure it's just the updated artifact.
+- Do not change the language of the updated artifact. The updated artifact language is consistent with the current artifact.`;
 
   try {
-    const response = await geminiApiCallWithRetry({
+    console.log(`Elaborating report using model: ${modelName}...`);
+    const elaboratedResponse = await geminiApiCallWithRetry({
       model: modelName, 
-      contents: prompt,
-      // Omit thinkingConfig for quality tasks (default enabled for flash models)
+      contents: elaborationPrompt,
     });
-    return response.text || "";
+    const elaboratedReportText = (elaboratedResponse.text || "").trim();
+    if (!elaboratedReportText) {
+        console.warn("Report elaboration resulted in empty text. Returning initial report.");
+        return initialReportText; // Return initial report if elaboration fails to produce content
+    }
+    console.log("Report elaborated, new length:", elaboratedReportText.length);
+    return elaboratedReportText;
   } catch (error) {
-    console.error("Error synthesizing report:", error);
-    throw new Error(`Failed to synthesize report: ${error instanceof Error ? error.message : String(error)}`);
+    console.warn("Error elaborating report. Returning the initial version.", error);
+    // If elaboration fails, return the initial report as a fallback.
+    return initialReportText;
   }
 };
