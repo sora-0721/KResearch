@@ -10,14 +10,18 @@ if (!API_KEY) {
   console.error("API_KEY missing in clarificationService.ts");
 }
 
+const EXPERT_RESEARCHER_CLARIFICATION_SYSTEM_PROMPT = "You are an expert researcher. Be proactive and anticipate user needs. Your goal is to help refine the research topic effectively. Ask insightful and targeted questions. Avoid generic or overly broad questions.";
+
 export const getInitialTopicContext = async (topic: string, researchMode: ResearchMode): Promise<string> => {
   if (!API_KEY) throw new Error("API Key not configured.");
   try {
+    // Using researchMode's model for the initial search, as it might be a complex query.
     const searchResult = await executeResearchStep(`Provide a brief overview of the current understanding or key aspects of the topic: "${topic}"`, researchMode);
     if (!searchResult.text && searchResult.sources.length === 0) {
         return "No initial context could be found for this topic via search.";
     }
-    // Using NORMAL_MODE_MODEL for summarization as it's a general task
+    // Summarization can use the researchMode model as well, or a specific one if preferred for cost/speed.
+    // Sticking with researchMode model for consistency in quality for this initial critical step.
     const contextSummary = await summarizeText(searchResult.text, researchMode, `Initial context for: ${topic}`);
     return contextSummary || "Could not summarize initial context.";
   } catch (error) {
@@ -35,28 +39,40 @@ export const generateInitialClarificationQuestions = async (topic: string, resea
 Given the research topic: "${topic}"
 Today's date is: ${today}.
 Initial context: <context>${initialContext}</context>
-Generate 3-4 concise initial clarifying questions. Focus on narrowing scope, user intent.
-Avoid questions obvious from context or about unannounced future events.
+
+Generate 3-4 concise initial clarifying questions. Focus on narrowing scope, user intent, specific areas of interest, or ambiguities in the topic or context.
+Avoid questions that are:
+- Obvious from the provided context.
+- About unannounced future events or pure speculation (unless the topic is explicitly about forecasting).
+- Overly simplistic or yes/no questions if a more nuanced answer is needed.
+
 Output ONLY a JSON array of strings (questions). No other text.
 Example for "Renewable Energy Impact" (context: general types/benefits):
 [
-  "Focus on economic impacts on developing countries or global markets?",
-  "Interested in common (solar, wind) or less common renewables (tidal, geothermal)?",
-  "Policy angle like incentives or agreements post-${parseInt(today.substring(0,4)) - 2}?",
-  "Challenges/limitations or success stories/future potential?"
+  "Are you primarily interested in the economic impacts on developing countries, or the technological advancements in specific renewable sectors like next-gen solar?",
+  "Should the research focus on common renewables (solar, wind) or also explore less common but emerging ones (e.g., tidal, geothermal, green hydrogen)?",
+  "Is there a specific policy angle, such as the effectiveness of government incentives or international agreements post-${parseInt(today.substring(0,4)) - 2}, you'd like to investigate?",
+  "Are you more interested in the current challenges and limitations of renewable energy adoption, or the success stories and future potential?"
 ]`;
 
   try {
-    const response = await geminiApiCallWithRetry({ model: modelName, contents: prompt, config: { responseMimeType: "application/json" } });
+    const response = await geminiApiCallWithRetry({ 
+        model: modelName, 
+        contents: prompt, 
+        config: { 
+            responseMimeType: "application/json",
+            systemInstruction: EXPERT_RESEARCHER_CLARIFICATION_SYSTEM_PROMPT 
+        } 
+    });
     const questions = parseJsonFromString<string[]>(response.text, response.text);
     if (questions && Array.isArray(questions) && questions.every(item => typeof item === 'string')) {
-      return questions.length > 0 ? questions : ["No specific questions generated. What aspect are you most interested in?"];
+      return questions.length > 0 ? questions : ["No specific questions generated. What aspect of the topic are you most interested in focusing on?"];
     }
     console.warn("Invalid initial clarification questions format. Response:", response.text);
-    return ["AI couldn't generate specific questions. Specify your interest areas."];
+    return ["The AI couldn't generate specific questions at this time. Could you please specify your primary areas of interest within the topic?"];
   } catch (error) {
     console.error("Error generating initial clarification questions:", error);
-    return [`Failed to get questions for "${topic}". Specific area of interest?`];
+    return [`Failed to generate initial questions for "${topic}". What specific aspect or sub-topic are you most interested in exploring?`];
   }
 };
 
@@ -75,36 +91,72 @@ export const evaluateAnswersAndGenerateFollowUps = async (
   const modelName = getModelNameForMode(researchMode);
   const formattedPrevQA = userAnswers.map(ua => {
     const question = questionsAsked.find(q => q.id === ua.questionId);
-    return `Q: ${question ? question.question : `ID ${ua.questionId}`}\nA: ${ua.answer}`;
+    return `Q: ${question ? question.question : `Question ID ${ua.questionId}`}\nA: ${ua.answer}`;
   }).join('\n\n');
 
   const prompt = `
 Original Topic: "${topic}"
 User answers to previous questions:
+<PreviousQA>
 ${formattedPrevQA}
+</PreviousQA>
 
 Task:
-1. Evaluate if answers provide sufficient clarity for a focused research strategy.
-2. If sufficient, indicate no more questions.
-3. If vague/incomplete, generate 1-3 NEW follow-up questions to resolve ambiguities. Do NOT repeat questions unless user was confused. Focus on what's *still* unclear.
+1. Critically evaluate if the user's answers provide sufficient clarity and detail to formulate a focused and effective research strategy.
+2. If the answers are sufficient (i.e., the research scope is well-defined, key ambiguities are resolved), indicate that no more questions are needed.
+3. If answers are vague, incomplete, introduce new ambiguities, or don't adequately narrow the scope, generate 1-3 NEW, targeted follow-up questions. 
+   These follow-up questions should aim to resolve the *remaining* ambiguities or delve deeper into specific aspects that are still unclear.
+   Do NOT repeat previous questions unless the user's answer was entirely off-topic or indicated a misunderstanding of the original question.
+   Focus on what is *still* unclear or insufficiently detailed for strategic research planning.
 
-Output ONLY a JSON object: { "areAnswersSufficient": boolean, "followUpQuestions": string[] }
-Example (insufficient): { "areAnswersSufficient": false, "followUpQuestions": ["Specify micro or macroeconomic impact?", "Timeframe for 'recent developments' (e.g., last 2, 5 years)?"] }
-Example (sufficient): { "areAnswersSufficient": true, "followUpQuestions": [] }`;
+Output ONLY a JSON object with the following structure:
+{
+  "areAnswersSufficient": boolean, // true if no more questions are needed, false otherwise.
+  "followUpQuestions": string[]    // An array of new follow-up questions if areAnswersSufficient is false. Empty array if true.
+}
+
+Example (insufficient answers, more detail needed):
+{
+  "areAnswersSufficient": false,
+  "followUpQuestions": [
+    "You mentioned 'economic impact,' could you specify if you mean microeconomic effects on businesses or macroeconomic trends like GDP growth?",
+    "For 'recent developments,' what timeframe are you considering (e.g., last 2 years, last 5 years)?",
+    "Regarding 'sustainability,' are you focused on environmental, social, or economic sustainability aspects, or a combination?"
+  ]
+}
+
+Example (sufficient answers, ready to proceed):
+{
+  "areAnswersSufficient": true,
+  "followUpQuestions": []
+}`;
 
   try {
-    const response = await geminiApiCallWithRetry({ model: modelName, contents: prompt, config: { responseMimeType: "application/json" } });
+    const response = await geminiApiCallWithRetry({ 
+        model: modelName, 
+        contents: prompt, 
+        config: { 
+            responseMimeType: "application/json",
+            systemInstruction: EXPERT_RESEARCHER_CLARIFICATION_SYSTEM_PROMPT
+        } 
+    });
     const evaluation = parseJsonFromString<EvaluatedAnswers>(response.text, response.text);
     if (evaluation && typeof evaluation.areAnswersSufficient === 'boolean') {
       if (!evaluation.areAnswersSufficient && (!Array.isArray(evaluation.followUpQuestions) || evaluation.followUpQuestions.length === 0)) {
-         console.warn("AI: answers insufficient, but no follow-ups. Proceeding.");
+         // If AI says answers are insufficient but provides no follow-ups, it might be a subtle way of saying it has enough.
+         // Or it's an error. For robustness, assume it's "good enough" if no new questions are posed.
+         console.warn("AI indicated answers are insufficient but provided no follow-up questions. Proceeding as if sufficient.");
          return { ...evaluation, areAnswersSufficient: true, followUpQuestions: [] };
       }
       return evaluation;
     }
-    throw new Error("Failed evaluation. Invalid JSON structure.");
+    // If parsing fails or structure is wrong, assume error and consider answers insufficient, prompting for manual review or retry implicitly.
+    throw new Error("Failed to evaluate answers: Invalid JSON structure in AI response.");
   } catch (error) {
-    console.error("Error evaluating answers:", error);
-    throw new Error(`Evaluation failed: ${error instanceof Error ? error.message : String(error)}`);
+    console.error("Error evaluating answers and generating follow-up questions:", error);
+    // Gracefully degrade: assume not sufficient, but don't ask new questions to avoid error loop.
+    // This will push user to strategy phase, where they can refine. Or they can go back.
+    // throw new Error(`Answer evaluation failed: ${error instanceof Error ? error.message : String(error)}`);
+     return { areAnswersSufficient: true, followUpQuestions: [] }; // Safest fallback: proceed to strategy
   }
 };
