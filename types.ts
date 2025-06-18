@@ -61,3 +61,32 @@ export interface ProposedActionDetails {
   reason: string;
   shouldStop: boolean; // From decideNextResearchAction
 }
+
+// For Checkpoint feature
+export type CheckpointName = 'POST_CLARIFICATION' | 'POST_STRATEGY';
+
+export interface CheckpointData {
+  phaseToRestore: AppPhase; // The phase to enter *after* loading this checkpoint's data
+  researchTopic: string;
+  researchMode: ResearchMode;
+  maxIterations: number;
+  accumulatedAnswers: UserAnswer[]; // Always save accumulated, even if empty
+  researchStrategy?: string; // Optional, only for POST_STRATEGY
+  clarificationQuestions?: ClarificationQuestion[]; // For restoring clarification UI
+  userAnswers?: Record<number, string>; // For restoring clarification UI
+}
+
+// For streaming report synthesis
+export type ReportChunkType = 
+  'initial_chunk' | 
+  'initial_report_complete' | 
+  'elaborated_chunk' | 
+  'elaborated_report_complete';
+
+export interface ReportChunk {
+  type: ReportChunkType;
+  content?: string; // For _chunk types
+  fullReportText?: string; // For _complete types
+  error?: string; // If an error occurred during this stage
+  note?: string; // Additional info, e.g., if elaboration was skipped
+}
