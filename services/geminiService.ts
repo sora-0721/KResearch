@@ -33,6 +33,13 @@ const researchModeModels: Record<ResearchMode, ModelSet> = {
     }
 };
 
+const clarificationModels: Record<ResearchMode, string> = {
+    Balanced: 'gemini-2.5-flash',
+    DeepDive: 'gemini-2.5-pro',
+    Fast: 'gemini-2.5-flash',
+    UltraFast: 'gemini-2.5-flash-lite-preview-06-17',
+};
+
 
 const parseJsonFromMarkdown = (text: string): any => {
     const fenceRegex = /^```(\w*)?\s*\n?(.*?)\n?\s*```$/s;
@@ -62,13 +69,73 @@ interface PlannerTurn {
     finish_reason?: string | null;
 }
 
+export interface ClarificationResponse {
+    type: 'question' | 'summary';
+    content: string;
+}
+
+export const clarifyQuery = async (
+    history: { role: 'user' | 'model', content: string }[],
+    mode: ResearchMode
+): Promise<ClarificationResponse> => {
+    const systemPrompt = `You are a helpful AI assistant. Your goal is to clarify a user's research request by asking a series of targeted questions.
+
+Follow these rules:
+1.  Engage in a conversation, asking one clarifying question at a time.
+2.  Base each new question on the user's previous answers to narrow down their intent.
+3.  Provide examples or options in your questions to guide the user. For example: "Are you interested in performance for gaming, video editing, or something else?"
+4.  After asking at least 3-5 questions and you feel you have a very clear understanding of the user's goal, stop asking questions.
+5.  When you stop asking questions, you MUST generate a concise, one-paragraph summary of the refined research goal. This summary will be passed to other AI agents.
+
+Your entire output must be a single JSON object with one of two formats:
+- If you are asking a question: \`{ "type": "question", "content": "Your question here..." }\`
+- When you are finished and providing the summary: \`{ "type": "summary", "content": "Your final summary paragraph here..." }\`
+
+Example flow:
+User says: "Tell me about the M2 Ultra vs 4060"
+Your first response would be: \`{ "type": "question", "content": "To give you the best comparison, what aspect are you most interested in? For example, are you focused on gaming performance, video editing capabilities, power efficiency, or something else?" }\`
+User answers.
+Your next response would be: \`{ "type": "question", "content": "Great, for gaming performance, are there any specific games or genres you're curious about? Or should I look for general benchmarks across a wide range of popular titles?" }\`
+... after a few more turns ...
+Your final response would be: \`{ "type": "summary", "content": "The user wants a detailed comparison between the M2 Ultra and the Nvidia 4060, with a primary focus on gaming performance. They are specifically interested in benchmarks and real-world frame rates for modern AAA titles like Cyberpunk 2077 and Alan Wake 2, and are less concerned with power consumption or video editing." }\`
+`;
+    
+    const contents = history.map(turn => ({
+        role: turn.role,
+        parts: [{ text: turn.content }]
+    }));
+
+    const modelName = clarificationModels[mode];
+
+    const response = await ai.models.generateContent({
+        model: modelName,
+        contents: contents,
+        config: {
+            systemInstruction: systemPrompt,
+            responseMimeType: "application/json",
+            temperature: 0.5
+        }
+    });
+
+    const parsedResponse = parseJsonFromMarkdown(response.text) as ClarificationResponse;
+
+    if (!parsedResponse || !parsedResponse.type || !parsedResponse.content) {
+        console.error("Failed to parse clarification response:", response.text);
+        return { type: 'summary', content: 'AI clarification failed. Proceeding with original query.' };
+    }
+    
+    return parsedResponse;
+};
+
+
 const runDynamicConversationalPlanner = async (
     query: string,
     researchHistory: ResearchUpdate[],
     onUpdate: (update: ResearchUpdate) => void,
     checkSignal: () => void,
     idCounter: { current: number },
-    mode: ResearchMode
+    mode: ResearchMode,
+    clarifiedContext: string
 ): Promise<{ search_queries: string[], should_finish: boolean, finish_reason?: string }> => {
     
     const overallHistoryText = researchHistory.map(h => `${h.persona ? h.persona + ' ' : ''}${h.type}: ${Array.isArray(h.content) ? h.content.join(', ') : h.content}`).join('\n');
@@ -88,7 +155,8 @@ const runDynamicConversationalPlanner = async (
             Engage in a critical debate to decide the next research step. The goal is to formulate the best possible search queries through collaboration.
 
             **Overall Research Context:**
-            *   User Query: "${query}"
+            *   User's Original Query: "${query}"
+            *   Refined Research Goal (from user conversation): "${clarifiedContext}"
             *   Total search cycles so far: ${searchCycles}.
             *   Overall Research History: <history>${overallHistoryText || 'No history yet.'}</history>
 
@@ -306,7 +374,8 @@ export const runIterativeDeepResearch = async (
   query: string,
   onUpdate: (update: ResearchUpdate) => void,
   signal: AbortSignal,
-  mode: ResearchMode
+  mode: ResearchMode,
+  clarifiedContext: string
 ): Promise<FinalResearchData> => {
   console.log(`Starting DYNAMIC CONVERSATIONAL research for: ${query}`);
 
@@ -328,7 +397,7 @@ export const runIterativeDeepResearch = async (
     await new Promise(resolve => setTimeout(resolve, 1000));
     checkSignal();
     
-    const plan = await runDynamicConversationalPlanner(query, history, onPlannerUpdate, checkSignal, idCounter, mode);
+    const plan = await runDynamicConversationalPlanner(query, history, onPlannerUpdate, checkSignal, idCounter, mode, clarifiedContext);
     
     checkSignal();
 

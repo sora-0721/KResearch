@@ -5,13 +5,19 @@ import LiquidButton from './components/LiquidButton';
 import ResearchProgress from './components/ResearchProgress';
 import FinalReport from './components/FinalReport';
 import ThemeSwitcher from './components/ThemeSwitcher';
-import { runIterativeDeepResearch } from './services/geminiService';
+import ClarificationChat from './components/ClarificationChat';
+import { runIterativeDeepResearch, clarifyQuery } from './services/geminiService';
 import { ResearchUpdate, FinalResearchData, ResearchMode } from './types';
+
+type AppState = 'idle' | 'clarifying' | 'researching' | 'complete';
+export interface ClarificationTurn {
+    role: 'user' | 'model';
+    content: string;
+}
 
 const App: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [query, setQuery] = useState<string>('');
-  const [isResearching, setIsResearching] = useState<boolean>(false);
   const [researchUpdates, setResearchUpdates] = useState<ResearchUpdate[]>([]);
   const [finalData, setFinalData] = useState<FinalResearchData | null>(null);
   const [isLogVisible, setIsLogVisible] = useState<boolean>(true);
@@ -19,6 +25,10 @@ const App: React.FC = () => {
   const abortControllerRef = useRef<AbortController | null>(null);
   const finalReportRef = useRef<HTMLDivElement>(null);
 
+  const [appState, setAppState] = useState<AppState>('idle');
+  const [clarificationHistory, setClarificationHistory] = useState<ClarificationTurn[]>([]);
+  const [clarificationLoading, setClarificationLoading] = useState<boolean>(false);
+  const [clarifiedContext, setClarifiedContext] = useState<string>('');
 
   useEffect(() => {
     if (isDarkMode) {
@@ -31,25 +41,55 @@ const App: React.FC = () => {
   }, [isDarkMode]);
 
   useEffect(() => {
-    if (finalData && finalReportRef.current) {
+    if (appState === 'complete' && finalData && finalReportRef.current) {
         setTimeout(() => {
             finalReportRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 100);
     }
-  }, [finalData]);
+  }, [appState, finalData]);
 
   const handleToggleTheme = () => {
     setIsDarkMode(!isDarkMode);
   };
+  
+  const handleClarificationResponse = async (history: ClarificationTurn[]) => {
+      setClarificationLoading(true);
+      try {
+          const response = await clarifyQuery(history, mode);
+          if (response.type === 'question') {
+              setClarificationHistory(prev => [...prev, { role: 'model', content: response.content }]);
+          } else if (response.type === 'summary') {
+              setClarifiedContext(response.content);
+              setAppState('researching');
+          }
+      } catch (error) {
+          console.error("Clarification step failed:", error);
+          setClarifiedContext('Clarification process failed. Proceeding with original query.');
+          setAppState('researching');
+      } finally {
+          setClarificationLoading(false);
+      }
+  };
 
-  const startResearch = useCallback(async () => {
-    if (!query.trim() || isResearching) return;
-    
+  const startClarificationProcess = () => {
+      if (!query.trim() || appState !== 'idle') return;
+      setAppState('clarifying');
+      const initialHistory: ClarificationTurn[] = [{ role: 'user', content: query }];
+      setClarificationHistory(initialHistory);
+      handleClarificationResponse(initialHistory);
+  };
+
+  const handleAnswerSubmit = (answer: string) => {
+      const newHistory: ClarificationTurn[] = [...clarificationHistory, { role: 'user', content: answer }];
+      setClarificationHistory(newHistory);
+      handleClarificationResponse(newHistory);
+  };
+
+  const startResearch = useCallback(async (context: string) => {
     abortControllerRef.current = new AbortController();
     const signal = abortControllerRef.current.signal;
 
     const startTime = Date.now();
-    setIsResearching(true);
     setFinalData(null);
     setResearchUpdates([]);
     setIsLogVisible(true);
@@ -57,7 +97,7 @@ const App: React.FC = () => {
     try {
       const result = await runIterativeDeepResearch(query, (update) => {
         setResearchUpdates(prev => [...prev, update]);
-      }, signal, mode);
+      }, signal, mode, context);
       
       const endTime = Date.now();
       setFinalData({
@@ -84,14 +124,20 @@ const App: React.FC = () => {
             });
         }
     } finally {
-      setIsResearching(false);
+      setAppState('complete');
     }
-  }, [query, isResearching, mode]);
+  }, [query, mode]);
   
+  useEffect(() => {
+    if (appState === 'researching' && clarifiedContext) {
+        startResearch(clarifiedContext);
+    }
+  }, [appState, clarifiedContext, startResearch]);
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      startResearch();
+      startClarificationProcess();
     }
   };
   
@@ -102,11 +148,15 @@ const App: React.FC = () => {
   };
 
   const handleReset = () => {
-      setIsResearching(false);
+      abortControllerRef.current?.abort();
+      setAppState('idle');
       setFinalData(null);
       setResearchUpdates([]);
       setQuery('');
       setMode('Balanced');
+      setClarificationHistory([]);
+      setClarifiedContext('');
+      setClarificationLoading(false);
   }
 
   const modes: { id: ResearchMode, name: string, description: string }[] = [
@@ -115,7 +165,6 @@ const App: React.FC = () => {
     { id: 'Fast', name: 'Fast', description: 'Quick results with capable models.' },
     { id: 'UltraFast', name: 'Ultra Fast', description: 'Lightning-fast results for quick checks.' },
   ];
-
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8 font-sans text-gray-800 dark:text-gray-200 transition-colors duration-300">
@@ -129,7 +178,7 @@ const App: React.FC = () => {
           <p className="mt-2 text-base text-gray-600 dark:text-gray-400">Your AI-powered deep research assistant.</p>
         </header>
 
-        {(!isResearching && !finalData) && (
+        {appState === 'idle' && (
           <div className="animate-fade-in space-y-4">
             <div className="mb-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 text-center">Select Research Mode</label>
@@ -165,33 +214,41 @@ const App: React.FC = () => {
                 focus:outline-none
                 transition-all duration-300
               "
-              disabled={isResearching}
+              disabled={appState !== 'idle'}
             />
-            <LiquidButton onClick={startResearch} disabled={isResearching || !query.trim()} className="w-full">
+            <LiquidButton onClick={startClarificationProcess} disabled={appState !== 'idle' || !query.trim()} className="w-full">
               Start Research
             </LiquidButton>
           </div>
         )}
         
-        {isResearching && (
+        {appState === 'clarifying' && (
+          <ClarificationChat
+            history={clarificationHistory}
+            onAnswerSubmit={handleAnswerSubmit}
+            isLoading={clarificationLoading}
+          />
+        )}
+        
+        {appState === 'researching' && (
              <LiquidButton onClick={handleStopResearch} className="w-full bg-red-500/30 hover:bg-red-500/40 border-red-500/50">
                 Stop Research
             </LiquidButton>
         )}
 
-        {(isResearching || (finalData && researchUpdates.length > 0)) && (
+        {(appState === 'researching' || (appState === 'complete' && researchUpdates.length > 0)) && (
           <div className="animate-fade-in space-y-4">
-            {finalData && (
+            {appState === 'complete' && (
                  <button onClick={() => setIsLogVisible(!isLogVisible)} className="flex items-center justify-between w-full text-left font-semibold text-lg p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5">
                      <span>{isLogVisible ? 'Hide' : 'Show'} Research Log</span>
                      <svg className={`w-5 h-5 transition-transform ${isLogVisible ? 'rotate-180' : ''}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                  </button>
             )}
-             {isLogVisible && <ResearchProgress updates={researchUpdates} isResearching={isResearching} />}
+             {isLogVisible && <ResearchProgress updates={researchUpdates} isResearching={appState === 'researching'} />}
           </div>
         )}
         
-        {finalData && (
+        {appState === 'complete' && finalData && (
             <div ref={finalReportRef} className="animate-fade-in space-y-6 border-t border-border-light dark:border-border-dark pt-6 mt-6">
                  <FinalReport data={finalData} />
                  <LiquidButton onClick={handleReset} className="w-full mt-4">
