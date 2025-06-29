@@ -19,7 +19,7 @@ const LiquidButton: React.FC<LiquidButtonProps> = ({ children, className = '', .
         hover:shadow-lg hover:shadow-glow-light/50 dark:hover:shadow-glow-dark/50
         hover:border-glow-light dark:hover:border-glow-dark
         hover:-translate-y-0.5
-        active:translate-y-0
+        active:translate-y-px
         transition-all duration-300
         disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:-translate-y-0
         ${className}

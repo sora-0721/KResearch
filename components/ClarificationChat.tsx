@@ -52,7 +52,11 @@ const ClarificationChat: React.FC<ClarificationChatProps> = ({ history, onAnswer
             <div ref={chatContainerRef} className="max-h-80 overflow-y-auto space-y-4 p-4 rounded-lg bg-black/5 dark:bg-white/5 scroll-smooth">
                 {getVisibleHistory().map((turn, index) => (
                     <div key={index} className={`flex animate-fade-in ${turn.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-md p-3 rounded-xl shadow-sm ${turn.role === 'user' ? 'bg-blue-500 text-white' : 'bg-glass-light dark:bg-glass-dark text-gray-800 dark:text-gray-200'}`}>
+                        <div className={`max-w-md p-3 rounded-xl shadow-sm transition-colors duration-300 ${
+                            turn.role === 'user' 
+                                ? 'bg-blue-500/10 dark:bg-blue-400/10 text-gray-800 dark:text-gray-200 border border-blue-500/20 dark:border-blue-400/30' 
+                                : 'bg-glass-light dark:bg-glass-dark text-gray-800 dark:text-gray-200'
+                            }`}>
                            <p className="text-sm leading-relaxed whitespace-pre-wrap">{turn.content}</p>
                         </div>
                     </div>

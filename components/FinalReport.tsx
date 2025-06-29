@@ -66,30 +66,37 @@ const FinalReport: React.FC<FinalReportProps> = ({ data }) => {
             p: ({node, ...props}) => <p className="mb-4 leading-relaxed" {...props} />,
             ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-4 space-y-2" {...props} />,
             ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-4 space-y-2" {...props} />,
-            a: ({node, ...props}) => <a className="text-blue-500 hover:underline dark:text-blue-400" target="_blank" rel="noopener noreferrer" {...props} />,
+            a: ({node, ...props}) => <a className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-500 dark:from-blue-400 dark:to-purple-400 hover:brightness-125 transition-all duration-300" target="_blank" rel="noopener noreferrer" {...props} />,
             strong: ({node, ...props}) => <strong className="font-bold text-gray-900 dark:text-gray-100" {...props} />,
             pre: ({ node, children, ...props }) => {
-              // @ts-ignore
-              const codeNode = node.children[0];
-              if (codeNode && codeNode.tagName === 'code') {
-                  // @ts-ignore
-                  const className = codeNode.properties.className || [];
-                  const match = /language-(\w+)/.exec(className[0] || '');
+              const codeNode = node?.children[0];
 
-                  if (match && match[1] === 'mermaid') {
-                      // @ts-ignore
-                      const codeString = codeNode.children[0].value;
-                      return (
-                          <div className="p-4 my-4 bg-glass-light dark:bg-glass-dark rounded-lg flex justify-center items-center overflow-x-auto">
-                              <div key={codeString} className="mermaid" style={{ minWidth: '100%', textAlign: 'center' }}>
-                                  {codeString}
-                              </div>
-                          </div>
-                      )
+              if (codeNode && codeNode.type === 'element' && codeNode.tagName === 'code') {
+                const className = (codeNode.properties?.className || []) as string[];
+                const match = /language-(\w+)/.exec(className[0] || '');
+
+                if (match && match[1] === 'mermaid') {
+                  const textNode = codeNode.children?.[0];
+                  if (textNode && textNode.type === 'text') {
+                    const codeString = textNode.value;
+                    return (
+                      <div className="p-4 my-4 bg-glass-light dark:bg-glass-dark rounded-lg flex justify-center items-center overflow-x-auto">
+                        <div key={codeString} className="mermaid" style={{ minWidth: '100%', textAlign: 'center' }}>
+                          {codeString}
+                        </div>
+                      </div>
+                    );
                   }
+                }
               }
-              // For all other code blocks, use a standard <pre> which will be styled by prose
-              return <pre {...props}>{children}</pre>
+              // For all other code blocks, wrap them in a glass container.
+              return (
+                <div className="my-4 bg-black/20 dark:bg-black/40 backdrop-blur-md border border-border-light/50 dark:border-border-dark/50 rounded-lg overflow-x-auto">
+                    <pre className="!bg-transparent !p-4" {...props}>
+                        {children}
+                    </pre>
+                </div>
+              );
             },
           }}
         >
