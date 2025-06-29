@@ -17,36 +17,25 @@ interface FinalReportProps {
 }
 
 const FinalReport: React.FC<FinalReportProps> = ({ data }) => {
-  const { report, citations, researchTimeMs, mermaidGraph } = data;
+  const { report, citations, researchTimeMs } = data;
   const [copyButtonText, setCopyButtonText] = useState('Copy Report');
 
   useEffect(() => {
-    if (mermaidGraph && window.mermaid) {
-      // Use a timeout to ensure the DOM is updated before mermaid tries to render.
+    if (report && window.mermaid) {
       const timer = setTimeout(() => {
         try {
-          // Remove any existing rendered SVGs before re-running
-          const mermaidDivs = document.querySelectorAll('.mermaid');
-          mermaidDivs.forEach(div => {
-            const svg = div.querySelector('svg');
-            if(svg) {
-                svg.remove();
-            }
-            div.removeAttribute('data-processed');
-            // @ts-ignore
-            div.innerHTML = div.textContent;
-          });
-
-          window.mermaid.run({
-            nodes: document.querySelectorAll('.mermaid'),
-          });
+          const mermaidElements = document.querySelectorAll('.mermaid');
+          if (mermaidElements.length) {
+            mermaidElements.forEach(el => el.removeAttribute('data-processed'));
+            window.mermaid.run({ nodes: mermaidElements });
+          }
         } catch(e) {
-          console.error("Error rendering mermaid graph:", e);
+          console.error("Error rendering mermaid graphs:", e);
         }
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [mermaidGraph]);
+  }, [report]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(report).then(() => {
@@ -79,6 +68,29 @@ const FinalReport: React.FC<FinalReportProps> = ({ data }) => {
             ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-4 space-y-2" {...props} />,
             a: ({node, ...props}) => <a className="text-blue-500 hover:underline dark:text-blue-400" target="_blank" rel="noopener noreferrer" {...props} />,
             strong: ({node, ...props}) => <strong className="font-bold text-gray-900 dark:text-gray-100" {...props} />,
+            pre: ({ node, children, ...props }) => {
+              // @ts-ignore
+              const codeNode = node.children[0];
+              if (codeNode && codeNode.tagName === 'code') {
+                  // @ts-ignore
+                  const className = codeNode.properties.className || [];
+                  const match = /language-(\w+)/.exec(className[0] || '');
+
+                  if (match && match[1] === 'mermaid') {
+                      // @ts-ignore
+                      const codeString = codeNode.children[0].value;
+                      return (
+                          <div className="p-4 my-4 bg-glass-light dark:bg-glass-dark rounded-lg flex justify-center items-center overflow-x-auto">
+                              <div key={codeString} className="mermaid" style={{ minWidth: '100%', textAlign: 'center' }}>
+                                  {codeString}
+                              </div>
+                          </div>
+                      )
+                  }
+              }
+              // For all other code blocks, use a standard <pre> which will be styled by prose
+              return <pre {...props}>{children}</pre>
+            },
           }}
         >
           {report}
@@ -98,17 +110,6 @@ const FinalReport: React.FC<FinalReportProps> = ({ data }) => {
             </div>
         </div>
       </div>
-
-      {mermaidGraph && (
-        <div className="mt-8 border-t border-border-light dark:border-border-dark pt-6">
-          <h3 className="text-2xl font-bold mb-4">Knowledge Graph</h3>
-          <div className="p-4 bg-glass-light dark:bg-glass-dark rounded-lg flex justify-center items-center overflow-x-auto">
-             <div key={mermaidGraph} className="mermaid" style={{ minWidth: '100%', textAlign: 'center' }}>
-                {mermaidGraph}
-             </div>
-          </div>
-        </div>
-      )}
 
       <div className="mt-8 border-t border-border-light dark:border-border-dark pt-6">
         <h3 className="text-2xl font-bold mb-4">Citations</h3>

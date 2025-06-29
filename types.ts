@@ -22,5 +22,4 @@ export interface FinalResearchData {
   report: string;
   citations: Citation[];
   researchTimeMs: number;
-  mermaidGraph?: string;
 }

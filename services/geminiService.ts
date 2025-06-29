@@ -257,7 +257,7 @@ const executeSingleSearch = async (searchQuery: string, mode: ResearchMode): Pro
     return { text: `Summary for "${searchQuery}": ${response.text}`, citations: uniqueCitations };
 };
 
-const synthesizeReport = async (query: string, history: ResearchUpdate[], citations: Citation[], mode: ResearchMode): Promise<FinalResearchData> => {
+const synthesizeReport = async (query: string, history: ResearchUpdate[], citations: Citation[], mode: ResearchMode): Promise<Omit<FinalResearchData, 'researchTimeMs'>> => {
     const learnings = history
         .filter(h => h.type === 'read')
         .map(h => h.content)
@@ -266,107 +266,75 @@ const synthesizeReport = async (query: string, history: ResearchUpdate[], citati
     const historyText = history
         .map(h => `${h.persona ? h.persona + ' ' : ''}${h.type}: ${Array.isArray(h.content) ? h.content.join(' | ') : h.content}`)
         .join('\n');
-    
-    const sourcesText = citations.map(c => `- ${c.title}: ${c.url}`).join('\n');
 
-    // Step 1: Generate initial detailed report
-    const initialReportPrompt = `
-        You are an expert research analyst. Your task is to write a comprehensive, well-structured final report based on the provided research materials.
+    const initialReportPrompt = `You are an expert Senior Research Analyst and Strategist, specializing in synthesizing complex information into clear, insightful, and decision-ready reports for executive-level stakeholders.
 
-        **User's Core Request:**
-        <REQUIREMENT>
-        ${query}
-        </REQUIREMENT>
+Your mission is to transform the provided raw research materials into a polished and comprehensive final report that not only answers the user's request but also provides strategic context and actionable insights.
 
-        **Research Learnings (Base your report on this information):**
-        <LEARNINGS>
-        ${learnings || "No specific content was read during research. Base the report on the thought process."}
-        </LEARNINGS>
+**User's Core Request:**
+<REQUIREMENT>
+${query}
+</REQUIREMENT>
 
-        **Full Research History (For context on the research path):**
-        <HISTORY>
-        ${historyText}
-        </HISTORY>
+**Synthesized Research Learnings (Primary Source for the Report):**
+<LEARNINGS>
+${learnings || "No specific content was read during research. Base the report on the thought process."}
+</LEARNINGS>
 
-        **Instructions:**
-        1. Synthesize the learnings into a detailed report. Aim for depth and comprehensiveness.
-        2. Structure the report logically using markdown (headings, lists, bold text).
-        3. Ensure the report directly addresses the user's core request.
-        4. The report must be exclusively based on the provided research learnings.
-        5. Do NOT include inline citations like [1] or [source.com].
+**Full Research History (For Context and Nuance Only):**
+<HISTORY>
+${historyText}
+</HISTORY>
 
-        **Respond ONLY with the raw markdown content of the final report. Do not include any extra text, commentary, or wrappers.**
-    `;
+**--- INSTRUCTIONS ---**
 
-    const initialReportResponse = await ai.models.generateContent({
+**1. Report Structure & Content:**
+Adhere to the following professional report structure. Each section should be clearly delineated.
+
+*   **Title:** Create a concise and descriptive title for the report.
+*   **Executive Summary:** Begin with a brief, high-level overview. This section is for busy executives and should summarize the core request, the most critical findings, and the key recommendations in a few paragraphs or bullet points.
+*   **Introduction:** State the original request and the objective of the report. Briefly outline the report's scope and methodology (i.e., synthesis of the provided research learnings).
+*   **Detailed Analysis / Key Findings:** This is the main body of the report.
+    *   Synthesize the information from the \`<LEARNINGS>\` block into a thorough and coherent analysis.
+    *   Organize findings thematically using clear headings and subheadings.
+    *   Directly address all parts of the user's \`<REQUIREMENT>\`.
+*   **Strategic Recommendations / Implications:** Go beyond summarizing. Based *only* on the findings, provide actionable recommendations, outline potential strategic implications, or identify opportunities and risks.
+*   **Conclusion:** Provide a concise final summary of the report's findings and their significance.
+
+**2. Tone and Style:**
+*   Maintain a professional, objective, and analytical tone.
+*   The report's content must be based **exclusively** on the information within the \`<LEARNINGS>\` block. Use the \`<HISTORY>\` block for contextual understanding only, not as a source for new facts.
+*   Do NOT include inline citations (e.g., [1], [source.com]) or invent sources.
+
+**3. Data Visualization and Formatting:**
+Enhance readability and impact by incorporating visual elements where appropriate.
+
+*   **Markdown Tables:** Use tables to present structured data, comparisons (e.g., pros/cons, feature comparisons), or quantitative information in a clear and organized manner.
+*   **Mermaid Charts:** Use Mermaid syntax (within a \`\`\`mermaid ... \`\`\` code block) to create diagrams and charts. This is crucial for visualizing processes, relationships, and distributions.
+    *   Use \`graph TD\` or \`flowchart TD\` for processes and flowcharts.
+    *   Use \`pieChart\` for market share, budget allocations, or other proportional data.
+    *   Use \`gantt\` for project timelines or roadmaps.
+    *   Use \`mindmap\` to illustrate complex relationships or brainstorming sessions.
+*   **Rich Text Formatting:** Use **bold text** for emphasis on key terms and conclusions, *italics* for nuance, and nested bullet points and blockquotes (\`>\`) to structure information effectively.
+
+**4. Final Output:**
+Respond ONLY with the raw markdown content of the final report. Do not include any preamble (e.g., "Here is the report you requested"), commentary, or post-report summaries. The output should begin directly with the report's title.
+`;
+
+    const reportResponse = await ai.models.generateContent({
         model: researchModeModels[mode].synthesizer,
         contents: initialReportPrompt,
         config: { temperature: 0.5 }
     });
     
-    const initialReportText = initialReportResponse.text.trim();
-    if (!initialReportText) {
-        return { report: "Failed to generate an initial report.", citations: [], researchTimeMs: 0 };
-    }
-
-    // Step 2: Make the report longer
-    const makeLongerPrompt = `
-        You are tasked with re-writing the following text to be longer and more detailed, expanding on the concepts presented. Do not change the core meaning or narrative of the text. Add more explanatory sentences, provide deeper context, and flesh out the existing points to create a more comprehensive version.
-
-        **Original Text:**
-        ---
-        ${initialReportText}
-        ---
-
-        **Respond only with the updated, longer markdown text. Do not add any commentary before or after.**
-    `;
-
-    const longerReportResponse = await ai.models.generateContent({
-        model: researchModeModels[mode].synthesizer,
-        contents: makeLongerPrompt,
-        config: { temperature: 0.6 }
-    });
-    
-    const finalReportText = longerReportResponse.text.trim() || initialReportText;
-
-    // Step 3: Generate Mermaid Graph from the final report
-    const mermaidPrompt = `
-        Based on the following article, extract the key entities (e.g., people, places, organizations, concepts) and their main relationships. Then, generate Mermaid graph code to visualize these connections.
-
-        **Article:**
-        ---
-        ${finalReportText}
-        ---
-
-        ## Output format requirements
-        1. Use Mermaid's \`graph TD\` (Top-Down) type.
-        2. Create a unique node ID for each entity (e.g., \`PersonA\`, \`OrgB\`). Display the entity's name in the node shape (e.g., \`PersonA["Alice"]\`, \`OrgB["XYZ Company"]\`).
-        3. Represent relationships as arrows with labels describing the connection (e.g., \`A -->|"Works for"| B\`).
-        4. Focus on the most core entities and their most important relationships for a concise graph.
-        5. **Strict Requirement:** All text for node and edge labels MUST be wrapped in double quotes (e.g., \`Node["Label"]\`, \`A -->|"Relationship"| B\`).
-        6. **Respond ONLY with the complete Mermaid code block (starting with \`\`\`mermaid\` and ending with \`\`\`). Do not include any other text.**
-    `;
-
-    const mermaidResponse = await ai.models.generateContent({
-        model: researchModeModels[mode].synthesizer,
-        contents: mermaidPrompt,
-        config: { temperature: 0.2 }
-    });
-
-    let mermaidGraphCode = mermaidResponse.text.trim();
-    const fenceRegex = /^```(\w*)?\s*\n?(.*?)\n?\s*```$/s;
-    const match = mermaidGraphCode.match(fenceRegex);
-    if (match && match[2]) {
-        mermaidGraphCode = `graph TD\n${match[2].trim()}`;
-    } else if (!mermaidGraphCode.trim().startsWith('graph')) {
-        mermaidGraphCode = '';
+    const reportText = reportResponse.text.trim();
+    if (!reportText) {
+        return { report: "Failed to generate an initial report.", citations: [] };
     }
 
     return {
-        report: finalReportText,
+        report: reportText,
         citations: [],
-        researchTimeMs: 0,
-        mermaidGraph: mermaidGraphCode || undefined,
     };
 };
 
@@ -440,5 +408,5 @@ export const runIterativeDeepResearch = async (
   const finalReportData = await synthesizeReport(query, history, allCitations, mode);
   const uniqueCitations = Array.from(new Map(allCitations.map(c => [c.url, c])).values());
 
-  return { ...finalReportData, citations: uniqueCitations };
+  return { ...finalReportData, citations: uniqueCitations, researchTimeMs: 0 };
 };
