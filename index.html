@@ -1,51 +1,81 @@
 
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KResearch</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body {
-      font-family: 'Inter', sans-serif; /* A nice default sans-serif font */
-    }
-    /* For Webkit browsers like Chrome, Safari */
-    ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #2d3748; /* dark-700 */
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #4a5568; /* dark-600 */
-      border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #718096; /* dark-500 */
-    }
-
-  </style>
-<script type="importmap">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KResearch - AI Deep Research</title>
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'glass-dark': 'rgba(25, 25, 35, 0.2)',
+              'glass-light': 'rgba(255, 255, 255, 0.2)',
+              'border-dark': 'rgba(255, 255, 255, 0.1)',
+              'border-light': 'rgba(255, 255, 255, 0.3)',
+              'glow-dark': 'rgba(0, 196, 255, 0.6)',
+              'glow-light': 'rgba(0, 122, 255, 0.5)',
+              'shadow-dark': 'rgba(0, 0, 0, 0.3)',
+              'shadow-light': 'rgba(0, 0, 0, 0.1)',
+            },
+            typography: (theme) => ({
+              DEFAULT: {
+                css: {
+                  '--tw-prose-body': theme('colors.gray[800]'),
+                  '--tw-prose-headings': theme('colors.gray[900]'),
+                  '--tw-prose-links': theme('colors.blue[600]'),
+                  '--tw-prose-invert-body': theme('colors.gray[300]'),
+                  '--tw-prose-invert-headings': theme('colors.gray[100]'),
+                  '--tw-prose-invert-links': theme('colors.blue[400]'),
+                },
+              },
+            }),
+            animation: {
+              'fade-in': 'fadeIn 0.5s ease-in-out forwards',
+              'shimmer': 'shimmer 2s infinite linear',
+              'spin': 'spin 1s linear infinite',
+            },
+            keyframes: {
+              fadeIn: {
+                '0%': { opacity: 0, transform: 'translateY(10px)' },
+                '100%': { opacity: 1, transform: 'translateY(0)' },
+              },
+               shimmer: {
+                '0%': { transform: 'translateX(-100%)' },
+                '100%': { transform: 'translateX(100%)' },
+              },
+               spin: {
+                'from': { transform: 'rotate(0deg)' },
+                'to': { transform: 'rotate(360deg)' },
+              },
+            },
+          },
+        },
+        darkMode: 'class',
+      }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+      mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' });
+    </script>
+    <script type="importmap">
 {
   "imports": {
-    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
     "react": "https://esm.sh/react@^19.1.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
     "react/": "https://esm.sh/react@^19.1.0/",
-    "@google/genai": "https://esm.sh/@google/genai@^1.5.1"
+    "@google/genai": "https://esm.sh/@google/genai@^1.7.0",
+    "react-markdown": "https://esm.sh/react-markdown@^9.0.1",
+    "remark-gfm": "https://esm.sh/remark-gfm@^4.0.0"
   }
 }
 </script>
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css" integrity="sha384-N/GMqpXOmIIOF97S/LdKaj+P2C_vDY3LSSOShmFgr3M7MKA_499GIfnALhp2M0C2" crossorigin="anonymous">
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js" integrity="sha384-hIo7KMyiC1x5RZyHBYjT1+YqFNoGkM4M8Kj9gKj7pBKqG6G00vL1wKkVnE9sL/Zk" crossorigin="anonymous"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.min.js" integrity="sha384-4h/LAtKxqvAMSzB3M99B11S+S50NG1kY4LwHh3qV9g1QNMz03P2p+o+L/W2oKjYh" crossorigin="anonymous"></script>
 <link rel="stylesheet" href="/index.css">
 </head>
-<body class="bg-gray-900 text-gray-100">
-  <div id="root"></div>
+  <body>
+    <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
 </body>
 </html>

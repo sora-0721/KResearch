@@ -1,135 +1,124 @@
 # KResearch
 
-KResearch is an advanced web application that leverages the Google Gemini API to conduct in-depth research on a user-specified topic. It features an iterative process that includes clarifying the research scope with the user, devising a research strategy, performing automated research actions using Google Search, and finally, synthesizing a comprehensive, well-structured report. The entire research process is streamed live to the user.
+> An advanced AI-powered deep research application that synthesizes information from numerous sources to generate comprehensive, well-documented reports on complex topics.
 
-## Core Features
+<!-- Badges (Placeholders) -->
+![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)
+![React](https://img.shields.io/badge/React-19-blue?style=flat-square&logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?style=flat-square&logo=typescript)
+![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-3.x-38B2AC?style=flat-square&logo=tailwind-css)
 
-*   **Iterative Topic Clarification:** Asks insightful clarifying questions, driven by an 'expert researcher' persona, to refine the research scope and user intent.
-*   **AI-Driven Research Strategy:** Generates a high-level research strategy based on the clarified topic, emulating an 'expert strategist'.
-*   **Automated Iterative Research:** Executes a series of research steps (queries to Google Search via Gemini API) to gather information, with improved decision-making for novel and impactful actions.
-*   **Sophisticated AI Reasoning:** Incorporates an 'expert researcher/analyst' persona throughout the process for more insightful questions, robust strategies, analytical decision-making, and detailed summaries/reports.
-*   **Improved "Learning" Extraction:** AI focuses on extracting information-dense, unique learnings, including specific entities (people, places, companies), metrics, numbers, and dates.
-*   **Configurable Iteration Count:** Users can specify the maximum number of research iterations (1-500).
-*   **Comprehensive Report Generation:** Synthesizes all findings into a detailed Markdown report, featuring:
-    *   **Advanced Formatting:** Native support for tables, KaTeX for mathematical formulas, and **Mermaid diagrams** for visualizing relationships (e.g., concept maps, hierarchies).
-    *   **Enhanced Detail & Structure:** AI aims for in-depth content, following the user-approved strategy and best practices for report organization and adhering to typographical guidelines. Report generation is a two-step streaming process: an initial draft followed by an elaboration pass.
-    *   **No Citations/References by Default:** The final report, by default, focuses on synthesizing the narrative without inline citations or a "References" section.
-*   **Two Research Modes:**
-    *   **Normal Mode:** Uses the `gemini-2.5-flash` model for quick and efficient results.
-    *   **Deeper Mode:** Uses the `gemini-2.5-pro` model for higher quality and more in-depth analysis.
-*   **Live Research Log:** Provides a real-time stream of the AI's thoughts, actions, and findings.
-*   **User-Friendly Interface:** Clean, responsive UI built with React and Tailwind CSS.
-*   **Error Handling & Retry Logic:** Robust error handling for API calls, including retry mechanisms for transient issues.
-*   **Keep-Alive Pings:** Provides feedback to the user during long operations.
-*   **Checkpoint System:** Allows users to save and load research progress at key stages (after clarification, after strategy approval), useful for resuming after interruptions.
+## Table of Contents
+- [About The Project](#about-the-project)
+  - [Key Features](#key-features)
+  - [Built With](#built-with)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [Contributing](#contributing)
+- [License](#license)
+- [Contact](#contact)
+- [Acknowledgements](#acknowledgements)
 
-## Tech Stack
+## About The Project
 
-*   **Frontend:** React, TypeScript
-*   **Styling:** Tailwind CSS
-*   **AI Backend:** Google Gemini API (`@google/genai`)
-*   **Markdown Rendering:** `marked` (for basic Markdown), `KaTeX` (for math), `Mermaid` (for diagrams).
+KResearch is a sophisticated research assistant designed to tackle complex topics by leveraging a multi-agent AI system. It automates the process of in-depth research by planning, executing, and synthesizing information from the web. The final output is a comprehensive, well-structured report complete with source citations and a visual knowledge graph, making it an invaluable tool for students, analysts, and anyone needing to quickly develop a deep understanding of a subject.
 
-## Prerequisites
 
-*   A modern web browser with JavaScript enabled.
-*   A **Google Gemini API Key**.
 
-## Setup and Running
+### Key Features
 
-KResearch is designed to run in an environment where the Google Gemini API key is securely managed.
+*   **Conversational AI Agents**: Utilizes 'Alpha' (Strategist) and 'Beta' (Tactician) agents who collaborate to create an optimal research plan.
+*   **Iterative Research Cycles**: Performs multiple cycles of planning, searching, and reading to gather comprehensive insights.
+*   **Real-time Progress Tracking**: Visualizes the AI's entire thought process in a detailed, step-by-step timeline.
+*   **Configurable Research Modes**: Offers 'Balanced', 'Deep Dive', 'Fast', and 'Ultra Fast' modes to tailor the research process to your needs.
+*   **Comprehensive Final Report**: Generates a well-structured final report in Markdown, synthesizing all findings.
+*   **Knowledge Graph Visualization**: Automatically creates a Mermaid.js graph to visualize key entities and their relationships.
+*   **Sourced Citations**: Grounds all research using Google Search and provides a complete list of sources.
+*   **Modern & Responsive UI**: A sleek, glassmorphism design built with React and Tailwind CSS, featuring light and dark modes.
 
-1.  **API Key Configuration:**
-    *   The application **requires** a Google Gemini API Key to function.
-    *   This API key **must** be set as an environment variable named `API_KEY`.
-    *   **DO NOT** embed your API key directly into the code. The application is designed to pick it up from `process.env.API_KEY`.
+### Built With
 
-    Example (conceptual, how you set environment variables depends on your deployment platform):
-    ```bash
-    export API_KEY="YOUR_GEMINI_API_KEY"
+*   [React](https://react.dev/)
+*   [TypeScript](https://www.typescriptlang.org/)
+*   [Tailwind CSS](https://tailwindcss.com/)
+*   [Google Gemini API (`@google/genai`)](https://github.com/google/generative-ai-js)
+*   [Mermaid.js](https://mermaid.js.org/)
+
+## Getting Started
+
+This section will guide you through setting up and running the KResearch application locally.
+
+### Prerequisites
+
+You must have a Google Gemini API key to use this application.
+*   **Google Gemini API Key**: Obtain from [Google AI Studio](https://aistudio.google.com/app/apikey).
+
+### Installation
+
+This project is a static web application and does not require a complex build step.
+
+1.  Clone the repository:
+    ```sh
+    git clone https://github.com/your-username/kresearch.git
+    cd kresearch
     ```
+2.  Serve the project folder using a local web server. Here are two common ways:
+    
+    Using Python's built-in server:
+    ```sh
+    python -m http.server
+    ```
+    
+    Or using the `serve` NPM package:
+    ```sh
+    npx serve .
+    ```
+3.  Open your browser and navigate to the local address provided by the server (e.g., `http://localhost:8000`).
 
-2.  **Running the Application:**
-    *   Once the `API_KEY` environment variable is set, open the `index.html` file in your web browser. The application should load and be ready to use.
-    *   If the API key is not configured, the application will display a prominent warning.
+## Configuration
 
-## How to Use
+The application requires the Google Gemini API key to be available as an environment variable.
 
-1.  **Input Phase:**
-    *   Enter your desired research topic.
-    *   Select a **Research Mode** (`Normal` or `Deeper`).
-    *   Set the **Maximum Research Iterations** (1-500).
-    *   Click "Next: Clarify Topic".
+Create a `.env` file in the root of the project (if your serving method supports it) or ensure the `API_KEY` is set in the environment where the application is hosted.
 
-2.  **Iterative Clarification Phase (Optional):**
-    *   The AI will generate questions to clarify your topic. Answer them.
-    *   Submit answers. The AI may ask follow-up questions or proceed if sufficient.
-    *   Optionally, skip clarification.
-    *   *Checkpoint "Clarification Complete" is saved if this phase completes successfully.*
+```dotenv
+# .env file
+API_KEY="YOUR_GEMINI_API_KEY"
+```
 
-3.  **Strategy Review Phase:**
-    *   Review the AI's proposed research strategy. You can edit it.
-    *   Choose to "Start Research Directly" (AI uses its first proposed action automatically) or "Review First Action & Proceed" (you get to review/edit the AI's first specific action).
-    *   *Checkpoint "Strategy Approved" is saved if you proceed from this phase.*
+The application code directly accesses this key via `process.env.API_KEY`. You must ensure your local server or deployment environment makes this variable accessible to the frontend code.
 
-4.  **Action Review Phase (if not skipped):**
-    *   Review and optionally edit the AI's first proposed research action (e.g., a search query).
-    *   Click "Execute this Action & Start Research".
+## Usage
 
-5.  **Execution Phase:**
-    *   Monitor the **Live Research Log** as the AI executes research steps.
-    *   The UI will provide "Still working..." pings if an operation takes longer than a minute.
-    *   You can "Cancel" the research if needed.
+Once the application is running in your browser:
 
-6.  **Report Phase:**
-    *   A **Final Research Report** is displayed. The generation process involves an initial draft stream, followed by an elaboration stream.
-    *   The report is in Markdown and includes synthesized information, potentially incorporating tables, KaTeX formulas, and Mermaid diagrams.
-    *   You can copy the report as Markdown or download it as a `.txt` file.
-    *   The UI also provides a separate, collapsible view of "All Sources Gathered" for quick reference (though these are not included in the report itself by default).
-    *   Click "Start New Research" to reset.
+1.  **Select a Research Mode**: Choose from 'Balanced', 'Deep Dive', 'Fast', or 'Ultra Fast' depending on the desired depth and speed.
+2.  **Enter Your Query**: Type your research topic or question into the main text area.
+3.  **Start Research**: Click the "Start Research" button or press `Enter` (without `Shift`).
+4.  **Monitor Progress**: Observe the research log as the AI agents work. You can stop the process at any time.
+5.  **Review Results**: Once complete, the final report, knowledge graph, and citations will be displayed. You can copy the report text to your clipboard.
+6.  **New Research**: Click "Start New Research" to clear the results and begin again.
 
-7.  **Error Handling:**
-    *   Error messages guide you if issues arise (e.g., API failures, unexpected empty responses).
+## Contributing
 
-8.  **Loading Checkpoints:**
-    *   Use the "Load Checkpoint" button (icon in the header) to roll back to previously saved states if the process hangs or you need to restart from a specific point.
+Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
-## Project Structure
+Please refer to the project's issue tracker for ways to contribute. If you have suggestions for improvement, please open an issue to discuss it first.
 
-*   `index.html`: Main HTML file with CDN links for Tailwind, Marked, Mermaid, and KaTeX.
-*   `index.tsx`: React app entry point.
-*   `App.tsx`: Core application logic, state management, and phase routing.
-*   `types.ts`: TypeScript definitions for data structures and types.
-*   `services/`: Gemini API interaction and research flow logic.
-    *   `geminiService.ts`: Aggregator for service functions.
-    *   `gemini/`: Specific modules for different parts of the research process:
-        *   `clarificationService.ts`: Handles topic clarification and question generation.
-        *   `strategyService.ts`: Generates the research strategy.
-        *   `executionService.ts`: Decides and executes research steps using Google Search.
-        *   `synthesisService.ts`: Summarizes text and synthesizes the final report.
-        *   `utils.ts`: Core Gemini API call utilities (including retry logic and stream handling), JSON parsing.
-        *   `constants.ts`: Model names, retry limits, etc.
-*   `components/`: React UI components.
-    *   `phases/`: Components for each distinct research phase (Input, Clarification, Strategy Review, Action Review, Executing, Report, Error).
-    *   `AppHeader.tsx`: Application title header.
-    *   `ApiKeyWarning.tsx`: Warning for missing API key.
-    *   `ActionButton.tsx`: Standardized button component.
-    *   `LoadingSpinner.tsx`: Reusable loading spinner.
-    *   `MarkdownRenderer.tsx`: Renders Markdown content, including KaTeX and Mermaid. Optimized for streaming.
-    *   `ResearchLogView.tsx`: Displays the live research log.
-    *   `SourcesListView.tsx`: Displays all gathered sources.
-    *   `icons.tsx`: SVG icon components.
-*   `utils/`: General utility functions and application constants.
-    *   `appConstants.ts`: Default values, API key status check.
-    *   `formatters.ts`: Helper functions (e.g., `formatDuration`).
-*   `metadata.json`: Application metadata for the environment.
-*   `README.md`: This file.
+## License
 
-## Important Notes
+Distributed under the MIT License. See `LICENSE` for more information. (Note: A LICENSE file should be added to the repository).
 
-*   **API Key Security:** Your Google Gemini API Key is sensitive. Ensure it is kept secure and only exposed as `process.env.API_KEY`.
-*   **Information Verification:** Always critically evaluate AI-generated information.
-*   **API Costs:** Be mindful of potential costs associated with Google Gemini API usage.
-*   **Model Updates:** The application uses `gemini-2.5-flash` for "Normal" mode and `gemini-2.5-pro` for "Deeper" mode, as per current guidelines. These are subject to change based on model availability and updates.
-*   **Offline Functionality:** While the UI is responsive, core functionality relies on API calls and requires an internet connection.
-*   **Error Reporting:** The app will attempt to display errors from the API or internal processes directly to the user.
+## Contact
+
+KResearch - [Project Issue Tracker](https://github.com/your-username/kresearch/issues)
+
+Project Link: [https://github.com/your-username/kresearch](https://github.com/your-username/kresearch)
+
+## Acknowledgements
+*   Powered by the Google Gemini API.
+*   Icons provided by [Heroicons](https://heroicons.com/).
+*   UI inspired by modern glassmorphism design trends.

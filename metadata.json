@@ -1,6 +1,6 @@
 {
   "name": "KResearch",
-  "description": "An application that uses the Gemini API to conduct deep research. It clarifies the topic with the user, devises a research strategy, iteratively executes research actions using Google Search, and synthesizes a comprehensive report with citations. The process is streamed to the user.",
+  "description": "An advanced AI-powered deep research application that synthesizes information from numerous sources to generate comprehensive, well-documented reports on complex topics.",
   "requestFramePermissions": [],
   "prompt": ""
 }
