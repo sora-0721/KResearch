@@ -106,19 +106,10 @@ Once the application is running in your browser:
 
 Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
-Please refer to the project's issue tracker for ways to contribute. If you have suggestions for improvement, please open an issue to discuss it first.
-
 ## License
 
 Distributed under the MIT License. See `LICENSE` for more information. (Note: A LICENSE file should be added to the repository).
 
-## Contact
-
-KResearch - [Project Issue Tracker](https://github.com/KuekHaoYang/KResearch)
-
-Project Link: [https://github.com/KuekHaoYang/KResearch](https://github.com/KuekHaoYang/KResearch)
-
 ## Acknowledgements
 *   Powered by the Google Gemini API.
-*   Icons provided by [Heroicons](https://heroicons.com/).
 *   UI inspired by modern glassmorphism design trends.
