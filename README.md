@@ -62,7 +62,7 @@ This project is a static web application and does not require a complex build st
 
 1.  Clone the repository:
     ```sh
-    git clone https://github.com/your-username/kresearch.git
+    git clone https://github.com/KuekHaoYang/KResearch
     cd kresearch
     ```
 2.  Serve the project folder using a local web server. Here are two common ways:
@@ -114,9 +114,9 @@ Distributed under the MIT License. See `LICENSE` for more information. (Note: A 
 
 ## Contact
 
-KResearch - [Project Issue Tracker](https://github.com/your-username/kresearch/issues)
+KResearch - [Project Issue Tracker](https://github.com/KuekHaoYang/KResearch)
 
-Project Link: [https://github.com/your-username/kresearch](https://github.com/your-username/kresearch)
+Project Link: [https://github.com/KuekHaoYang/KResearch](https://github.com/KuekHaoYang/KResearch)
 
 ## Acknowledgements
 *   Powered by the Google Gemini API.
