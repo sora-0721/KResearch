@@ -23,3 +23,9 @@ export interface FinalResearchData {
   citations: Citation[];
   researchTimeMs: number;
 }
+
+export interface FileData {
+  name: string;
+  mimeType: string;
+  data: string; // base64 encoded string
+}

@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
-import { ResearchUpdate, FinalResearchData, Citation, AgentPersona, ResearchMode } from '../types';
+import { ResearchUpdate, FinalResearchData, Citation, AgentPersona, ResearchMode, FileData } from '../types';
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -12,9 +12,9 @@ type ModelSet = {
 
 const researchModeModels: Record<ResearchMode, ModelSet> = {
     Balanced: {
-        planner: 'gemini-2.5-pro',
-        searcher: 'gemini-2.5-flash-lite-preview-06-17',
-        synthesizer: 'gemini-2.5-flash'
+        planner: 'gemini-2.5-flash-preview-04-17',
+        searcher: 'gemini-2.5-flash-preview-04-17',
+        synthesizer: 'gemini-2.5-flash-preview-04-17'
     },
     DeepDive: {
         planner: 'gemini-2.5-pro',
@@ -22,9 +22,9 @@ const researchModeModels: Record<ResearchMode, ModelSet> = {
         synthesizer: 'gemini-2.5-pro'
     },
     Fast: {
-        planner: 'gemini-2.5-flash',
-        searcher: 'gemini-2.5-flash',
-        synthesizer: 'gemini-2.5-flash'
+        planner: 'gemini-2.5-flash-preview-04-17',
+        searcher: 'gemini-2.5-flash-preview-04-17',
+        synthesizer: 'gemini-2.5-flash-preview-04-17'
     },
     UltraFast: {
         planner: 'gemini-2.5-flash-lite-preview-06-17',
@@ -34,9 +34,9 @@ const researchModeModels: Record<ResearchMode, ModelSet> = {
 };
 
 const clarificationModels: Record<ResearchMode, string> = {
-    Balanced: 'gemini-2.5-flash',
+    Balanced: 'gemini-2.5-flash-preview-04-17',
     DeepDive: 'gemini-2.5-pro',
-    Fast: 'gemini-2.5-flash',
+    Fast: 'gemini-2.5-flash-preview-04-17',
     UltraFast: 'gemini-2.5-flash-lite-preview-06-17',
 };
 
@@ -76,34 +76,39 @@ export interface ClarificationResponse {
 
 export const clarifyQuery = async (
     history: { role: 'user' | 'model', content: string }[],
-    mode: ResearchMode
+    mode: ResearchMode,
+    fileData: FileData | null
 ): Promise<ClarificationResponse> => {
-    const systemPrompt = `You are a helpful AI assistant. Your goal is to clarify a user's research request by asking a series of targeted questions.
+    const systemPrompt = `You are a helpful AI assistant. Your goal is to clarify a user's research request. If a file is attached, use its content to inform your questions.
 
 Follow these rules:
 1.  Engage in a conversation, asking one clarifying question at a time.
-2.  Base each new question on the user's previous answers to narrow down their intent.
-3.  Provide examples or options in your questions to guide the user. For example: "Are you interested in performance for gaming, video editing, or something else?"
+2.  Base each new question on the user's previous answers and any provided file context to narrow down their intent.
+3.  Provide examples or options in your questions to guide the user. For example: "I see you've uploaded a document about X. Are you interested in a summary, a critique, or how it compares to Y?"
 4.  After asking at least 3-5 questions and you feel you have a very clear understanding of the user's goal, stop asking questions.
 5.  When you stop asking questions, you MUST generate a concise, one-paragraph summary of the refined research goal. This summary will be passed to other AI agents.
 
 Your entire output must be a single JSON object with one of two formats:
 - If you are asking a question: \`{ "type": "question", "content": "Your question here..." }\`
 - When you are finished and providing the summary: \`{ "type": "summary", "content": "Your final summary paragraph here..." }\`
-
-Example flow:
-User says: "Tell me about the M2 Ultra vs 4060"
-Your first response would be: \`{ "type": "question", "content": "To give you the best comparison, what aspect are you most interested in? For example, are you focused on gaming performance, video editing capabilities, power efficiency, or something else?" }\`
-User answers.
-Your next response would be: \`{ "type": "question", "content": "Great, for gaming performance, are there any specific games or genres you're curious about? Or should I look for general benchmarks across a wide range of popular titles?" }\`
-... after a few more turns ...
-Your final response would be: \`{ "type": "summary", "content": "The user wants a detailed comparison between the M2 Ultra and the Nvidia 4060, with a primary focus on gaming performance. They are specifically interested in benchmarks and real-world frame rates for modern AAA titles like Cyberpunk 2077 and Alan Wake 2, and are less concerned with power consumption or video editing." }\`
 `;
     
-    const contents = history.map(turn => ({
-        role: turn.role,
-        parts: [{ text: turn.content }]
-    }));
+    const contents = history.map((turn, index) => {
+        const parts: ({ text: string } | { inlineData: { mimeType: string; data: string } })[] = [{ text: turn.content }];
+        // Attach the file only to the very first user message to provide initial context.
+        if (turn.role === 'user' && index === 0 && fileData) {
+            parts.push({
+                inlineData: {
+                    mimeType: fileData.mimeType,
+                    data: fileData.data
+                }
+            });
+        }
+        return {
+            role: turn.role,
+            parts: parts
+        };
+    });
 
     const modelName = clarificationModels[mode];
 
@@ -135,7 +140,8 @@ const runDynamicConversationalPlanner = async (
     checkSignal: () => void,
     idCounter: { current: number },
     mode: ResearchMode,
-    clarifiedContext: string
+    clarifiedContext: string,
+    fileData: FileData | null
 ): Promise<{ search_queries: string[], should_finish: boolean, finish_reason?: string }> => {
     
     const overallHistoryText = researchHistory.map(h => `${h.persona ? h.persona + ' ' : ''}${h.type}: ${Array.isArray(h.content) ? h.content.join(', ') : h.content}`).join('\n');
@@ -157,6 +163,7 @@ const runDynamicConversationalPlanner = async (
             **Overall Research Context:**
             *   User's Original Query: "${query}"
             *   Refined Research Goal (from user conversation): "${clarifiedContext}"
+            *   Provided File: ${fileData ? fileData.name : 'None'}
             *   Total search cycles so far: ${searchCycles}.
             *   Overall Research History: <history>${overallHistoryText || 'No history yet.'}</history>
 
@@ -164,7 +171,7 @@ const runDynamicConversationalPlanner = async (
             ${conversationText || 'You are Agent Alpha, starting the conversation. Propose the initial strategy.'}
 
             **Your Task & Rules:**
-            1.  Critically analyze the research so far and the ongoing debate.
+            1.  Critically analyze the research so far, the ongoing debate, and the content of the provided file (if any).
             2.  Provide your 'thought', addressing the other agent if they have spoken.
             3.  Choose ONE of the following actions:
                 *   'continue_debate': To continue the discussion and refine the strategy. Let the other agent respond.
@@ -179,25 +186,21 @@ const runDynamicConversationalPlanner = async (
 
             **RESPONSE FORMAT:**
             Your entire output MUST be a single JSON object.
-
-            Example (Continue Debate):
-            {
-              "thought": "I think we should start by verifying the existence of this product. The naming seems unusual.",
-              "action": "continue_debate",
-              "queries": null
-            }
-            
-            Example (Search):
-            {
-              "thought": "Okay, I agree. Let's refine the queries to be more specific. I will search for the technical specs and target market.",
-              "action": "search",
-              "queries": ["product X detailed specs", "product X target market analysis"]
-            }
         `;
+
+        const parts: ({ text: string } | { inlineData: { mimeType: string; data: string; } })[] = [{ text: prompt }];
+        if (fileData) {
+            parts.push({
+                inlineData: {
+                    mimeType: fileData.mimeType,
+                    data: fileData.data,
+                }
+            });
+        }
 
         const response = await ai.models.generateContent({
             model: researchModeModels[mode].planner,
-            contents: prompt,
+            contents: { parts },
             config: { responseMimeType: "application/json", temperature: 0.7 }
         });
         checkSignal();
@@ -257,7 +260,7 @@ const executeSingleSearch = async (searchQuery: string, mode: ResearchMode): Pro
     return { text: `Summary for "${searchQuery}": ${response.text}`, citations: uniqueCitations };
 };
 
-const synthesizeReport = async (query: string, history: ResearchUpdate[], citations: Citation[], mode: ResearchMode): Promise<Omit<FinalResearchData, 'researchTimeMs'>> => {
+const synthesizeReport = async (query: string, history: ResearchUpdate[], citations: Citation[], mode: ResearchMode, fileData: FileData | null): Promise<Omit<FinalResearchData, 'researchTimeMs'>> => {
     const learnings = history
         .filter(h => h.type === 'read')
         .map(h => h.content)
@@ -269,16 +272,19 @@ const synthesizeReport = async (query: string, history: ResearchUpdate[], citati
 
     const initialReportPrompt = `You are an expert Senior Research Analyst and Strategist, specializing in synthesizing complex information into clear, insightful, and decision-ready reports for executive-level stakeholders.
 
-Your mission is to transform the provided raw research materials into a polished and comprehensive final report that not only answers the user's request but also provides strategic context and actionable insights.
+Your mission is to transform the provided raw research materials and any attached files into a polished and comprehensive final report.
 
 **User's Core Request:**
 <REQUIREMENT>
 ${query}
 </REQUIREMENT>
 
+**Attached File:**
+${fileData ? `A file named '${fileData.name}' has been provided. Its content is available to you as primary context.` : "No file was provided."}
+
 **Synthesized Research Learnings (Primary Source for the Report):**
 <LEARNINGS>
-${learnings || "No specific content was read during research. Base the report on the thought process."}
+${learnings || "No specific content was read during research. Base the report on the thought process and any attached file."}
 </LEARNINGS>
 
 **Full Research History (For Context and Nuance Only):**
@@ -292,38 +298,40 @@ ${historyText}
 Adhere to the following professional report structure. Each section should be clearly delineated.
 
 *   **Title:** Create a concise and descriptive title for the report.
-*   **Executive Summary:** Begin with a brief, high-level overview. This section is for busy executives and should summarize the core request, the most critical findings, and the key recommendations in a few paragraphs or bullet points.
-*   **Introduction:** State the original request and the objective of the report. Briefly outline the report's scope and methodology (i.e., synthesis of the provided research learnings).
-*   **Detailed Analysis / Key Findings:** This is the main body of the report.
-    *   Synthesize the information from the \`<LEARNINGS>\` block into a thorough and coherent analysis.
-    *   Organize findings thematically using clear headings and subheadings.
+*   **Executive Summary:** Begin with a brief, high-level overview summarizing the core request, the most critical findings (from both web research and any provided files), and key recommendations.
+*   **Introduction:** State the original request, including the role of any attached files, and the objective of the report.
+*   **Detailed Analysis / Key Findings:** This is the main body.
+    *   Synthesize information from the \`<LEARNINGS>\` block AND the attached file content into a thorough, coherent analysis.
+    *   Organize findings thematically.
     *   Directly address all parts of the user's \`<REQUIREMENT>\`.
-*   **Strategic Recommendations / Implications:** Go beyond summarizing. Based *only* on the findings, provide actionable recommendations, outline potential strategic implications, or identify opportunities and risks.
-*   **Conclusion:** Provide a concise final summary of the report's findings and their significance.
+*   **Strategic Recommendations / Implications:** Based *only* on the findings, provide actionable recommendations or outline strategic implications.
+*   **Conclusion:** Provide a concise final summary.
 
 **2. Tone and Style:**
 *   Maintain a professional, objective, and analytical tone.
-*   The report's content must be based **exclusively** on the information within the \`<LEARNINGS>\` block. Use the \`<HISTORY>\` block for contextual understanding only, not as a source for new facts.
-*   Do NOT include inline citations (e.g., [1], [source.com]) or invent sources.
+*   The report's content must be based **exclusively** on the information within the \`<LEARNINGS>\` block and the attached file.
+*   Do NOT include inline citations or invent sources.
 
 **3. Data Visualization and Formatting:**
-Enhance readability and impact by incorporating visual elements where appropriate.
-
-*   **Markdown Tables:** Use tables to present structured data, comparisons (e.g., pros/cons, feature comparisons), or quantitative information in a clear and organized manner.
-*   **Mermaid Charts:** Use Mermaid syntax (within a \`\`\`mermaid ... \`\`\` code block) to create diagrams and charts. This is crucial for visualizing processes, relationships, and distributions.
-    *   Use \`graph TD\` or \`flowchart TD\` for processes and flowcharts.
-    *   Use \`pieChart\` for market share, budget allocations, or other proportional data.
-    *   Use \`gantt\` for project timelines or roadmaps.
-    *   Use \`mindmap\` to illustrate complex relationships or brainstorming sessions.
-*   **Rich Text Formatting:** Use **bold text** for emphasis on key terms and conclusions, *italics* for nuance, and nested bullet points and blockquotes (\`>\`) to structure information effectively.
+Enhance readability with visual elements where appropriate, using Markdown and Mermaid charts.
 
 **4. Final Output:**
-Respond ONLY with the raw markdown content of the final report. Do not include any preamble (e.g., "Here is the report you requested"), commentary, or post-report summaries. The output should begin directly with the report's title.
+Respond ONLY with the raw markdown content of the final report.
 `;
+
+    const parts: ({ text: string } | { inlineData: { mimeType: string; data: string; } })[] = [{ text: initialReportPrompt }];
+    if (fileData) {
+        parts.push({
+            inlineData: {
+                mimeType: fileData.mimeType,
+                data: fileData.data,
+            }
+        });
+    }
 
     const reportResponse = await ai.models.generateContent({
         model: researchModeModels[mode].synthesizer,
-        contents: initialReportPrompt,
+        contents: { parts },
         config: { temperature: 0.5 }
     });
     
@@ -343,7 +351,8 @@ export const runIterativeDeepResearch = async (
   onUpdate: (update: ResearchUpdate) => void,
   signal: AbortSignal,
   mode: ResearchMode,
-  clarifiedContext: string
+  clarifiedContext: string,
+  fileData: FileData | null
 ): Promise<FinalResearchData> => {
   console.log(`Starting DYNAMIC CONVERSATIONAL research for: ${query}`);
 
@@ -365,7 +374,7 @@ export const runIterativeDeepResearch = async (
     await new Promise(resolve => setTimeout(resolve, 1000));
     checkSignal();
     
-    const plan = await runDynamicConversationalPlanner(query, history, onPlannerUpdate, checkSignal, idCounter, mode, clarifiedContext);
+    const plan = await runDynamicConversationalPlanner(query, history, onPlannerUpdate, checkSignal, idCounter, mode, clarifiedContext, fileData);
     
     checkSignal();
 
@@ -405,7 +414,7 @@ export const runIterativeDeepResearch = async (
     }
   }
 
-  const finalReportData = await synthesizeReport(query, history, allCitations, mode);
+  const finalReportData = await synthesizeReport(query, history, allCitations, mode, fileData);
   const uniqueCitations = Array.from(new Map(allCitations.map(c => [c.url, c])).values());
 
   return { ...finalReportData, citations: uniqueCitations, researchTimeMs: 0 };

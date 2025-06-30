@@ -7,7 +7,7 @@ import FinalReport from './components/FinalReport';
 import ThemeSwitcher from './components/ThemeSwitcher';
 import ClarificationChat from './components/ClarificationChat';
 import { runIterativeDeepResearch, clarifyQuery } from './services/geminiService';
-import { ResearchUpdate, FinalResearchData, ResearchMode } from './types';
+import { ResearchUpdate, FinalResearchData, ResearchMode, FileData } from './types';
 
 type AppState = 'idle' | 'clarifying' | 'researching' | 'complete';
 export interface ClarificationTurn {
@@ -18,12 +18,14 @@ export interface ClarificationTurn {
 const App: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [query, setQuery] = useState<string>('');
+  const [selectedFile, setSelectedFile] = useState<FileData | null>(null);
   const [researchUpdates, setResearchUpdates] = useState<ResearchUpdate[]>([]);
   const [finalData, setFinalData] = useState<FinalResearchData | null>(null);
   const [isLogVisible, setIsLogVisible] = useState<boolean>(true);
   const [mode, setMode] = useState<ResearchMode>('Balanced');
   const abortControllerRef = useRef<AbortController | null>(null);
   const finalReportRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [appState, setAppState] = useState<AppState>('idle');
   const [clarificationHistory, setClarificationHistory] = useState<ClarificationTurn[]>([]);
@@ -55,7 +57,7 @@ const App: React.FC = () => {
   const handleClarificationResponse = async (history: ClarificationTurn[]) => {
       setClarificationLoading(true);
       try {
-          const response = await clarifyQuery(history, mode);
+          const response = await clarifyQuery(history, mode, selectedFile);
           if (response.type === 'question') {
               setClarificationHistory(prev => [...prev, { role: 'model', content: response.content }]);
           } else if (response.type === 'summary') {
@@ -74,7 +76,13 @@ const App: React.FC = () => {
   const startClarificationProcess = () => {
       if (!query.trim() || appState !== 'idle') return;
       setAppState('clarifying');
-      const initialHistory: ClarificationTurn[] = [{ role: 'user', content: query }];
+      
+      let initialQuery = query;
+      if (selectedFile) {
+        initialQuery += `\n\n[File attached: ${selectedFile.name}]`;
+      }
+
+      const initialHistory: ClarificationTurn[] = [{ role: 'user', content: initialQuery }];
       setClarificationHistory(initialHistory);
       handleClarificationResponse(initialHistory);
   };
@@ -97,7 +105,7 @@ const App: React.FC = () => {
     try {
       const result = await runIterativeDeepResearch(query, (update) => {
         setResearchUpdates(prev => [...prev, update]);
-      }, signal, mode, context);
+      }, signal, mode, context, selectedFile);
       
       const endTime = Date.now();
       setFinalData({
@@ -126,7 +134,7 @@ const App: React.FC = () => {
     } finally {
       setAppState('complete');
     }
-  }, [query, mode]);
+  }, [query, mode, selectedFile]);
   
   useEffect(() => {
     if (appState === 'researching' && clarifiedContext) {
@@ -146,6 +154,32 @@ const App: React.FC = () => {
       abortControllerRef.current.abort();
     }
   };
+  
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64String = e.target?.result as string;
+        // The result includes a prefix like "data:image/png;base64," that needs to be removed.
+        const base64Data = base64String.split(',')[1];
+        setSelectedFile({
+          name: file.name,
+          mimeType: file.type,
+          data: base64Data,
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    if(fileInputRef.current) {
+        fileInputRef.current.value = "";
+    }
+  };
+
 
   const handleReset = () => {
       abortControllerRef.current?.abort();
@@ -154,6 +188,8 @@ const App: React.FC = () => {
       setResearchUpdates([]);
       setQuery('');
       setMode('Balanced');
+      setSelectedFile(null);
+      if(fileInputRef.current) fileInputRef.current.value = "";
       setClarificationHistory([]);
       setClarifiedContext('');
       setClarificationLoading(false);
@@ -180,7 +216,7 @@ const App: React.FC = () => {
 
         {appState === 'idle' && (
           <div className="animate-fade-in space-y-4">
-            <div className="mb-2">
+            <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 text-center">Select Research Mode</label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {modes.map((m) => (
@@ -201,21 +237,48 @@ const App: React.FC = () => {
                 ))}
               </div>
             </div>
-            <textarea
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="What is the future of AI in healthcare?"
-              className="
-                w-full h-32 p-4 rounded-xl resize-none
-                bg-black/10 dark:bg-black/20 
-                border border-transparent focus:border-glow-light dark:focus:border-glow-dark
-                focus:ring-2 focus:ring-glow-light/50 dark:focus:ring-glow-dark/50
-                focus:outline-none
-                transition-all duration-300
-              "
-              disabled={appState !== 'idle'}
-            />
+
+            <div className="relative">
+                <textarea
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="What is the future of AI in healthcare? (You can also attach a file)"
+                  className="
+                    w-full h-32 p-4 pr-12 rounded-xl resize-none
+                    bg-black/10 dark:bg-black/20 
+                    border border-transparent focus:border-glow-light dark:focus:border-glow-dark
+                    focus:ring-2 focus:ring-glow-light/50 dark:focus:ring-glow-dark/50
+                    focus:outline-none
+                    transition-all duration-300
+                  "
+                  disabled={appState !== 'idle'}
+                />
+                <div className="absolute inset-y-0 right-0 flex items-end p-3">
+                    <input type="file" id="file-upload" ref={fileInputRef} className="hidden" onChange={handleFileChange} disabled={appState !== 'idle'} />
+                    <label htmlFor="file-upload" className="p-2 rounded-full cursor-pointer hover:bg-black/10 dark:hover:bg-white/10 transition-colors" title="Attach file">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                        </svg>
+                        <span className="sr-only">Attach file</span>
+                    </label>
+                </div>
+            </div>
+
+            {selectedFile && (
+                <div className="flex items-center justify-between px-3 py-2 text-sm rounded-lg bg-blue-500/10 dark:bg-blue-400/10 border border-blue-500/20 dark:border-blue-400/20">
+                    <span className="truncate text-gray-700 dark:text-gray-300" title={selectedFile.name}>
+                        {selectedFile.name}
+                    </span>
+                    <button onClick={handleRemoveFile} className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10" title="Remove file">
+                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        <span className="sr-only">Remove file</span>
+                    </button>
+                </div>
+            )}
+
             <LiquidButton onClick={startClarificationProcess} disabled={appState !== 'idle' || !query.trim()} className="w-full">
               Start Research
             </LiquidButton>
