@@ -28,6 +28,14 @@ export const runIterativeDeepResearch = async (
 
   while (true) {
     checkSignal();
+    const searchCycles = history.filter(h => h.type === 'search').length;
+    if (searchCycles >= 17) {
+        const finishUpdate = { id: idCounter.current++, type: 'thought' as const, content: 'Maximum research cycles (17) reached. Forcing conclusion to synthesize report.' };
+        history.push(finishUpdate);
+        onUpdate(finishUpdate);
+        break;
+    }
+    
     await new Promise(resolve => setTimeout(resolve, 1000));
     checkSignal();
     

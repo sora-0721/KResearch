@@ -1,3 +1,4 @@
+
 import { ai } from './geminiClient';
 import { clarificationModels } from './models';
 import { parseJsonFromMarkdown } from './utils';
@@ -13,18 +14,25 @@ export const clarifyQuery = async (
     mode: ResearchMode,
     fileData: FileData | null
 ): Promise<ClarificationResponse> => {
-    const systemPrompt = `You are a helpful AI assistant. Your goal is to clarify a user's research request. If a file is attached, use its content to inform your questions.
+    const systemPrompt = `**YOUR ONLY JOB IS TO PRODUCE A SINGLE, RAW JSON OBJECT.**
+Do not write any other text. Your entire response must start with \`{\` and end with \`}\`. Do not use markdown fences like \`\`\`json.
 
-Follow these rules:
-1.  Engage in a conversation, asking one clarifying question at a time.
-2.  Base each new question on the user's previous answers and any provided file context to narrow down their intent.
-3.  Provide examples or options in your questions to guide the user. For example: "I see you've uploaded a document about X. Are you interested in a summary, a critique, or how it compares to Y?"
-4.  After asking at least 3-5 questions and you feel you have a very clear understanding of the user's goal, stop asking questions.
-5.  When you stop asking questions, you MUST generate a concise, one-paragraph summary of the refined research goal. This summary will be passed to other AI agents.
+Your role is to ask clarifying questions to refine a user's research request. You will use Google Search to inform your questions.
 
-Your entire output must be a single JSON object with one of two formats:
-- If you are asking a question: \`{ "type": "question", "content": "Your question here..." }\`
-- When you are finished and providing the summary: \`{ "type": "summary", "content": "Your final summary paragraph here..." }\`
+**CRITICAL RULES:**
+1.  **ASK, DON'T ANSWER:** Your goal is to ask questions, not provide answers. Use search results to formulate better questions. (e.g., After searching "iPhone 17e", ask "Are you interested in its rumored specs, potential release date, or something else?").
+2.  **VERIFY:** Always use Google Search. Your internal knowledge may be outdated. Do not argue with the user about facts you can verify.
+3.  **ONE QUESTION AT A TIME:** Ask only one targeted question per turn.
+4.  **FINISH:** After 2-4 questions, you MUST stop asking and provide a summary.
+
+**JSON FORMATS (CHOOSE ONE):**
+1.  **To ask a question:** \`{ "type": "question", "content": "Your single, focused question here." }\`
+2.  **To provide the final summary:** \`{ "type": "summary", "content": "Your final summary paragraph of the refined research goal." }\`
+
+**EXAMPLE DIALOGUE:**
+User: "iPhone 17e"
+Your AI Response (this is the entire response, nothing else):
+{ "type": "question", "content": "I see from search results that the iPhone 17e is a rumored future product. Are you more interested in its technical specifications, potential market impact, or comparisons to the existing iPhone SE line?" }
 `;
     
     const contents = history.map((turn, index) => {
@@ -38,7 +46,11 @@ Your entire output must be a single JSON object with one of two formats:
     const response = await ai.models.generateContent({
         model: clarificationModels[mode],
         contents: contents,
-        config: { systemInstruction: systemPrompt, responseMimeType: "application/json", temperature: 0.5 }
+        config: { 
+            systemInstruction: systemPrompt, 
+            temperature: 0.5,
+            tools: [{ googleSearch: {} }] 
+        }
     });
 
     const parsedResponse = parseJsonFromMarkdown(response.text) as ClarificationResponse;

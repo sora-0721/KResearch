@@ -20,8 +20,10 @@ export const runDynamicConversationalPlanner = async (
     clarifiedContext: string,
     fileData: FileData | null
 ): Promise<{ search_queries: string[], should_finish: boolean, finish_reason?: string }> => {
-    const overallHistoryText = researchHistory.map(h => `${h.persona ? h.persona + ' ' : ''}${h.type}: ${Array.isArray(h.content) ? h.content.join(', ') : h.content}`).join('\n');
+    const searchHistoryText = researchHistory.filter(h => h.type === 'search').map(h => (Array.isArray(h.content) ? h.content : [h.content]).join(', ')).join('; ');
+    const readHistoryText = researchHistory.filter(h => h.type === 'read').map(h => h.content).join('\n---\n');
     const searchCycles = researchHistory.filter(h => h.type === 'search').length;
+
     let currentConversation: { persona: AgentPersona; thought: string }[] = [];
     let nextPersona: AgentPersona = 'Alpha';
 
@@ -32,34 +34,35 @@ export const runDynamicConversationalPlanner = async (
 
         const prompt = `
             You are Agent ${nextPersona} (${nextPersona === 'Alpha' ? 'Strategist' : 'Tactician'}).
-            Engage in a critical debate to decide the next research step. The goal is to formulate the best possible search queries through collaboration.
+            Engage in a critical debate to decide the next research step. The goal is to formulate novel and effective search queries through collaboration.
 
             **Overall Research Context:**
             *   User's Original Query: "${query}"
             *   Refined Research Goal (from user conversation): "${clarifiedContext}"
             *   Provided File: ${fileData ? fileData.name : 'None'}
             *   Total search cycles so far: ${searchCycles}.
-            *   Overall Research History: <history>${overallHistoryText || 'No history yet.'}</history>
+            *   Previously Executed Searches: <searches>${searchHistoryText || 'None yet.'}</searches>
+            *   Synthesized Learnings from Past Searches: <learnings>${readHistoryText || 'No learnings yet.'}</learnings>
 
             **Current Planning Conversation:**
             ${conversationText || 'You are Agent Alpha, starting the conversation. Propose the initial strategy.'}
 
             **Your Task & Rules:**
-            1.  Critically analyze the research so far, the ongoing debate, and the content of the provided file (if any).
-            2.  Provide your 'thought', addressing the other agent if they have spoken.
-            3.  Choose ONE of the following actions:
+            1.  **Analyze All Context:** Critically analyze the refined goal, the learnings from past searches, the provided file content, and the ongoing debate.
+            2.  **Avoid Redundancy:** Do NOT propose search queries that are identical or semantically very similar to queries already in <searches>. Your goal is to explore new avenues, deepen understanding, or challenge existing findings, not repeat work.
+            3.  **Provide Your 'thought':** Articulate your reasoning, addressing the other agent if they have spoken.
+            4.  **Choose ONE Action:**
                 *   'continue_debate': To continue the discussion and refine the strategy. Let the other agent respond.
-                *   'search': When you are confident in the next search queries. Provide 1-4 queries. This ends the current planning session.
-                *   'finish': ONLY if you are certain the research is comprehensive enough to answer the user's query. You MUST provide a reason. You may only choose 'finish' if at least 3 search cycles have been completed. (Current cycles: ${searchCycles}).
+                *   'search': When you are confident in the next 1-4 queries. This ends the current planning session.
+                *   'finish': ONLY if you are certain the research is comprehensive enough. You MUST provide a clear reason.
+            5.  **Research Cycle Rules:**
+                *   The 'finish' action is disabled until at least 7 search cycles are complete. (Current cycles: ${searchCycles}).
+                *   You should aim to conclude the research between 7 and 17 cycles. Do not extend research unnecessarily.
 
-            ${isFirstTurn ? `
-            **Critical Rule for Agent Alpha (First Turn):** As this is the first turn of the debate, your role is to propose an initial strategy. Your action MUST be 'continue_debate'.
-            ` : ''}
-
-            ${searchCycles < 3 ? `**Note:** The 'finish' action is disabled until at least 3 search cycles are complete.` : ''}
+            ${isFirstTurn ? `**Critical Rule for Agent Alpha (First Turn):** As this is the first turn of the debate, propose an initial strategy. Your action MUST be 'continue_debate'.` : ''}
 
             **RESPONSE FORMAT:**
-            Your entire output MUST be a single JSON object.
+            Your entire output MUST be a single JSON object. Example: { "thought": "...", "action": "search", "queries": ["query1", "query2"] }
         `;
         const parts: ({ text: string } | { inlineData: { mimeType: string; data: string; } })[] = [{ text: prompt }];
         if (fileData) {
@@ -83,8 +86,8 @@ export const runDynamicConversationalPlanner = async (
         checkSignal();
 
         if (parsedResponse.action === 'finish') {
-            if (searchCycles < 3) {
-                 const thought = `Rule violation: Cannot finish before 3 search cycles. Continuing debate. My previous thought was: ${parsedResponse.thought}`;
+            if (searchCycles < 7) {
+                 const thought = `Rule violation: Cannot finish before 7 search cycles. Continuing debate. My previous thought was: ${parsedResponse.thought}`;
                  onUpdate({ id: idCounter.current++, type: 'thought' as const, persona: nextPersona, content: thought });
                  currentConversation.push({ persona: nextPersona, thought: thought });
                  nextPersona = (nextPersona === 'Alpha') ? 'Beta' : 'Alpha';

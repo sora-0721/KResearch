@@ -12,32 +12,62 @@ export const synthesizeReport = async (
     const learnings = history.filter(h => h.type === 'read').map(h => h.content).join('\n\n---\n\n');
     const historyText = history.map(h => `${h.persona ? h.persona + ' ' : ''}${h.type}: ${Array.isArray(h.content) ? h.content.join(' | ') : h.content}`).join('\n');
 
-    const initialReportPrompt = `You are an expert Senior Research Analyst and Strategist, specializing in synthesizing complex information into clear, insightful, and decision-ready reports for executive-level stakeholders.
-Your mission is to transform the provided raw research materials and any attached files into a polished and comprehensive final report.
-**User's Core Request:** <REQUIREMENT>${query}</REQUIREMENT>
-**Attached File:** ${fileData ? `A file named '${fileData.name}' has been provided. Its content is available to you as primary context.` : "No file was provided."}
-**Synthesized Research Learnings (Primary Source for the Report):** <LEARNINGS>${learnings || "No specific content was read during research. Base the report on the thought process and any attached file."}</LEARNINGS>
+    const initialReportPrompt = `You are an elite Senior Research Analyst and Strategist, tasked with producing a formal, in-depth, and comprehensive research report for a C-suite executive audience. Your analysis must be sharp, insightful, and decision-ready.
+
+**Your Mission:** Transform the provided raw research materials—including synthesized learnings, the full research history, and any attached files—into a polished, substantial, and impeccably structured final report. The expected length is significant, reflecting the depth of the research performed.
+
+**Core Requirement from User:** <REQUIREMENT>${query}</REQUIREMENT>
+**Attached File Context:** ${fileData ? `A file named '${fileData.name}' has been provided and its content was central to the research process.` : "No file was provided."}
+**Synthesized Research Learnings (Primary Source for the Report):** <LEARNINGS>${learnings || "No specific content was read during research. Base the report primarily on the research history and any attached file."}</LEARNINGS>
 **Full Research History (For Context and Nuance Only):** <HISTORY>${historyText}</HISTORY>
-**--- INSTRUCTIONS ---**
-**1. Report Structure & Content:**
-Adhere to the following professional report structure. Each section should be clearly delineated.
-*   **Title:** Create a concise and descriptive title for the report.
-*   **Executive Summary:** Begin with a brief, high-level overview summarizing the core request, the most critical findings (from both web research and any provided files), and key recommendations.
-*   **Introduction:** State the original request, including the role of any attached files, and the objective of the report.
-*   **Detailed Analysis / Key Findings:** This is the main body.
-    *   Synthesize information from the \`<LEARNINGS>\` block AND the attached file content into a thorough, coherent analysis.
-    *   Organize findings thematically.
-    *   Directly address all parts of the user's \`<REQUIREMENT>\`.
-*   **Strategic Recommendations / Implications:** Based *only* on the findings, provide actionable recommendations or outline strategic implications.
-*   **Conclusion:** Provide a concise final summary.
-**2. Tone and Style:**
-*   Maintain a professional, objective, and analytical tone.
-*   The report's content must be based **exclusively** on the information within the \`<LEARNINGS>\` block and the attached file.
-*   Do NOT include inline citations or invent sources.
-**3. Data Visualization and Formatting:**
-Enhance readability with visual elements where appropriate, using Markdown and Mermaid charts.
-**4. Final Output:**
-Respond ONLY with the raw markdown content of the final report.
+
+**--- MANDATORY REPORT STRUCTURE & INSTRUCTIONS ---**
+
+You must generate a report that strictly adheres to the following structure and guidelines. Each section must be clearly delineated with the specified markdown headings.
+
+# [Create a Formal and Descriptive Title for the Report]
+
+## 1. Executive Summary
+*   Start with a high-level overview.
+*   Concisely state the original research objective.
+*   Summarize the most critical findings and conclusions drawn from the entire research process.
+*   End with a brief statement on the strategic implications.
+*   This section must be a dense, polished summary of the entire document.
+
+## 2. Introduction and Methodology
+*   **Introduction:** Restate the refined research problem from the \`<REQUIREMENT>\`. Explain the report's purpose and what it aims to achieve.
+*   **Scope:** Clearly define the boundaries of the research. What was included and what was intentionally excluded?
+*   **Methodology:** Describe the research process. Mention the use of a multi-agent AI system, iterative search cycles using Google Search, and synthesis of information from multiple sources. Explain that the research was dynamic and adaptive based on emerging findings.
+
+## 3. Thematic Analysis of Findings
+*   This is the core of the report. It must be detailed and extensive.
+*   Synthesize information from the \`<LEARNINGS>\` block AND the attached file content into a thorough, coherent analysis.
+*   Organize findings into distinct thematic sections (e.g., "Market Trends," "Technological Advancements," "Competitive Landscape"). Use \`###\` for sub-headings for each theme.
+*   For each theme, provide in-depth analysis, supported by the data gathered. Do not just list facts; interpret them.
+*   Where applicable, discuss contrasting viewpoints or conflicting data found during the research.
+
+## 4. Strategic Implications and Recommendations
+*   Based *exclusively* on the findings in the previous section, deduce the strategic implications for the target audience.
+*   If relevant, perform a SWOT (Strengths, Weaknesses, Opportunities, Threats) analysis.
+*   Provide a set of clear, actionable recommendations. Each recommendation should be justified by the research findings.
+
+## 5. Future Outlook and Areas for Further Research
+*   Discuss the likely future trajectory of the topic based on your analysis.
+*   Identify any unanswered questions that emerged during the research.
+*   Suggest specific areas where further, more targeted research could provide additional value.
+
+## 6. Conclusion
+*   Provide a strong, concise final summary of the report.
+*   Reiterate the most important takeaways and their significance.
+*   End with a powerful concluding thought.
+
+**--- STYLE AND FORMATTING ---**
+*   **Tone:** Formal, objective, authoritative, and analytical.
+*   **Data Visualization:** Where appropriate, use Mermaid.js charts (e.g., flowcharts, mind maps, Gantt charts) to visually represent complex relationships, processes, or timelines. Embed them in the relevant sections.
+*   **Formatting:** Use Markdown extensively for clarity (headings, lists, bold text).
+*   **Exclusivity:** The report's content must be based **exclusively** on the information provided in the prompt context. Do NOT invent information or use outside knowledge. Do NOT include inline citations.
+
+**Final Output:** Respond ONLY with the raw markdown content of the final report, starting with the H1 Title.
 `;
 
     const parts: ({ text: string } | { inlineData: { mimeType: string; data: string; } })[] = [{ text: initialReportPrompt }];
