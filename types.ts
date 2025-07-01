@@ -2,6 +2,12 @@
 export type ResearchUpdateType = 'thought' | 'search' | 'read';
 export type AgentPersona = 'Alpha' | 'Beta';
 export type ResearchMode = 'Balanced' | 'DeepDive' | 'Fast' | 'UltraFast';
+export type AppState = 'idle' | 'clarifying' | 'researching' | 'complete';
+
+export interface ClarificationTurn {
+    role: 'user' | 'model';
+    content: string;
+}
 
 export interface ResearchUpdate {
   id: number;
