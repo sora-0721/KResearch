@@ -24,10 +24,8 @@ const App: React.FC = () => {
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
-      document.body.style.background = 'linear-gradient(135deg, #1f2128 0%, #121212 100%)';
     } else {
       document.documentElement.classList.remove('dark');
-      document.body.style.background = 'linear-gradient(135deg, #e6e9f0 0%, #eef1f5 100%)';
     }
   }, [isDarkMode]);
 
@@ -69,11 +67,11 @@ const App: React.FC = () => {
           <div className="animate-fade-in space-y-4">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {modes.map((m) => (
-                <button key={m.id} onClick={() => setMode(m.id)} className={`p-3 rounded-lg text-sm font-semibold transition-all duration-300 text-center border ${mode === m.id ? 'bg-glow-light/20 dark:bg-glow-dark/30 text-gray-900 dark:text-white shadow-md border-glow-light dark:border-glow-dark' : 'bg-glass-light/50 dark:bg-glass-dark/50 text-gray-600 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/10 border-border-light dark:border-border-dark'}`} title={m.description}>{m.name}</button>
+                <button key={m.id} onClick={() => setMode(m.id)} className={`p-3 rounded-[10px] text-sm font-semibold transition-all duration-300 text-center border ${mode === m.id ? 'bg-glow-light/20 dark:bg-glow-dark/30 text-gray-900 dark:text-white shadow-md border-glow-light dark:border-glow-dark' : 'bg-glass-light/50 dark:bg-glass-dark/50 text-gray-600 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/10 border-border-light dark:border-border-dark'}`} title={m.description}>{m.name}</button>
               ))}
             </div>
             <div className="relative">
-              <textarea value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={handleKeyDown} placeholder="What is the future of AI in healthcare? (You can also attach a file)" className="w-full h-32 p-4 pr-12 rounded-xl resize-none bg-black/10 dark:bg-black/20 border border-transparent focus:border-glow-light dark:focus:border-glow-dark focus:ring-2 focus:ring-glow-light/50 dark:focus:ring-glow-dark/50 focus:outline-none transition-all duration-300" disabled={appState !== 'idle'}/>
+              <textarea value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={handleKeyDown} placeholder="What is the future of AI in healthcare? (You can also attach a file)" className="w-full h-32 p-4 pr-12 rounded-lg resize-none bg-black/10 dark:bg-black/20 border border-transparent focus:border-glow-light dark:focus:border-glow-dark focus:ring-2 focus:ring-glow-light/50 dark:focus:ring-glow-dark/50 focus:outline-none transition-all duration-300" disabled={appState !== 'idle'}/>
               <div className="absolute inset-y-0 right-0 flex items-end p-3">
                   <input type="file" id="file-upload" ref={fileInputRef} className="hidden" onChange={handleFileChange} disabled={appState !== 'idle'} />
                   <label htmlFor="file-upload" className="p-2 rounded-full cursor-pointer hover:bg-black/10 dark:hover:bg-white/10 transition-colors" title="Attach file"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg><span className="sr-only">Attach file</span></label>

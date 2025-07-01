@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect } from 'react';
 import Spinner from './Spinner';
 import { ResearchUpdate, AgentPersona } from '../types';
@@ -68,7 +69,7 @@ const ResearchProgress: React.FC<ResearchProgressProps> = ({ updates, isResearch
             <div className="absolute left-0 top-1.5 w-6 h-6 rounded-full bg-glass-light dark:bg-glass-dark border-2 border-border-light dark:border-border-dark flex items-center justify-center -translate-x-1/2">
                 <TypeIcon type={update.type} persona={update.persona}/>
             </div>
-            <div className="ml-2 p-3 rounded-lg bg-black/5 dark:bg-white/5">
+            <div className="ml-2 p-3 rounded-lg bg-glass-light/30 dark:bg-glass-dark/30 backdrop-blur-sm border border-border-light/20 dark:border-border-dark/20">
                 <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
                 {update.type === 'search' && Array.isArray(update.content) ? (
                     <div>

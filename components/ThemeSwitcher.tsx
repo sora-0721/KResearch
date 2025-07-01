@@ -19,12 +19,12 @@ const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({ isDarkMode, onToggle }) =
         after:content-[''] 
         after:absolute 
         after:top-1 after:left-1
-        after:bg-white/80
-        after:border after:border-gray-300
+        after:bg-white/90
+        after:border after:border-gray-300/50
         after:rounded-full 
         after:h-6 after:w-6 
         after:transition-all
-        peer-checked:bg-glow-dark/50
+        peer-checked:bg-glow-light dark:peer-checked:bg-glow-dark peer-checked:shadow-lg peer-checked:shadow-glow-light/50 dark:peer-checked:shadow-glow-dark/50
         peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-glow-light/50 dark:peer-focus:ring-glow-dark/50
       "></div>
       <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300">

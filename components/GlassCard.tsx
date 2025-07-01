@@ -10,11 +10,11 @@ const GlassCard: React.FC<GlassCardProps> = ({ children, className = '' }) => {
   return (
     <div
       className={`
-        bg-glass-light dark:bg-glass-dark 
-        backdrop-blur-2xl 
+        bg-card-bg-light dark:bg-glass-dark 
+        backdrop-blur-[25px]
         border border-border-light dark:border-border-dark 
         rounded-2xl 
-        shadow-lg shadow-shadow-light dark:shadow-shadow-dark
+        shadow-glass shadow-shadow-light dark:shadow-shadow-dark
         transition-all duration-300
         ${className}
       `}

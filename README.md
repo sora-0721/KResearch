@@ -108,7 +108,7 @@ Contributions are what make the open-source community such an amazing place to l
 
 ## License
 
-Distributed under the MIT License. See `LICENSE` for more information. (Note: A LICENSE file should be added to the repository).
+Distributed under the MIT License. See `LICENSE` for more information. 
 
 ## Acknowledgements
 *   Powered by the Google Gemini API.

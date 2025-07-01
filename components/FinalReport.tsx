@@ -91,7 +91,7 @@ const FinalReport: React.FC<FinalReportProps> = ({ data }) => {
               }
               // For all other code blocks, wrap them in a glass container.
               return (
-                <div className="my-4 bg-black/20 dark:bg-black/40 backdrop-blur-md border border-border-light/50 dark:border-border-dark/50 rounded-lg overflow-x-auto">
+                <div className="my-4 bg-black/20 dark:bg-black/40 backdrop-blur-[25px] border border-border-light/50 dark:border-border-dark/50 rounded-lg overflow-x-auto">
                     <pre className="!bg-transparent !p-4" {...props}>
                         {children}
                     </pre>
@@ -122,7 +122,7 @@ const FinalReport: React.FC<FinalReportProps> = ({ data }) => {
         <h3 className="text-2xl font-bold mb-4">Citations</h3>
         <ul className="list-none p-0 space-y-2">
             {citations.map((citation, index) => (
-                <li key={index} className="text-sm p-3 bg-glass-light dark:bg-glass-dark rounded-lg hover:bg-opacity-50 transition-colors">
+                <li key={index} className="text-sm p-3 bg-glass-light dark:bg-glass-dark rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
                     <a href={citation.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 dark:text-blue-400 hover:underline transition-colors font-medium break-words">
                         {citation.title || citation.url}
                     </a>
