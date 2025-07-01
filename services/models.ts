@@ -8,9 +8,9 @@ type ModelSet = {
 
 export const researchModeModels: Record<ResearchMode, ModelSet> = {
     Balanced: {
-        planner: 'gemini-2.5-flash-preview-04-17',
-        searcher: 'gemini-2.5-flash-preview-04-17',
-        synthesizer: 'gemini-2.5-flash-preview-04-17'
+        planner: 'gemini-2.5-pro',
+        searcher: 'gemini-2.5-flash-lite-preview-06-17',
+        synthesizer: 'gemini-2.5-flash'
     },
     DeepDive: {
         planner: 'gemini-2.5-pro',
@@ -18,9 +18,9 @@ export const researchModeModels: Record<ResearchMode, ModelSet> = {
         synthesizer: 'gemini-2.5-pro'
     },
     Fast: {
-        planner: 'gemini-2.5-flash-preview-04-17',
-        searcher: 'gemini-2.5-flash-preview-04-17',
-        synthesizer: 'gemini-2.5-flash-preview-04-17'
+        planner: 'gemini-2.5-flash',
+        searcher: 'gemini-2.5-flash',
+        synthesizer: 'gemini-2.5-flash'
     },
     UltraFast: {
         planner: 'gemini-2.5-flash-lite-preview-06-17',
@@ -30,8 +30,8 @@ export const researchModeModels: Record<ResearchMode, ModelSet> = {
 };
 
 export const clarificationModels: Record<ResearchMode, string> = {
-    Balanced: 'gemini-2.5-flash-preview-04-17',
+    Balanced: 'gemini-2.5-flash',
     DeepDive: 'gemini-2.5-pro',
-    Fast: 'gemini-2.5-flash-preview-04-17',
+    Fast: 'gemini-2.5-flash',
     UltraFast: 'gemini-2.5-flash-lite-preview-06-17',
 };
