@@ -65,16 +65,16 @@ This project is a static web application and does not require a complex build st
     git clone https://github.com/KuekHaoYang/KResearch
     cd kresearch
     ```
-2.  Serve the project folder using a local web server. Here are two common ways:
+2.  Run the project folder using a local web server. Here are two step:
     
-    Using Python's built-in server:
+    install the package:
     ```sh
-    python -m http.server
+    npm install
     ```
     
-    Or using the `serve` NPM package:
+   Run it
     ```sh
-    npx serve .
+    npm run dev
     ```
 3.  Open your browser and navigate to the local address provided by the server (e.g., `http://localhost:8000`).
 
