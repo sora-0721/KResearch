@@ -10,6 +10,17 @@ interface PlannerTurn {
     finish_reason?: string | null;
 }
 
+const plannerTurnSchema = {
+    type: 'object',
+    properties: {
+        thought: { type: 'string', description: 'Your reasoning and analysis for the chosen action.' },
+        action: { type: 'string', enum: ['search', 'continue_debate', 'finish'] },
+        queries: { type: 'array', items: { type: 'string' }, nullable: true, description: "1-4 search queries if action is 'search'." },
+        finish_reason: { type: 'string', nullable: true, description: "Reason for finishing if action is 'finish'." }
+    },
+    required: ['thought', 'action'],
+};
+
 export const runDynamicConversationalPlanner = async (
     query: string,
     researchHistory: ResearchUpdate[],
@@ -34,7 +45,7 @@ export const runDynamicConversationalPlanner = async (
 
         const prompt = `
             You are Agent ${nextPersona} (${nextPersona === 'Alpha' ? 'Strategist' : 'Tactician'}).
-            Engage in a critical debate to decide the next research step. The goal is to formulate novel and effective search queries through collaboration.
+            Engage in a critical debate to decide the next research step. Your response must be a single JSON object matching the provided schema.
 
             **Overall Research Context:**
             *   User's Original Query: "${query}"
@@ -50,19 +61,13 @@ export const runDynamicConversationalPlanner = async (
             **Your Task & Rules:**
             1.  **Analyze All Context:** Critically analyze the refined goal, the learnings from past searches, the provided file content, and the ongoing debate.
             2.  **Avoid Redundancy:** Do NOT propose search queries that are identical or semantically very similar to queries already in <searches>. Your goal is to explore new avenues, deepen understanding, or challenge existing findings, not repeat work.
-            3.  **Provide Your 'thought':** Articulate your reasoning, addressing the other agent if they have spoken.
-            4.  **Choose ONE Action:**
-                *   'continue_debate': To continue the discussion and refine the strategy. Let the other agent respond.
-                *   'search': When you are confident in the next 1-4 queries. This ends the current planning session.
-                *   'finish': ONLY if you are certain the research is comprehensive enough. You MUST provide a clear reason.
+            3.  **Provide Your 'thought':** Articulate your reasoning for the chosen action in the 'thought' field.
+            4.  **Choose ONE Action:** The 'action' field must be 'continue_debate', 'search', or 'finish'.
             5.  **Research Cycle Rules:**
                 *   The 'finish' action is disabled until at least 7 search cycles are complete. (Current cycles: ${searchCycles}).
                 *   You should aim to conclude the research between 7 and 17 cycles. Do not extend research unnecessarily.
 
             ${isFirstTurn ? `**Critical Rule for Agent Alpha (First Turn):** As this is the first turn of the debate, propose an initial strategy. Your action MUST be 'continue_debate'.` : ''}
-
-            **RESPONSE FORMAT:**
-            Your entire output MUST be a single JSON object. Example: { "thought": "...", "action": "search", "queries": ["query1", "query2"] }
         `;
         const parts: ({ text: string } | { inlineData: { mimeType: string; data: string; } })[] = [{ text: prompt }];
         if (fileData) {
@@ -71,13 +76,17 @@ export const runDynamicConversationalPlanner = async (
         const response = await ai.models.generateContent({
             model: researchModeModels[mode].planner,
             contents: { parts },
-            config: { responseMimeType: "application/json", temperature: 0.7 }
+            config: { 
+                responseMimeType: "application/json", 
+                temperature: 0.7,
+                responseSchema: plannerTurnSchema
+            }
         });
         checkSignal();
         const parsedResponse = parseJsonFromMarkdown(response.text) as PlannerTurn;
 
         if (!parsedResponse || !parsedResponse.thought || !parsedResponse.action) {
-            onUpdate({ id: idCounter.current++, type: 'thought', content: `Agent ${nextPersona} failed to respond. Finishing research.` });
+            onUpdate({ id: idCounter.current++, type: 'thought', content: `Agent ${nextPersona} failed to respond with valid JSON. Finishing research.` });
             return { should_finish: true, search_queries: [], finish_reason: `Agent ${nextPersona} failed to generate a valid action.` };
         }
         onUpdate({ id: idCounter.current++, type: 'thought' as const, persona: nextPersona, content: parsedResponse.thought });

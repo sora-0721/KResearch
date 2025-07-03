@@ -1,4 +1,3 @@
-
 import { ai } from './geminiClient';
 import { clarificationModels } from './models';
 import { parseJsonFromMarkdown } from './utils';
@@ -14,26 +13,25 @@ export const clarifyQuery = async (
     mode: ResearchMode,
     fileData: FileData | null
 ): Promise<ClarificationResponse> => {
-    const systemPrompt = `**YOUR ONLY JOB IS TO PRODUCE A SINGLE, RAW JSON OBJECT.**
-Do not write any other text. Your entire response must start with \`{\` and end with \`}\`. Do not use markdown fences like \`\`\`json.
+    // --- STEP 1: Generate the clarification text using Google Search ---
+    const generationPrompt = `You are a Research Analyst AI. Your task is to help a user refine their research topic. You MUST respond ONLY in English.
 
-Your role is to ask clarifying questions to refine a user's research request. You will use Google Search to inform your questions.
+**Workflow:**
+1.  You will receive a user's query and the conversation history.
+2.  Use the Google Search tool to gather initial context on the user's query.
+3.  Based on the search results, decide if you need more information or if you have enough to proceed.
+4.  If you need more information, formulate ONE specific, concise question in English to help the user narrow their focus.
+5.  If you have enough information (e.g., after 2-4 questions), provide a final, refined research topic summary in English.
 
-**CRITICAL RULES:**
-1.  **ASK, DON'T ANSWER:** Your goal is to ask questions, not provide answers. Use search results to formulate better questions. (e.g., After searching "iPhone 17e", ask "Are you interested in its rumored specs, potential release date, or something else?").
-2.  **VERIFY:** Always use Google Search. Your internal knowledge may be outdated. Do not argue with the user about facts you can verify.
-3.  **ONE QUESTION AT A TIME:** Ask only one targeted question per turn.
-4.  **FINISH:** After 2-4 questions, you MUST stop asking and provide a summary.
+**Output Rules:**
+- Your output must be ONLY the plain text of your question or your summary.
+- Do NOT add any conversational filler, introductory phrases, or markdown formatting.
 
-**JSON FORMATS (CHOOSE ONE):**
-1.  **To ask a question:** \`{ "type": "question", "content": "Your single, focused question here." }\`
-2.  **To provide the final summary:** \`{ "type": "summary", "content": "Your final summary paragraph of the refined research goal." }\`
+Example output for a question:
+Are you more interested in the advancements in electric vehicle technology or the development of autonomous driving systems?
 
-**EXAMPLE DIALOGUE:**
-User: "iPhone 17e"
-Your AI Response (this is the entire response, nothing else):
-{ "type": "question", "content": "I see from search results that the iPhone 17e is a rumored future product. Are you more interested in its technical specifications, potential market impact, or comparisons to the existing iPhone SE line?" }
-`;
+Example output for a summary:
+The user wants to research the impact of autonomous driving systems on urban planning and public transportation.`;
     
     const contents = history.map((turn, index) => {
         const parts: ({ text: string } | { inlineData: { mimeType: string; data: string } })[] = [{ text: turn.content }];
@@ -43,21 +41,60 @@ Your AI Response (this is the entire response, nothing else):
         return { role: turn.role, parts: parts };
     });
 
-    const response = await ai.models.generateContent({
+    const generationResponse = await ai.models.generateContent({
         model: clarificationModels[mode],
         contents: contents,
         config: { 
-            systemInstruction: systemPrompt, 
+            systemInstruction: generationPrompt, 
             temperature: 0.5,
-            tools: [{ googleSearch: {} }] 
+            tools: [{ googleSearch: {} }],
         }
     });
 
-    const parsedResponse = parseJsonFromMarkdown(response.text) as ClarificationResponse;
+    const generatedText = generationResponse.text.trim();
+    if (!generatedText) {
+        console.error("Clarification Step 1 failed: No text was generated.");
+        return { type: 'summary', content: `AI clarification failed. Proceeding with original query: ${history[0].content}` };
+    }
+
+    // --- STEP 2: Format the generated text into a structured JSON object ---
+    const formattingPrompt = `Analyze the following text and classify it.
+Your response MUST be a single, valid JSON object and nothing else.
+- If the text is a question, set "type" to "question".
+- If the text is a summary or statement, set "type" to "summary".
+- The "content" key must contain the original, unmodified text.
+
+Text to analyze: "${generatedText}"
+`;
+
+    const clarificationResponseSchema = {
+        type: 'object',
+        properties: {
+            type: { type: 'string', enum: ['question', 'summary'] },
+            content: { type: 'string' }
+        },
+        required: ['type', 'content']
+    };
+
+    const formattingResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash', // Use a fast model for this simple formatting task
+        contents: [{ role: 'user', parts: [{ text: formattingPrompt }] }],
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: clarificationResponseSchema,
+            temperature: 0.0,
+        }
+    });
+
+    const parsedResponse = parseJsonFromMarkdown(formattingResponse.text) as ClarificationResponse;
 
     if (!parsedResponse || !parsedResponse.type || !parsedResponse.content) {
-        console.error("Failed to parse clarification response:", response.text);
-        return { type: 'summary', content: 'AI clarification failed. Proceeding with original query.' };
+        console.error("Clarification Step 2 (JSON formatting) failed. Raw text from formatter:", formattingResponse.text);
+        // Fallback: If JSON formatting fails, make an intelligent guess based on the original generated text.
+        if (generatedText.includes('?')) {
+            return { type: 'question', content: generatedText };
+        }
+        return { type: 'summary', content: generatedText };
     }
     
     return parsedResponse;
