@@ -65,12 +65,54 @@ export const runDynamicConversationalPlanner = async (
 
             **Your Task & Rules:**
             1.  **Analyze All Context:** Critically analyze the refined goal, the learnings from past searches, the provided file content, and the ongoing debate.
-            2.  **Avoid Redundancy:** Do NOT propose search queries that are identical or semantically very similar to queries already in <searches>. Your goal is to explore new avenues, deepen understanding, or challenge existing findings, not repeat work.
-            3.  **Provide Your 'thought':** Articulate your reasoning for the chosen action in the 'thought' field.
-            4.  **Choose ONE Action:** The 'action' field must be 'continue_debate', 'search', or 'finish'.
-            5.  **Research Cycle Rules:**
-                *   The 'finish' action is disabled until at least 7 search cycles are complete. (Current cycles: ${searchCycles}).
-                *   You should aim to conclude the research between 7 and 17 cycles. Do not extend research unnecessarily.
+            2.  **Progressive Deepening:** Your primary mission is to build a comprehensive and detailed report. Once a high-level topic is sufficiently established (e.g., the likelihood of a product's release and its general timeline), you MUST pivot to explore deeper, more granular details. Do not repeatedly re-verify the same high-level concepts. Instead, dive into specifics like:
+                *   What are the rumored camera sensor models, their sizes, and aperture specs?
+                *   What is the detailed display technology (e.g., resolution, LTPO version, peak brightness, manufacturer)?
+                *   What are the specifics of the chipset architecture (e.g., core counts, clock speeds, manufacturing process)?
+                *   What new materials, design changes, or color options are being discussed?
+                *   What are the battery capacity, charging speed, and connectivity (e.g., Wi-Fi standard) specifications?
+                *   What is the specific battery chemistry being used (e.g., NCM 811, LFP, silicon anode)? Who is the rumored battery cell supplier (e.g., CATL, LG Chem, Panasonic)?
+                *   What is the exact battery pack capacity in kWh (e.g., 112 kWh usable)?
+                *   Is it built on a 400V, 800V, or 900V+ electrical architecture?
+                *   What is the peak DC fast charging rate in kW, and what is the charging curve (e.g., how long does it take to charge from 10-80%)?
+                *   What are the specific models and power outputs (in hp or kW) of the front and rear electric motors? Are they permanent magnet, induction, or a hybrid?
+                *   What is the vehicle's coefficient of drag (Cd)?
+                *   What are the precise 0-60 mph times for different trim levels?
+                *   What specific grade of aluminum or high-strength steel is used in the chassis? Is it a unibody or body-on-frame design?
+                *   What is the suspension type (e.g., air suspension, multi-link, double wishbone)?
+                *   What are the names of the paint color options and the specific interior materials (e.g., "Mojave Purluxe leather alternative," "Reclaimed Juniper wood trim")?
+                *   What is the specific sensor suite for the ADAS (Advanced Driver-Assistance Systems)? (e.g., number of cameras, inclusion of LiDAR, type of radar).
+                *   Who is the supplier for the central infotainment processor (e.g., Qualcomm Snapdragon, NVIDIA Orin)?
+                *   What version of the infotainment OS will it launch with? Does it support Apple CarPlay or Android Auto?
+                *   What is the specific architecture (e.g., Mixture-of-Experts (MoE), Transformer, a new hybrid design)?
+                *   What is the rumored parameter count (e.g., 2.5 Trillion parameters)?
+                *   How many experts are used in the MoE architecture? What is the context window length (e.g., 1M tokens)?    *   What is the composition of the training data (e.g., percentage of proprietary code, scientific papers, synthetic data)?
+                *   What was the total training compute used, measured in FLOPs?
+                *   What specific reinforcement learning or alignment technique is being used (e.g., PPO, DPO, constitutional AI)?
+                *   What are its benchmark scores on specific academic tests (e.g., MMLU, GPQA, HumanEval)?
+                *   What new modalities are being introduced (e.g., video understanding, 3D asset generation, direct robotic control)?
+                *   What is its inference speed (tokens/second) on specific hardware like Google's own TPUs?
+                *   What will the pricing structure be (e.g., per-token, per-character, subscription tiers)?
+                *   Will there be different model sizes available through the API (e.g., a "Flash" and "Pro" version)?
+                *   What are the specific rate limits or safety filters being implemented at the API level?
+                *   What is the exact legal definition of "personal information" and "sensitive data" in the bill's text?
+                *   What are the specific requirements for user consent (e.g., opt-in vs. opt-out for different data types)?
+                *   Does the bill include a "private right of action," allowing individuals to sue companies directly for violations?
+                *   Which federal agency is tasked with enforcement (e.g., the FTC, a new dedicated Data Protection Agency)?
+                *   What is the precise structure for fines (e.g., "up to 4% of global annual revenue" or a fixed amount per violation)?
+                *   What are the specific auditing and reporting requirements for companies?
+                *   What are the revenue or data processing thresholds for a business to be subject to the law?
+                *   Are there specific exemptions for small businesses, journalism, or non-profit organizations?
+                *   How does the bill preempt or interact with existing state laws like the CCPA in California?
+                *   What is the proposed date for the law to go into effect after being signed?
+                *   Is there a grace period for companies to achieve compliance?
+                *   What are the specific steps outlined in the bill for the rulemaking process by the enforcement agency?
+            3.  **Avoid Redundancy:** Do NOT propose search queries that are identical or semantically very similar to queries already in <searches>. Your goal is to explore new, deeper avenues based on the "Progressive Deepening" rule, not repeat work.
+            4.  **Provide Your 'thought':** Articulate your reasoning for the chosen action in the 'thought' field, explicitly referencing how your plan follows the "Progressive Deepening" principle.
+            5.  **Choose ONE Action:** The 'action' field must be 'continue_debate', 'search', or 'finish'.
+            6.  **Research Cycle Rules:**
+                *   The 'finish' action is disabled until at least 3 search cycles are complete.
+                *   You should aim to conclude the research between 5 and 15 cycles. Do not extend research unnecessarily.
 
             ${isFirstTurn ? `**Critical Rule for Agent Alpha (First Turn):** As this is the first turn of the debate, propose an initial strategy. Your action MUST be 'continue_debate'.` : ''}
         `;
@@ -101,8 +143,8 @@ export const runDynamicConversationalPlanner = async (
 
         let effectiveAction = parsedResponse.action;
         
-        if (effectiveAction === 'finish' && searchCycles < 7) {
-             const thought = `Rule violation: Cannot finish before 7 search cycles. Forcing debate to continue.`;
+        if (effectiveAction === 'finish' && searchCycles < 3) {
+             const thought = `Rule violation: Cannot finish before 3 search cycles. Forcing debate to continue.`;
              onUpdate({ id: idCounter.current++, type: 'thought' as const, persona: nextPersona, content: thought });
              effectiveAction = 'continue_debate';
         }
