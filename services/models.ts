@@ -35,3 +35,10 @@ export const clarificationModels: Record<ResearchMode, string> = {
     Fast: 'gemini-2.5-flash',
     UltraFast: 'gemini-2.5-flash-lite-preview-06-17',
 };
+
+export const visualizerModels: Record<ResearchMode, string> = {
+    Balanced: 'gemini-2.5-flash',
+    DeepDive: 'gemini-2.5-pro',
+    Fast: 'gemini-2.5-flash',
+    UltraFast: 'gemini-2.5-flash-lite-preview-06-17',
+};

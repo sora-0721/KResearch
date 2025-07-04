@@ -6,6 +6,7 @@ import ResearchProgress from './components/ResearchProgress';
 import FinalReport from './components/FinalReport';
 import ThemeSwitcher from './components/ThemeSwitcher';
 import ClarificationChat from './components/ClarificationChat';
+import ReportVisualizer from './components/ReportVisualizer';
 import { useAppLogic } from './hooks/useAppLogic';
 import { ResearchMode } from './types';
 
@@ -16,7 +17,8 @@ const App: React.FC = () => {
   const {
       query, setQuery, selectedFile, researchUpdates, finalData, mode, setMode, appState,
       clarificationHistory, clarificationLoading, startClarificationProcess, handleAnswerSubmit,
-      handleStopResearch, handleFileChange, handleRemoveFile, handleReset, fileInputRef
+      handleStopResearch, handleFileChange, handleRemoveFile, handleReset, fileInputRef,
+      isVisualizing, visualizedReportHtml, handleVisualizeReport, handleCloseVisualizer
   } = useAppLogic();
 
   const [isLogVisible, setIsLogVisible] = useState<boolean>(true);
@@ -95,11 +97,23 @@ const App: React.FC = () => {
         
         {appState === 'complete' && finalData && (
             <div ref={finalReportRef} className="animate-fade-in space-y-6 border-t border-border-light dark:border-border-dark pt-6 mt-6">
-                 <FinalReport data={finalData} />
+                 <FinalReport 
+                    data={finalData} 
+                    onVisualize={handleVisualizeReport}
+                    isVisualizing={isVisualizing}
+                 />
                  <LiquidButton onClick={handleReset} className="w-full mt-4">Start New Research</LiquidButton>
             </div>
         )}
       </GlassCard>
+
+      {(isVisualizing || visualizedReportHtml) && (
+        <ReportVisualizer 
+            isLoading={isVisualizing} 
+            htmlContent={visualizedReportHtml} 
+            onClose={handleCloseVisualizer} 
+        />
+      )}
       
       <footer className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
         <p>&copy; {new Date().getFullYear()} KResearch. Powered by Gemini.</p>

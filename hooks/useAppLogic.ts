@@ -1,5 +1,6 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { clarifyQuery, runIterativeDeepResearch } from '../services';
+import { clarifyQuery, runIterativeDeepResearch, generateVisualReport } from '../services';
 import { ResearchUpdate, FinalResearchData, ResearchMode, FileData, AppState, ClarificationTurn } from '../types';
 
 export const useAppLogic = () => {
@@ -12,6 +13,8 @@ export const useAppLogic = () => {
     const [clarificationHistory, setClarificationHistory] = useState<ClarificationTurn[]>([]);
     const [clarificationLoading, setClarificationLoading] = useState<boolean>(false);
     const [clarifiedContext, setClarifiedContext] = useState<string>('');
+    const [isVisualizing, setIsVisualizing] = useState<boolean>(false);
+    const [visualizedReportHtml, setVisualizedReportHtml] = useState<string | null>(null);
 
     const abortControllerRef = useRef<AbortController | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -76,7 +79,23 @@ export const useAppLogic = () => {
         setClarificationHistory(newHistory);
         handleClarificationResponse(newHistory);
     }, [clarificationHistory, handleClarificationResponse]);
+    
+    const handleVisualizeReport = useCallback(async (reportMarkdown: string) => {
+        if (!reportMarkdown) return;
+        setIsVisualizing(true);
+        setVisualizedReportHtml(null);
+        try {
+            const html = await generateVisualReport(reportMarkdown, mode);
+            setVisualizedReportHtml(html);
+        } catch(error) {
+            console.error("Failed to generate visual report:", error);
+            alert("Sorry, the visual report could not be generated.");
+        } finally {
+            setIsVisualizing(false);
+        }
+    }, [mode]);
 
+    const handleCloseVisualizer = () => setVisualizedReportHtml(null);
     const handleStopResearch = () => abortControllerRef.current?.abort();
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -106,12 +125,14 @@ export const useAppLogic = () => {
         setClarificationHistory([]);
         setClarifiedContext('');
         setClarificationLoading(false);
+        setVisualizedReportHtml(null);
+        setIsVisualizing(false);
     }
 
     return {
-        query, setQuery, selectedFile, researchUpdates, setResearchUpdates, finalData, setFinalData, mode, setMode,
-        appState, setAppState, clarificationHistory, clarificationLoading, clarifiedContext, abortControllerRef,
-        fileInputRef, handleClarificationResponse, startResearch, startClarificationProcess, handleAnswerSubmit,
-        handleStopResearch, handleFileChange, handleRemoveFile, handleReset
+        query, setQuery, selectedFile, researchUpdates, finalData, mode, setMode, appState,
+        clarificationHistory, clarificationLoading, fileInputRef, startClarificationProcess, 
+        handleAnswerSubmit, handleStopResearch, handleFileChange, handleRemoveFile, handleReset,
+        isVisualizing, visualizedReportHtml, handleVisualizeReport, handleCloseVisualizer
     };
 };

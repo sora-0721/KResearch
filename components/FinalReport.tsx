@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { FinalResearchData } from '../types';
 import LiquidButton from './LiquidButton';
+import Spinner from './Spinner';
 
 
 declare global {
@@ -14,9 +15,11 @@ declare global {
 
 interface FinalReportProps {
   data: FinalResearchData;
+  onVisualize: (reportMarkdown: string) => void;
+  isVisualizing: boolean;
 }
 
-const FinalReport: React.FC<FinalReportProps> = ({ data }) => {
+const FinalReport: React.FC<FinalReportProps> = ({ data, onVisualize, isVisualizing }) => {
   const { report, citations, researchTimeMs } = data;
   const [copyButtonText, setCopyButtonText] = useState('Copy Report');
 
@@ -51,11 +54,23 @@ const FinalReport: React.FC<FinalReportProps> = ({ data }) => {
 
   return (
     <div className="w-full text-gray-800 dark:text-gray-300">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
         <h2 className="text-3xl font-bold">Final Report</h2>
-        <LiquidButton onClick={handleCopy} className="px-4 py-2 text-sm shrink-0">
-            {copyButtonText}
-        </LiquidButton>
+        <div className="flex items-center gap-2">
+            <LiquidButton onClick={handleCopy} disabled={isVisualizing} className="px-4 py-2 text-sm shrink-0">
+                {copyButtonText}
+            </LiquidButton>
+             <LiquidButton onClick={() => onVisualize(report)} disabled={isVisualizing} className="px-4 py-2 text-sm shrink-0 flex items-center gap-2">
+                {isVisualizing ? (
+                    <>
+                        <Spinner />
+                        <span>Visualizing...</span>
+                    </>
+                ) : (
+                    "Visualize"
+                )}
+            </LiquidButton>
+        </div>
       </div>
       <div className="prose prose-sm sm:prose lg:prose-lg dark:prose-invert max-w-none">
         <ReactMarkdown

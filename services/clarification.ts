@@ -1,3 +1,4 @@
+
 import { ai } from './geminiClient';
 import { clarificationModels } from './models';
 import { parseJsonFromMarkdown } from './utils';
@@ -13,25 +14,26 @@ export const clarifyQuery = async (
     mode: ResearchMode,
     fileData: FileData | null
 ): Promise<ClarificationResponse> => {
-    // --- STEP 1: Generate the clarification text using Google Search ---
-    const generationPrompt = `You are a Research Analyst AI. Your task is to help a user refine their research topic. You MUST respond ONLY in English.
+    // --- STEP 1: Generate the clarification text ---
+    const generationPrompt = `You are a Research Analyst AI. Your task is to help a user refine their research topic by asking clarifying questions. You MUST respond ONLY in English.
 
 **Workflow:**
-1.  You will receive a user's query and the conversation history.
-2.  Use the Google Search tool to gather initial context on the user's query.
-3.  Based on the search results, decide if you need more information or if you have enough to proceed.
-4.  If you need more information, formulate ONE specific, concise question in English to help the user narrow their focus.
-5.  If you have enough information (e.g., after 2-4 questions), provide a final, refined research topic summary in English.
+1.  You will receive a user's research query and the conversation history.
+2.  Critically analyze the query. If it is ambiguous, too broad, or could be interpreted in multiple ways, you must ask a clarifying question.
+3.  If you have sufficient information to formulate a clear, actionable research plan (e.g., after 2-3 questions), provide a final, refined research topic summary in English.
 
-**Output Rules:**
+**Key Rules:**
+- Your questions must be targeted and specific, designed to narrow the scope or resolve ambiguity.
+- Do NOT use your own external knowledge. Your role is to understand the user's intent based *only* on the provided conversation, not to fact-check their premise or quiz them on external information.
+- Do NOT make statements and phrase them as questions. Ask genuine questions.
 - Your output must be ONLY the plain text of your question or your summary.
 - Do NOT add any conversational filler, introductory phrases, or markdown formatting.
 
 Example output for a question:
-Are you more interested in the advancements in electric vehicle technology or the development of autonomous driving systems?
+Are you more interested in the commercial applications of quantum computing or the theoretical physics behind it?
 
 Example output for a summary:
-The user wants to research the impact of autonomous driving systems on urban planning and public transportation.`;
+The user wants to research the impact of recent advancements in large language models on the software development industry, focusing on code generation and automated testing tools.`;
     
     const contents = history.map((turn, index) => {
         const parts: ({ text: string } | { inlineData: { mimeType: string; data: string } })[] = [{ text: turn.content }];
@@ -47,7 +49,6 @@ The user wants to research the impact of autonomous driving systems on urban pla
         config: { 
             systemInstruction: generationPrompt, 
             temperature: 0.5,
-            tools: [{ googleSearch: {} }],
         }
     });
 
@@ -77,7 +78,7 @@ Text to analyze: "${generatedText}"
     };
 
     const formattingResponse = await ai.models.generateContent({
-        model: 'gemini-2.5-flash', // Use a fast model for this simple formatting task
+        model: 'gemini-2.5-flash-preview-04-17', // Use a fast model for this simple formatting task
         contents: [{ role: 'user', parts: [{ text: formattingPrompt }] }],
         config: {
             responseMimeType: "application/json",

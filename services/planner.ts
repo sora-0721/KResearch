@@ -1,3 +1,4 @@
+
 import { ai } from './geminiClient';
 import { researchModeModels } from './models';
 import { parseJsonFromMarkdown } from './utils';
@@ -21,6 +22,8 @@ const plannerTurnSchema = {
     required: ['thought', 'action'],
 };
 
+const MAX_DEBATE_TURNS = 6; // Maximum number of back-and-forth turns in a single planning phase.
+
 export const runDynamicConversationalPlanner = async (
     query: string,
     researchHistory: ResearchUpdate[],
@@ -37,9 +40,11 @@ export const runDynamicConversationalPlanner = async (
 
     let currentConversation: { persona: AgentPersona; thought: string }[] = [];
     let nextPersona: AgentPersona = 'Alpha';
+    let debateTurns = 0;
 
-    while (true) {
+    while (debateTurns < MAX_DEBATE_TURNS) {
         checkSignal();
+        debateTurns++;
         const conversationText = currentConversation.map(t => `${t.persona}: ${t.thought}`).join('\n');
         const isFirstTurn = conversationText === '';
 
@@ -94,19 +99,27 @@ export const runDynamicConversationalPlanner = async (
         await new Promise(res => setTimeout(res, 400));
         checkSignal();
 
-        if (parsedResponse.action === 'finish') {
-            if (searchCycles < 7) {
-                 const thought = `Rule violation: Cannot finish before 7 search cycles. Continuing debate. My previous thought was: ${parsedResponse.thought}`;
-                 onUpdate({ id: idCounter.current++, type: 'thought' as const, persona: nextPersona, content: thought });
-                 currentConversation.push({ persona: nextPersona, thought: thought });
-                 nextPersona = (nextPersona === 'Alpha') ? 'Beta' : 'Alpha';
-                 continue;
-            }
+        let effectiveAction = parsedResponse.action;
+        
+        if (effectiveAction === 'finish' && searchCycles < 7) {
+             const thought = `Rule violation: Cannot finish before 7 search cycles. Forcing debate to continue.`;
+             onUpdate({ id: idCounter.current++, type: 'thought' as const, persona: nextPersona, content: thought });
+             effectiveAction = 'continue_debate';
+        }
+
+        if (effectiveAction === 'finish') {
             return { should_finish: true, search_queries: [], finish_reason: parsedResponse.finish_reason || `${nextPersona} decided to finish.` };
         }
-        if (parsedResponse.action === 'search' && parsedResponse.queries && parsedResponse.queries.length > 0) {
+        
+        if (effectiveAction === 'search' && parsedResponse.queries && parsedResponse.queries.length > 0) {
             return { should_finish: false, search_queries: parsedResponse.queries };
         }
+        
+        // if we reach here, action is 'continue_debate'
         nextPersona = (nextPersona === 'Alpha') ? 'Beta' : 'Alpha';
     }
+
+    // If the while loop exits, it means MAX_DEBATE_TURNS was reached.
+    onUpdate({ id: idCounter.current++, type: 'thought', content: 'Debate reached maximum turns without a decision. Forcing research to conclude.' });
+    return { should_finish: true, search_queries: [], finish_reason: 'Planning debate timed out.' };
 };
