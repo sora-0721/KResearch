@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { NotificationProvider } from './contexts/NotificationContext';
 import GlassCard from './components/GlassCard';
 import LiquidButton from './components/LiquidButton';
 import ResearchProgress from './components/ResearchProgress';
@@ -11,6 +12,14 @@ import { useAppLogic } from './hooks/useAppLogic';
 import { ResearchMode } from './types';
 
 const App: React.FC = () => {
+    return (
+        <NotificationProvider>
+            <AppContent />
+        </NotificationProvider>
+    )
+}
+
+const AppContent: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const finalReportRef = useRef<HTMLDivElement>(null);
   

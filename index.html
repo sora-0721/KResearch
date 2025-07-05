@@ -48,6 +48,8 @@
             }),
             animation: {
               'fade-in': 'fadeIn 0.5s ease-in-out forwards',
+              'fade-out': 'fadeOut 0.5s ease-in-out forwards',
+              'slide-in-right': 'slideInRight 0.5s cubic-bezier(0.25, 0.8, 0.25, 1) forwards',
               'shimmer': 'shimmer 2s infinite linear',
               'spin': 'spin 1s linear infinite',
             },
@@ -55,6 +57,14 @@
               fadeIn: {
                 '0%': { opacity: 0, transform: 'translateY(10px)' },
                 '100%': { opacity: 1, transform: 'translateY(0)' },
+              },
+               fadeOut: {
+                'from': { opacity: 1 },
+                'to': { opacity: 0 },
+              },
+              slideInRight: {
+                'from': { opacity: 0, transform: 'translateX(100%)' },
+                'to': { opacity: 1, transform: 'translateX(0)' },
               },
                shimmer: {
                 '0%': { transform: 'translateX(-100%)' },
@@ -78,11 +88,13 @@
 {
   "imports": {
     "react": "https://esm.sh/react@^19.1.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
+    "react-dom/client": "https://esm.sh/react-dom@^19.1.0/client",
+    "react-dom": "https://esm.sh/react-dom@^19.1.0",
     "react/": "https://esm.sh/react@^19.1.0/",
     "@google/genai": "https://esm.sh/@google/genai@^1.8.0",
     "react-markdown": "https://esm.sh/react-markdown@^10.1.0",
-    "remark-gfm": "https://esm.sh/remark-gfm@^4.0.1"
+    "remark-gfm": "https://esm.sh/remark-gfm@^4.0.1",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.0/"
   }
 }
 </script>

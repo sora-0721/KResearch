@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNotification } from '../contexts/NotificationContext';
 import { apiKeyService } from '../services/apiKeyService';
 import { settingsService } from '../services/settingsService';
 import { AppSettings, AgentRole } from '../types';
@@ -23,9 +24,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const [settings, setSettings] = useState<AppSettings>(settingsService.getSettings());
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
-  const [modelFetchError, setModelFetchError] = useState<string | null>(null);
 
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [isSaving, setIsSaving] = useState(false);
+  const addNotification = useNotification();
 
   useEffect(() => {
     if (isOpen) {
@@ -33,23 +34,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       setApiKey(apiKeyService.getApiKey() || '');
       setIsEnvKey(apiKeyService.isEnvKey());
       setSettings(settingsService.getSettings());
-      setSaveStatus('idle');
+      setIsSaving(false);
 
       const fetchModels = async () => {
         if (apiKeyService.hasKey()) {
           setIsLoadingModels(true);
-          setModelFetchError(null);
           try {
             const models = await settingsService.fetchAvailableModels();
             setAvailableModels(models);
           } catch (e: any) {
-            setModelFetchError(e.message || "Failed to fetch models. Check API Key and connection.");
+            addNotification({ type: 'error', title: 'Failed to Fetch Models', message: e.message || "Check API Key and connection." });
           } finally {
             setIsLoadingModels(false);
           }
         } else {
             setAvailableModels([]);
-            setModelFetchError("API Key is required to fetch models.");
         }
       };
       
@@ -60,17 +59,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     } else {
       setIsActive(false);
     }
-  }, [isOpen]);
+  }, [isOpen, addNotification]);
 
   const handleSave = () => {
-    setSaveStatus('saving');
+    setIsSaving(true);
     if (!isEnvKey) {
         apiKeyService.setApiKey(apiKey);
     }
     settingsService.save(settings);
     setTimeout(() => {
-        setSaveStatus('saved');
-        setTimeout(() => onClose(), 1000);
+        setIsSaving(false);
+        addNotification({type: 'success', title: 'Settings Saved', message: 'Your settings have been updated.'});
+        onClose();
     }, 500);
   };
 
@@ -142,6 +142,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   {isEnvKey ? "This key cannot be changed from the UI." : "Your key is stored only in your browser's local storage."} Get a key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Google AI Studio</a>.
                 </p>
+                 {!apiKeyService.hasKey() && (
+                    <div className="p-3 text-sm rounded-lg bg-yellow-500/10 text-yellow-800 dark:text-yellow-200 border border-yellow-500/20">
+                        An API Key is required to use the application.
+                    </div>
+                 )}
               </div>
             )}
             
@@ -150,12 +155,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                 <h3 className="text-lg font-semibold">Model Configuration</h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Override default models for each agent. Select "Default" to use the model specified by the current research mode.</p>
                 {isLoadingModels && <div className="flex items-center gap-2 text-sm"><Spinner /><span>Fetching available models...</span></div>}
-                {modelFetchError && <div className="text-sm text-red-500 p-2 bg-red-500/10 rounded-lg">{modelFetchError}</div>}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {AGENT_ROLES.map(role => (
                     <div key={role} className="space-y-1">
                       <label htmlFor={`model-${role}`} className="font-semibold text-gray-700 dark:text-gray-300 capitalize text-sm">{role}</label>
-                      <select id={`model-${role}`} value={settings.modelOverrides[role] || 'default'} onChange={e => handleSettingChange('modelOverrides', role, e.target.value === 'default' ? null : e.target.value)} disabled={isLoadingModels || !!modelFetchError} className="w-full p-2 rounded-lg bg-white/60 dark:bg-black/20 border border-transparent focus:border-glow-light dark:focus:border-glow-dark focus:ring-1 focus:ring-glow-light/50 dark:focus:ring-glow-dark/50 focus:outline-none transition-all text-sm">
+                      <select id={`model-${role}`} value={settings.modelOverrides[role] || 'default'} onChange={e => handleSettingChange('modelOverrides', role, e.target.value === 'default' ? null : e.target.value)} disabled={isLoadingModels || availableModels.length === 0} className="w-full p-2 rounded-lg bg-white/60 dark:bg-black/20 border border-transparent focus:border-glow-light dark:focus:border-glow-dark focus:ring-1 focus:ring-glow-light/50 dark:focus:ring-glow-dark/50 focus:outline-none transition-all text-sm disabled:opacity-50">
                         <option value="default">Default (Mode-based)</option>
                         {availableModels.map(modelName => (
                           <option key={modelName} value={modelName}>{modelName}</option>
@@ -196,10 +200,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
           <LiquidButton onClick={onClose} className="bg-transparent hover:bg-black/5 dark:hover:bg-white/5 text-gray-600 dark:text-gray-400 hover:shadow-none hover:-translate-y-0 active:translate-y-px">
             Cancel
           </LiquidButton>
-          <LiquidButton onClick={handleSave} disabled={saveStatus !== 'idle'}>
-            {saveStatus === 'idle' && 'Save & Close'}
-            {saveStatus === 'saving' && <><Spinner /> Saving...</>}
-            {saveStatus === 'saved' && 'Saved!'}
+          <LiquidButton onClick={handleSave} disabled={isSaving}>
+            {isSaving ? <><Spinner /> Saving...</> : 'Save & Close'}
           </LiquidButton>
         </footer>
       </GlassCard>

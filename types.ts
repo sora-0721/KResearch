@@ -3,6 +3,15 @@ export type AgentPersona = 'Alpha' | 'Beta';
 export type ResearchMode = 'Balanced' | 'DeepDive' | 'Fast' | 'UltraFast';
 export type AppState = 'idle' | 'clarifying' | 'researching' | 'complete';
 export type AgentRole = 'planner' | 'searcher' | 'synthesizer' | 'clarification' | 'visualizer';
+export type NotificationType = 'success' | 'error' | 'info' | 'warning';
+
+export interface Notification {
+  id: number;
+  type: NotificationType;
+  title: string;
+  message: string;
+  duration?: number;
+}
 
 export interface ModelOverrides {
     [key: string]: string | null;

@@ -2,6 +2,26 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { clarifyQuery, runIterativeDeepResearch, generateVisualReport } from '../services';
 import { ResearchUpdate, FinalResearchData, ResearchMode, FileData, AppState, ClarificationTurn } from '../types';
 import { apiKeyService } from '../services/apiKeyService';
+import { useNotification } from '../contexts/NotificationContext';
+
+const getCleanErrorMessage = (error: any): string => {
+    let message = 'An unknown error occurred.';
+    if (error instanceof Error) {
+        try {
+            // Attempt to parse the message as a JSON object, which is common for API errors
+            const parsed = JSON.parse(error.message);
+            // Extract the user-friendly message from the nested structure
+            message = parsed?.error?.message || error.message;
+        } catch (e) {
+            // If it's not JSON, use the raw message
+            message = error.message;
+        }
+    } else {
+        message = String(error);
+    }
+    return message;
+};
+
 
 export const useAppLogic = () => {
     const [query, setQuery] = useState<string>('');
@@ -18,7 +38,8 @@ export const useAppLogic = () => {
     const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
     const abortControllerRef = useRef<AbortController | null>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const addNotification = useNotification();
 
     const handleClarificationResponse = useCallback(async (history: ClarificationTurn[]) => {
       setClarificationLoading(true);
@@ -32,13 +53,14 @@ export const useAppLogic = () => {
           }
       } catch (error) {
           console.error("Clarification step failed:", error);
-          alert(`An error occurred: ${error instanceof Error ? error.message : String(error)}`);
+          const message = getCleanErrorMessage(error);
+          addNotification({type: 'error', title: 'Clarification Failed', message});
           setClarifiedContext('Clarification process failed. Proceeding with original query.');
           setAppState('researching');
       } finally {
           setClarificationLoading(false);
       }
-    }, [mode, selectedFile]);
+    }, [mode, selectedFile, addNotification]);
 
     const startResearch = useCallback(async (context: string) => {
       abortControllerRef.current = new AbortController();
@@ -51,16 +73,18 @@ export const useAppLogic = () => {
       } catch (error: any) {
         const commonErrorData = { citations: [], researchTimeMs: Date.now() - startTime };
         if (error.name === 'AbortError') {
+             addNotification({ type: 'info', title: 'Research Stopped', message: 'The research process was cancelled by the user.'});
              setFinalData({ report: "The research process was cancelled.", ...commonErrorData });
         } else {
             console.error("Research failed:", error);
-            alert(`An error occurred during research: ${error.message}`);
+            const message = getCleanErrorMessage(error);
+            addNotification({ type: 'error', title: 'Research Failed', message });
             setFinalData({ report: "An error occurred during the research process.", ...commonErrorData });
         }
       } finally {
         setAppState('complete');
       }
-    }, [query, mode, selectedFile]);
+    }, [query, mode, selectedFile, addNotification]);
 
     useEffect(() => {
       if (appState === 'researching' && clarifiedContext) {
@@ -72,6 +96,7 @@ export const useAppLogic = () => {
         if (!query.trim() || appState !== 'idle') return;
 
         if (!apiKeyService.hasKey()) {
+            addNotification({type: 'warning', title: 'API Key Required', message: 'Please set your Gemini API key in the settings before starting research.'});
             setIsSettingsOpen(true);
             return;
         }
@@ -81,7 +106,7 @@ export const useAppLogic = () => {
         const initialHistory: ClarificationTurn[] = [{ role: 'user', content: initialQuery }];
         setClarificationHistory(initialHistory);
         handleClarificationResponse(initialHistory);
-    }, [query, appState, selectedFile, handleClarificationResponse]);
+    }, [query, appState, selectedFile, handleClarificationResponse, addNotification]);
 
     const handleAnswerSubmit = useCallback((answer: string) => {
         const newHistory: ClarificationTurn[] = [...clarificationHistory, { role: 'user', content: answer }];
@@ -116,11 +141,12 @@ export const useAppLogic = () => {
             setVisualizedReportHtml(html);
         } catch(error) {
             console.error("Failed to generate visual report:", error);
-            alert("Sorry, the visual report could not be generated.");
+            const message = getCleanErrorMessage(error);
+            addNotification({type: 'error', title: 'Visualization Failed', message});
         } finally {
             setIsVisualizing(false);
         }
-    }, [mode]);
+    }, [mode, addNotification]);
 
     const handleCloseVisualizer = () => setVisualizedReportHtml(null);
     const handleStopResearch = () => abortControllerRef.current?.abort();

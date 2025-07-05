@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { FinalResearchData } from '../types';
 import LiquidButton from './LiquidButton';
 import Spinner from './Spinner';
+import { useNotification } from '../contexts/NotificationContext';
 
 
 declare global {
@@ -20,7 +21,7 @@ interface FinalReportProps {
 
 const FinalReport: React.FC<FinalReportProps> = ({ data, onVisualize, isVisualizing }) => {
   const { report, citations, researchTimeMs } = data;
-  const [copyButtonText, setCopyButtonText] = useState('Copy Report');
+  const addNotification = useNotification();
 
   useEffect(() => {
     if (report && window.mermaid) {
@@ -41,12 +42,10 @@ const FinalReport: React.FC<FinalReportProps> = ({ data, onVisualize, isVisualiz
 
   const handleCopy = () => {
     navigator.clipboard.writeText(report).then(() => {
-        setCopyButtonText('Copied!');
-        setTimeout(() => setCopyButtonText('Copy Report'), 2000);
+        addNotification({type: 'success', title: 'Report Copied', message: 'The report content has been copied to your clipboard.'});
     }).catch(err => {
         console.error('Failed to copy report: ', err);
-        setCopyButtonText('Copy Failed');
-        setTimeout(() => setCopyButtonText('Copy Report'), 2000);
+        addNotification({type: 'error', title: 'Copy Failed', message: 'Could not copy the report. Please try again.'});
     });
   };
 
@@ -57,7 +56,7 @@ const FinalReport: React.FC<FinalReportProps> = ({ data, onVisualize, isVisualiz
         <h2 className="text-3xl font-bold">Final Report</h2>
         <div className="flex items-center gap-2">
             <LiquidButton onClick={handleCopy} disabled={isVisualizing} className="px-4 py-2 text-sm shrink-0">
-                {copyButtonText}
+                Copy Report
             </LiquidButton>
              <LiquidButton onClick={() => onVisualize(report)} disabled={isVisualizing} className="px-4 py-2 text-sm shrink-0 flex items-center gap-2">
                 {isVisualizing ? (
