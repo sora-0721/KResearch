@@ -1,4 +1,3 @@
-
 import { ai } from './geminiClient';
 import { visualizerModels } from './models';
 import { ResearchMode } from '../types';

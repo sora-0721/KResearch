@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import LiquidButton from './LiquidButton';
 import Spinner from './Spinner';

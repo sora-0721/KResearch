@@ -19,14 +19,11 @@
 - [Usage](#usage)
 - [Contributing](#contributing)
 - [License](#license)
-- [Contact](#contact)
 - [Acknowledgements](#acknowledgements)
 
 ## About The Project
 
 KResearch is a sophisticated research assistant designed to tackle complex topics by leveraging a multi-agent AI system. It automates the process of in-depth research by planning, executing, and synthesizing information from the web. The final output is a comprehensive, well-structured report complete with source citations and a visual knowledge graph, making it an invaluable tool for students, analysts, and anyone needing to quickly develop a deep understanding of a subject.
-
-
 
 ### Key Features
 
@@ -58,25 +55,24 @@ You must have a Google Gemini API key to use this application.
 
 ### Installation
 
-This project is a static web application and does not require a complex build step.
+This project is a static web application but uses a local development server for better module handling and live reloading.
 
-1.  Clone the repository:
-    ```sh
-    git clone https://github.com/KuekHaoYang/KResearch
-    cd kresearch
-    ```
-2.  Run the project folder using a local web server. Here are two step:
-    
-    install the package:
-    ```sh
-    npm install
-    ```
-    
-   Run it
-    ```sh
-    npm run dev
-    ```
-3.  Open your browser and navigate to the local address provided by the server (e.g., `http://localhost:8000`).
+1. **Clone the repository:**
+   ```sh
+   git clone https://github.com/KuekHaoYang/KResearch
+   cd research
+   ```
+2. **Install dependencies:**
+   Make sure you have [Node.js](https://nodejs.org/) installed, then run:
+   ```sh
+   npm install
+   ```
+3. **Start the development server:**
+   ```sh
+   npm run dev
+   ```
+4. **Open in browser:**
+   Once the server is running, open your browser and navigate to the local address provided (e.g., `http://localhost:5173`, `http://localhost:3000`, etc., depending on your setup).
 
 ## Configuration
 

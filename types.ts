@@ -1,4 +1,3 @@
-
 export type ResearchUpdateType = 'thought' | 'search' | 'read';
 export type AgentPersona = 'Alpha' | 'Beta';
 export type ResearchMode = 'Balanced' | 'DeepDive' | 'Fast' | 'UltraFast';

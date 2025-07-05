@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect } from 'react';
 import Spinner from './Spinner';
 import { ResearchUpdate, AgentPersona } from '../types';

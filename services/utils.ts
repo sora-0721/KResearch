@@ -1,4 +1,3 @@
-
 export const parseJsonFromMarkdown = (text: string): any => {
     const fenceRegex = /^```(\w*)?\s*\n?(.*?)\n?\s*```$/s;
     const match = text.match(fenceRegex);
