@@ -17,7 +17,7 @@ const App: React.FC = () => {
       query, setQuery, selectedFile, researchUpdates, finalData, mode, setMode, appState,
       clarificationHistory, clarificationLoading, startClarificationProcess, handleAnswerSubmit,
       handleStopResearch, handleFileChange, handleRemoveFile, handleReset, fileInputRef,
-      isVisualizing, visualizedReportHtml, handleVisualizeReport, handleCloseVisualizer
+      isVisualizing, visualizedReportHtml, handleVisualizeReport, handleCloseVisualizer, handleSkipClarification
   } = useAppLogic();
 
   const [isLogVisible, setIsLogVisible] = useState<boolean>(true);
@@ -83,7 +83,7 @@ const App: React.FC = () => {
           </div>
         )}
         
-        {appState === 'clarifying' && (<ClarificationChat history={clarificationHistory} onAnswerSubmit={handleAnswerSubmit} isLoading={clarificationLoading}/>)}
+        {appState === 'clarifying' && (<ClarificationChat history={clarificationHistory} onAnswerSubmit={handleAnswerSubmit} onSkip={handleSkipClarification} isLoading={clarificationLoading}/>)}
         
         {appState === 'researching' && (<LiquidButton onClick={handleStopResearch} className="w-full bg-red-500/30 hover:bg-red-500/40 border-red-500/50">Stop Research</LiquidButton>)}
 

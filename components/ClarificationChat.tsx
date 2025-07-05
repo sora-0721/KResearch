@@ -8,9 +8,10 @@ interface ClarificationChatProps {
     history: ClarificationTurn[];
     onAnswerSubmit: (answer: string) => void;
     isLoading: boolean;
+    onSkip: () => void;
 }
 
-const ClarificationChat: React.FC<ClarificationChatProps> = ({ history, onAnswerSubmit, isLoading }) => {
+const ClarificationChat: React.FC<ClarificationChatProps> = ({ history, onAnswerSubmit, isLoading, onSkip }) => {
     const [userAnswer, setUserAnswer] = useState('');
     const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -46,7 +47,7 @@ const ClarificationChat: React.FC<ClarificationChatProps> = ({ history, onAnswer
     return (
         <div className="w-full animate-fade-in space-y-4">
             <h2 className="text-xl font-bold text-center text-gray-800 dark:text-gray-200">Refining Your Request</h2>
-            <p className="text-sm text-center text-gray-600 dark:text-gray-400">To get the best results, the AI will ask a few clarifying questions.</p>
+            <p className="text-sm text-center text-gray-600 dark:text-gray-400">To get the best results, the AI may ask a few clarifying questions.</p>
             
             <div ref={chatContainerRef} className="max-h-80 overflow-y-auto space-y-4 p-4 rounded-lg bg-black/5 dark:bg-white/5 scroll-smooth">
                 {getVisibleHistory().map((turn, index) => (
@@ -87,9 +88,14 @@ const ClarificationChat: React.FC<ClarificationChatProps> = ({ history, onAnswer
                     disabled={isLoading}
                     aria-label="Your answer to the AI's question"
                 />
-                <LiquidButton type="submit" disabled={isLoading || !userAnswer.trim()} className="w-full">
-                    {isLoading ? 'Waiting...' : 'Send Answer'}
-                </LiquidButton>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                     <LiquidButton type="submit" disabled={isLoading || !userAnswer.trim()} className="w-full">
+                        {isLoading ? 'Waiting...' : 'Send Answer'}
+                    </LiquidButton>
+                     <LiquidButton type="button" onClick={onSkip} disabled={isLoading} className="w-full bg-transparent hover:bg-black/5 dark:hover:bg-white/5 text-gray-600 dark:text-gray-400 hover:shadow-none hover:-translate-y-0 active:translate-y-px">
+                        Skip & Start Research
+                    </LiquidButton>
+                </div>
             </form>
         </div>
     );

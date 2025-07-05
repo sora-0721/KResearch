@@ -79,6 +79,27 @@ export const useAppLogic = () => {
         handleClarificationResponse(newHistory);
     }, [clarificationHistory, handleClarificationResponse]);
     
+    const handleSkipClarification = useCallback(() => {
+        if (appState !== 'clarifying') return;
+
+        // The first turn is always the initial user query. If there's more than one user turn, they've provided answers.
+        const userHasProvidedAnswers = clarificationHistory.filter(t => t.role === 'user').length > 1;
+
+        let contextForResearch: string;
+
+        if (userHasProvidedAnswers) {
+            // The context is the entire conversation, which the planner can use to understand the refined goal.
+            contextForResearch = `The user's initial query was "${query}". The following conversation was held to clarify the topic. The research should proceed based on this context:\n${clarificationHistory.map(t => `${t.role}: ${t.content}`).join('\n')}`;
+        } else {
+            // If no answers were provided, the original query is the goal.
+            contextForResearch = query;
+        }
+        
+        setClarifiedContext(contextForResearch);
+        setAppState('researching');
+
+    }, [appState, clarificationHistory, query]);
+
     const handleVisualizeReport = useCallback(async (reportMarkdown: string) => {
         if (!reportMarkdown) return;
         setIsVisualizing(true);
@@ -132,6 +153,6 @@ export const useAppLogic = () => {
         query, setQuery, selectedFile, researchUpdates, finalData, mode, setMode, appState,
         clarificationHistory, clarificationLoading, fileInputRef, startClarificationProcess, 
         handleAnswerSubmit, handleStopResearch, handleFileChange, handleRemoveFile, handleReset,
-        isVisualizing, visualizedReportHtml, handleVisualizeReport, handleCloseVisualizer
+        isVisualizing, visualizedReportHtml, handleVisualizeReport, handleCloseVisualizer, handleSkipClarification
     };
 };
