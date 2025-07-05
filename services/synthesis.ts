@@ -1,5 +1,5 @@
 import { ai } from './geminiClient';
-import { researchModeModels } from './models';
+import { getModel } from './models';
 import { ResearchUpdate, Citation, FinalResearchData, ResearchMode, FileData } from '../types';
 
 export const synthesizeReport = async (
@@ -75,7 +75,7 @@ You must generate a report that strictly adheres to the following structure and 
         parts.push({ inlineData: { mimeType: fileData.mimeType, data: fileData.data } });
     }
     const reportResponse = await ai.models.generateContent({
-        model: researchModeModels[mode].synthesizer,
+        model: getModel('synthesizer', mode),
         contents: { parts },
         config: { temperature: 0.5 }
     });

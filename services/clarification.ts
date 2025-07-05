@@ -1,5 +1,5 @@
 import { ai } from './geminiClient';
-import { clarificationModels } from './models';
+import { getModel } from './models';
 import { parseJsonFromMarkdown } from './utils';
 import { ResearchMode, FileData, ClarificationTurn } from '../types';
 
@@ -44,7 +44,7 @@ The user wants to research the impact of recent advancements in large language m
     });
 
     const generationResponse = await ai.models.generateContent({
-        model: clarificationModels[mode],
+        model: getModel('clarification', mode),
         contents: contents,
         config: { 
             systemInstruction: generationPrompt, 

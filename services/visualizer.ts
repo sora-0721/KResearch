@@ -1,5 +1,5 @@
 import { ai } from './geminiClient';
-import { visualizerModels } from './models';
+import { getModel } from './models';
 import { ResearchMode } from '../types';
 
 const cleanHtmlResponse = (text: string | undefined): string => {
@@ -76,7 +76,7 @@ ${reportMarkdown}
 Respond ONLY with the complete, raw HTML code. The response must start with \`<!DOCTYPE html>\` and end with \`</html>\`. Do not add any explanation or markdown formatting. Your career as a top-tier designer depends on the quality of this output.`;
 
     const response = await ai.models.generateContent({
-        model: visualizerModels[mode],
+        model: getModel('visualizer', mode),
         contents: prompt,
         config: { temperature: 0.6 }
     });

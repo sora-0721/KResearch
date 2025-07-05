@@ -1,11 +1,11 @@
 import { GenerateContentResponse } from "@google/genai";
 import { ai } from './geminiClient';
-import { researchModeModels } from './models';
+import { getModel } from './models';
 import { Citation, ResearchMode } from '../types';
 
 export const executeSingleSearch = async (searchQuery: string, mode: ResearchMode): Promise<{ text: string, citations: Citation[] }> => {
     const response: GenerateContentResponse = await ai.models.generateContent({
-        model: researchModeModels[mode].searcher,
+        model: getModel('searcher', mode),
         contents: `Concisely summarize key information for the query: "${searchQuery}"`,
         config: { tools: [{ googleSearch: {} }] },
     });

@@ -1,6 +1,7 @@
 import { runDynamicConversationalPlanner } from './planner';
 import { executeSingleSearch } from './search';
 import { synthesizeReport } from './synthesis';
+import { settingsService } from './settingsService';
 import { ResearchUpdate, Citation, FinalResearchData, ResearchMode, FileData } from '../types';
 
 export const runIterativeDeepResearch = async (
@@ -16,6 +17,7 @@ export const runIterativeDeepResearch = async (
   let history: ResearchUpdate[] = [];
   const idCounter = { current: 0 };
   let allCitations: Citation[] = [];
+  const { maxCycles } = settingsService.getSettings().researchParams;
   
   const checkSignal = () => {
     if (signal.aborted) throw new DOMException('Research aborted by user.', 'AbortError');
@@ -29,8 +31,8 @@ export const runIterativeDeepResearch = async (
   while (true) {
     checkSignal();
     const searchCycles = history.filter(h => h.type === 'search').length;
-    if (searchCycles >= 17) {
-        const finishUpdate = { id: idCounter.current++, type: 'thought' as const, content: 'Maximum research cycles (17) reached. Forcing conclusion to synthesize report.' };
+    if (searchCycles >= maxCycles) {
+        const finishUpdate = { id: idCounter.current++, type: 'thought' as const, content: `Maximum research cycles (${maxCycles}) reached. Forcing conclusion to synthesize report.` };
         history.push(finishUpdate);
         onUpdate(finishUpdate);
         break;

@@ -1,5 +1,6 @@
 import { ai } from './geminiClient';
-import { researchModeModels } from './models';
+import { getModel } from './models';
+import { settingsService } from './settingsService';
 import { parseJsonFromMarkdown } from './utils';
 import { ResearchUpdate, AgentPersona, ResearchMode, FileData } from '../types';
 
@@ -21,8 +22,6 @@ const plannerTurnSchema = {
     required: ['thought', 'action'],
 };
 
-const MAX_DEBATE_TURNS = 6; // Maximum number of back-and-forth turns in a single planning phase.
-
 export const runDynamicConversationalPlanner = async (
     query: string,
     researchHistory: ResearchUpdate[],
@@ -33,6 +32,8 @@ export const runDynamicConversationalPlanner = async (
     clarifiedContext: string,
     fileData: FileData | null
 ): Promise<{ search_queries: string[], should_finish: boolean, finish_reason?: string }> => {
+    const { minCycles, maxDebateRounds, maxCycles } = settingsService.getSettings().researchParams;
+
     const searchHistoryText = researchHistory.filter(h => h.type === 'search').map(h => (Array.isArray(h.content) ? h.content : [h.content]).join(', ')).join('; ');
     const readHistoryText = researchHistory.filter(h => h.type === 'read').map(h => h.content).join('\n---\n');
     const searchCycles = researchHistory.filter(h => h.type === 'search').length;
@@ -41,7 +42,7 @@ export const runDynamicConversationalPlanner = async (
     let nextPersona: AgentPersona = 'Alpha';
     let debateTurns = 0;
 
-    while (debateTurns < MAX_DEBATE_TURNS) {
+    while (debateTurns < maxDebateRounds) {
         checkSignal();
         debateTurns++;
         const conversationText = currentConversation.map(t => `${t.persona}: ${t.thought}`).join('\n');
@@ -106,12 +107,12 @@ export const runDynamicConversationalPlanner = async (
                 *   What is the proposed date for the law to go into effect after being signed?
                 *   Is there a grace period for companies to achieve compliance?
                 *   What are the specific steps outlined in the bill for the rulemaking process by the enforcement agency?
-            3.  **Avoid Redundancy:** Do NOT propose search queries that are identical or semantically very similar to queries already in <searches>. Your goal is to explore new, deeper avenues based on the "Progressive Deepening" rule, not repeat work.
+            3.  **Avoid Redundancy:** Do NOT propose search queries that are identical or semantically very similar to queries already in <searches>. Your goal is to explore new, deeper avenues based on the "Progressive Deepening" principle, not repeat work.
             4.  **Provide Your 'thought':** Articulate your reasoning for the chosen action in the 'thought' field, explicitly referencing how your plan follows the "Progressive Deepening" principle.
             5.  **Choose ONE Action:** The 'action' field must be 'continue_debate', 'search', or 'finish'.
             6.  **Research Cycle Rules:**
-                *   The 'finish' action is disabled until at least 3 search cycles are complete.
-                *   You should aim to conclude the research between 5 and 15 cycles. Do not extend research unnecessarily.
+                *   The 'finish' action is disabled until at least ${minCycles} search cycles are complete.
+                *   You should aim to conclude the research between ${minCycles} and ${maxCycles} cycles. Do not extend research unnecessarily.
 
             ${isFirstTurn ? `**Critical Rule for Agent Alpha (First Turn):** As this is the first turn of the debate, propose an initial strategy. Your action MUST be 'continue_debate'.` : ''}
         `;
@@ -120,7 +121,7 @@ export const runDynamicConversationalPlanner = async (
             parts.push({ inlineData: { mimeType: fileData.mimeType, data: fileData.data } });
         }
         const response = await ai.models.generateContent({
-            model: researchModeModels[mode].planner,
+            model: getModel('planner', mode),
             contents: { parts },
             config: { 
                 responseMimeType: "application/json", 
@@ -142,8 +143,8 @@ export const runDynamicConversationalPlanner = async (
 
         let effectiveAction = parsedResponse.action;
         
-        if (effectiveAction === 'finish' && searchCycles < 3) {
-             const thought = `Rule violation: Cannot finish before 3 search cycles. Forcing debate to continue.`;
+        if (effectiveAction === 'finish' && searchCycles < minCycles) {
+             const thought = `Rule violation: Cannot finish before ${minCycles} search cycles. Forcing debate to continue.`;
              onUpdate({ id: idCounter.current++, type: 'thought' as const, persona: nextPersona, content: thought });
              effectiveAction = 'continue_debate';
         }
@@ -160,7 +161,7 @@ export const runDynamicConversationalPlanner = async (
         nextPersona = (nextPersona === 'Alpha') ? 'Beta' : 'Alpha';
     }
 
-    // If the while loop exits, it means MAX_DEBATE_TURNS was reached.
+    // If the while loop exits, it means maxDebateRounds was reached.
     onUpdate({ id: idCounter.current++, type: 'thought', content: 'Debate reached maximum turns without a decision. Forcing research to conclude.' });
     return { should_finish: true, search_queries: [], finish_reason: 'Planning debate timed out.' };
 };

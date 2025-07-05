@@ -2,6 +2,22 @@ export type ResearchUpdateType = 'thought' | 'search' | 'read';
 export type AgentPersona = 'Alpha' | 'Beta';
 export type ResearchMode = 'Balanced' | 'DeepDive' | 'Fast' | 'UltraFast';
 export type AppState = 'idle' | 'clarifying' | 'researching' | 'complete';
+export type AgentRole = 'planner' | 'searcher' | 'synthesizer' | 'clarification' | 'visualizer';
+
+export interface ModelOverrides {
+    [key: string]: string | null;
+}
+
+export interface ResearchParams {
+    minCycles: number;
+    maxCycles: number;
+    maxDebateRounds: number;
+}
+
+export interface AppSettings {
+    modelOverrides: ModelOverrides;
+    researchParams: ResearchParams;
+}
 
 export interface ClarificationTurn {
     role: 'user' | 'model';

@@ -51,7 +51,7 @@ const ReportVisualizer: React.FC<ReportVisualizerProps> = ({ htmlContent, onClos
       className={`fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4 transition-opacity duration-300 ease-in-out ${isActive ? 'opacity-100' : 'opacity-0'}`}
       onTransitionEnd={handleTransitionEnd}
     >
-      <GlassCard className={`w-full h-full max-w-7xl flex flex-col p-4 sm:p-6 transition-all duration-300 ease-in-out ${isActive ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
+      <GlassCard className={`w-full h-full max-w-7xl flex flex-col p-4 sm:p-6 bg-slate-100/90 transition-all duration-300 ease-in-out ${isActive ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
         <header className="flex items-center justify-between mb-4 shrink-0">
           <h2 className="text-xl sm:text-2xl font-bold">Visual Report Preview</h2>
           <div className="flex items-center gap-2">
