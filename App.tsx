@@ -6,6 +6,7 @@ import FinalReport from './components/FinalReport';
 import ThemeSwitcher from './components/ThemeSwitcher';
 import ClarificationChat from './components/ClarificationChat';
 import ReportVisualizer from './components/ReportVisualizer';
+import SettingsModal from './components/SettingsModal';
 import { useAppLogic } from './hooks/useAppLogic';
 import { ResearchMode } from './types';
 
@@ -17,7 +18,8 @@ const App: React.FC = () => {
       query, setQuery, selectedFile, researchUpdates, finalData, mode, setMode, appState,
       clarificationHistory, clarificationLoading, startClarificationProcess, handleAnswerSubmit,
       handleStopResearch, handleFileChange, handleRemoveFile, handleReset, fileInputRef,
-      isVisualizing, visualizedReportHtml, handleVisualizeReport, handleCloseVisualizer, handleSkipClarification
+      isVisualizing, visualizedReportHtml, handleVisualizeReport, handleCloseVisualizer, handleSkipClarification,
+      isSettingsOpen, setIsSettingsOpen,
   } = useAppLogic();
 
   const [isLogVisible, setIsLogVisible] = useState<boolean>(true);
@@ -52,10 +54,16 @@ const App: React.FC = () => {
     { id: 'UltraFast', name: 'Ultra Fast', description: 'Lightning-fast results for quick checks.' },
   ];
 
+  const isVisualizerOpen = isVisualizing || !!visualizedReportHtml;
+
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8 font-sans text-gray-800 dark:text-gray-200 transition-colors duration-300">
-      <div className="absolute top-4 right-4 z-10">
+      <div className="absolute top-4 right-4 z-10 flex items-center gap-4">
         <ThemeSwitcher isDarkMode={isDarkMode} onToggle={() => setIsDarkMode(!isDarkMode)} />
+        <button onClick={() => setIsSettingsOpen(true)} className="p-2 rounded-full cursor-pointer hover:bg-black/10 dark:hover:bg-white/10 transition-colors" title="Settings">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            <span className="sr-only">Settings</span>
+        </button>
       </div>
 
       <GlassCard className="w-full max-w-4xl p-6 sm:p-8 flex flex-col gap-6">
@@ -106,13 +114,15 @@ const App: React.FC = () => {
         )}
       </GlassCard>
 
-      {(isVisualizing || visualizedReportHtml) && (
-        <ReportVisualizer 
-            isLoading={isVisualizing} 
-            htmlContent={visualizedReportHtml} 
-            onClose={handleCloseVisualizer} 
-        />
-      )}
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+
+      <ReportVisualizer 
+        isOpen={isVisualizerOpen}
+        isLoading={isVisualizing} 
+        htmlContent={visualizedReportHtml} 
+        onClose={handleCloseVisualizer} 
+        onRegenerate={finalData?.report ? () => handleVisualizeReport(finalData.report) : undefined}
+      />
       
       <footer className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
         <p>&copy; {new Date().getFullYear()} KResearch. Powered by Gemini.</p>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { clarifyQuery, runIterativeDeepResearch, generateVisualReport } from '../services';
 import { ResearchUpdate, FinalResearchData, ResearchMode, FileData, AppState, ClarificationTurn } from '../types';
+import { apiKeyService } from '../services/apiKeyService';
 
 export const useAppLogic = () => {
     const [query, setQuery] = useState<string>('');
@@ -14,6 +15,7 @@ export const useAppLogic = () => {
     const [clarifiedContext, setClarifiedContext] = useState<string>('');
     const [isVisualizing, setIsVisualizing] = useState<boolean>(false);
     const [visualizedReportHtml, setVisualizedReportHtml] = useState<string | null>(null);
+    const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
     const abortControllerRef = useRef<AbortController | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -30,6 +32,7 @@ export const useAppLogic = () => {
           }
       } catch (error) {
           console.error("Clarification step failed:", error);
+          alert(`An error occurred: ${error instanceof Error ? error.message : String(error)}`);
           setClarifiedContext('Clarification process failed. Proceeding with original query.');
           setAppState('researching');
       } finally {
@@ -51,6 +54,7 @@ export const useAppLogic = () => {
              setFinalData({ report: "The research process was cancelled.", ...commonErrorData });
         } else {
             console.error("Research failed:", error);
+            alert(`An error occurred during research: ${error.message}`);
             setFinalData({ report: "An error occurred during the research process.", ...commonErrorData });
         }
       } finally {
@@ -66,6 +70,12 @@ export const useAppLogic = () => {
 
     const startClarificationProcess = useCallback(() => {
         if (!query.trim() || appState !== 'idle') return;
+
+        if (!apiKeyService.hasKey()) {
+            setIsSettingsOpen(true);
+            return;
+        }
+
         setAppState('clarifying');
         const initialQuery = selectedFile ? `${query}\n\n[File attached: ${selectedFile.name}]` : query;
         const initialHistory: ClarificationTurn[] = [{ role: 'user', content: initialQuery }];
@@ -82,16 +92,13 @@ export const useAppLogic = () => {
     const handleSkipClarification = useCallback(() => {
         if (appState !== 'clarifying') return;
 
-        // The first turn is always the initial user query. If there's more than one user turn, they've provided answers.
         const userHasProvidedAnswers = clarificationHistory.filter(t => t.role === 'user').length > 1;
 
         let contextForResearch: string;
 
         if (userHasProvidedAnswers) {
-            // The context is the entire conversation, which the planner can use to understand the refined goal.
             contextForResearch = `The user's initial query was "${query}". The following conversation was held to clarify the topic. The research should proceed based on this context:\n${clarificationHistory.map(t => `${t.role}: ${t.content}`).join('\n')}`;
         } else {
-            // If no answers were provided, the original query is the goal.
             contextForResearch = query;
         }
         
@@ -147,12 +154,14 @@ export const useAppLogic = () => {
         setClarificationLoading(false);
         setVisualizedReportHtml(null);
         setIsVisualizing(false);
+        setIsSettingsOpen(false);
     }
 
     return {
         query, setQuery, selectedFile, researchUpdates, finalData, mode, setMode, appState,
         clarificationHistory, clarificationLoading, fileInputRef, startClarificationProcess, 
         handleAnswerSubmit, handleStopResearch, handleFileChange, handleRemoveFile, handleReset,
-        isVisualizing, visualizedReportHtml, handleVisualizeReport, handleCloseVisualizer, handleSkipClarification
+        isVisualizing, visualizedReportHtml, handleVisualizeReport, handleCloseVisualizer, handleSkipClarification,
+        isSettingsOpen, setIsSettingsOpen
     };
 };

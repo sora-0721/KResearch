@@ -2,7 +2,10 @@ import { ai } from './geminiClient';
 import { visualizerModels } from './models';
 import { ResearchMode } from '../types';
 
-const cleanHtmlResponse = (text: string): string => {
+const cleanHtmlResponse = (text: string | undefined): string => {
+    if (!text) {
+        return '';
+    }
     const fenceRegex = /^```html\s*\n?(.*?)\n?\s*```$/s;
     const match = text.match(fenceRegex);
     if (match && match[1]) {
