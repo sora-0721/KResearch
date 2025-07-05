@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { clarifyQuery, runIterativeDeepResearch, generateVisualReport } from '../services';
 import { ResearchUpdate, FinalResearchData, ResearchMode, FileData, AppState, ClarificationTurn } from '../types';
 import { apiKeyService } from '../services/apiKeyService';
-import { useNotification } from '../contexts/NotificationContext';
+import { useNotification } from '../contextx/NotificationContext';
 
 const getCleanErrorMessage = (error: any): string => {
     let message = 'An unknown error occurred.';

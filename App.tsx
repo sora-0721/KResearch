@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { NotificationProvider } from './contexts/NotificationContext';
+import { NotificationProvider } from './contextx/NotificationContext';
 import GlassCard from './components/GlassCard';
 import LiquidButton from './components/LiquidButton';
 import ResearchProgress from './components/ResearchProgress';

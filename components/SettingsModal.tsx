@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNotification } from '../contexts/NotificationContext';
+import { useNotification } from '../contextx/NotificationContext';
 import { apiKeyService } from '../services/apiKeyService';
 import { settingsService } from '../services/settingsService';
 import { AppSettings, AgentRole } from '../types';

@@ -4,7 +4,7 @@ import remarkGfm from 'remark-gfm';
 import { FinalResearchData } from '../types';
 import LiquidButton from './LiquidButton';
 import Spinner from './Spinner';
-import { useNotification } from '../contexts/NotificationContext';
+import { useNotification } from '../contextx/NotificationContext';
 
 
 declare global {
