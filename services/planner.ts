@@ -161,7 +161,26 @@ export const runDynamicConversationalPlanner = async (
         nextPersona = (nextPersona === 'Alpha') ? 'Beta' : 'Alpha';
     }
 
-    // If the while loop exits, it means maxDebateRounds was reached.
-    onUpdate({ id: idCounter.current++, type: 'thought', content: 'Debate reached maximum turns without a decision. Forcing research to conclude.' });
-    return { should_finish: true, search_queries: [], finish_reason: 'Planning debate timed out.' };
+    // If the while loop exits, it means maxDebateRounds was reached. Attempt a fallback search.
+    onUpdate({ id: idCounter.current++, type: 'thought', content: 'Debate reached maximum turns. Attempting a fallback search generation to continue.' });
+
+    const fallbackPrompt = `Based on the refined research goal ("${clarifiedContext}") and the previous learnings, generate 1-2 concise and specific search queries to advance the research.
+    Previous Learnings: ${readHistoryText || 'None'}
+    Your response MUST be a valid JSON object of the format: { "queries": ["query 1", "query 2", ...] }`;
+
+    const fallbackResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-preview-04-17',
+        contents: fallbackPrompt,
+        config: { responseMimeType: "application/json" }
+    });
+
+    const parsed = parseJsonFromMarkdown(fallbackResponse.text);
+    const queries = parsed?.queries;
+    
+    if (queries && Array.isArray(queries) && queries.length > 0) {
+        return { should_finish: false, search_queries: queries };
+    }
+    
+    // Absolute fallback if JSON parsing fails or queries are empty.
+    return { should_finish: true, search_queries: [], finish_reason: 'Planning debate timed out and fallback generation failed.' };
 };

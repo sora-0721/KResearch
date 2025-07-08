@@ -1,48 +1,48 @@
 import { runDynamicConversationalPlanner } from './planner';
 import { executeSingleSearch } from './search';
-import { synthesizeReport } from './synthesis';
 import { settingsService } from './settingsService';
-import { ResearchUpdate, Citation, FinalResearchData, ResearchMode, FileData } from '../types';
+import { ResearchUpdate, Citation, ResearchMode, FileData } from '../types';
+
+interface ResearchResult {
+  report: string; // This will be empty as synthesis is moved out
+  citations: Citation[];
+  canContinue: boolean;
+}
 
 export const runIterativeDeepResearch = async (
   query: string,
   onUpdate: (update: ResearchUpdate) => void,
+  onNewCitations: (citations: Citation[]) => void,
   signal: AbortSignal,
   mode: ResearchMode,
   clarifiedContext: string,
-  fileData: FileData | null
-): Promise<FinalResearchData> => {
-  console.log(`Starting DYNAMIC CONVERSATIONAL research for: ${query}`);
+  fileData: FileData | null,
+  initialHistory: ResearchUpdate[] = []
+): Promise<ResearchResult> => {
+  console.log(`Starting/Continuing research for: ${query}`);
 
-  let history: ResearchUpdate[] = [];
-  const idCounter = { current: 0 };
-  let allCitations: Citation[] = [];
+  let history: ResearchUpdate[] = [...initialHistory];
+  const idCounter = { current: initialHistory.length };
   const { maxCycles } = settingsService.getSettings().researchParams;
   
   const checkSignal = () => {
     if (signal.aborted) throw new DOMException('Research aborted by user.', 'AbortError');
   }
 
-  const onPlannerUpdate = (update: ResearchUpdate) => {
-    history.push(update);
-    onUpdate(update);
-  };
-
   while (true) {
     checkSignal();
     const searchCycles = history.filter(h => h.type === 'search').length;
     if (searchCycles >= maxCycles) {
-        const finishUpdate = { id: idCounter.current++, type: 'thought' as const, content: `Maximum research cycles (${maxCycles}) reached. Forcing conclusion to synthesize report.` };
+        const finishUpdate = { id: idCounter.current++, type: 'thought' as const, content: `Maximum research cycles (${maxCycles}) reached. Concluding to synthesize report.` };
         history.push(finishUpdate);
         onUpdate(finishUpdate);
-        break;
+        return { report: '', citations: [], canContinue: true }; // Can continue if they raise the limit
     }
     
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 500));
     checkSignal();
     
-    const plan = await runDynamicConversationalPlanner(query, history, onPlannerUpdate, checkSignal, idCounter, mode, clarifiedContext, fileData);
-    
+    const plan = await runDynamicConversationalPlanner(query, history, onUpdate, checkSignal, idCounter, mode, clarifiedContext, fileData);
     checkSignal();
 
     if (plan.should_finish) {
@@ -50,7 +50,8 @@ export const runIterativeDeepResearch = async (
         const finishUpdate = { id: idCounter.current++, type: 'thought' as const, content: `Finished research: ${finishReason}` };
         history.push(finishUpdate);
         onUpdate(finishUpdate);
-        break;
+        // If the planner explicitly finishes, we cannot continue.
+        return { report: '', citations: [], canContinue: false };
     }
 
     const searchQueries = plan.search_queries;
@@ -68,7 +69,7 @@ export const runIterativeDeepResearch = async (
       
       const combinedText = searchResults.map(r => r.text).join('\n\n');
       const combinedCitations = searchResults.flatMap(r => r.citations);
-      allCitations.push(...combinedCitations);
+      onNewCitations(combinedCitations);
       
       const readUpdate = { id: idCounter.current++, type: 'read' as const, content: combinedText, source: Array.from(new Set(combinedCitations.map(c => c.url))) };
       history.push(readUpdate);
@@ -77,12 +78,7 @@ export const runIterativeDeepResearch = async (
         const safetyBreakUpdate = { id: idCounter.current++, type: 'thought' as const, content: 'Planner did not provide a search action. Concluding research to synthesize report.' };
         history.push(safetyBreakUpdate);
         onUpdate(safetyBreakUpdate);
-        break;
+        return { report: '', citations: [], canContinue: true };
     }
   }
-
-  const finalReportData = await synthesizeReport(query, history, allCitations, mode, fileData);
-  const uniqueCitations = Array.from(new Map(allCitations.map(c => [c.url, c])).values());
-
-  return { ...finalReportData, citations: uniqueCitations, researchTimeMs: 0 };
 };
