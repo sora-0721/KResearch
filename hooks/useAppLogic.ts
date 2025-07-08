@@ -1,20 +1,21 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { runIterativeDeepResearch, clarifyQuery, generateVisualReport, synthesizeReport } from '../services';
-import { ResearchUpdate, FinalResearchData, ResearchMode, FileData, AppState, ClarificationTurn, Citation } from '../types';
+import { clarifyQuery, runIterativeDeepResearch, generateVisualReport } from '../services';
+import { ResearchUpdate, FinalResearchData, ResearchMode, FileData, AppState, ClarificationTurn } from '../types';
 import { apiKeyService } from '../services/apiKeyService';
 import { useNotification } from '../contextx/NotificationContext';
 
 const getCleanErrorMessage = (error: any): string => {
     let message = 'An unknown error occurred.';
     if (error instanceof Error) {
-        // API errors from the Gemini client often have a nested structure.
-        if (error.message.includes('FetchError')) {
-             return 'A network error occurred. Please check your connection and try again.';
+        try {
+            // Attempt to parse the message as a JSON object, which is common for API errors
+            const parsed = JSON.parse(error.message);
+            // Extract the user-friendly message from the nested structure
+            message = parsed?.error?.message || error.message;
+        } catch (e) {
+            // If it's not JSON, use the raw message
+            message = error.message;
         }
-        if (error.message.includes('429')) {
-            return 'You have exceeded your API quota. Please check your Gemini API plan and billing details.';
-        }
-        message = error.message;
     } else {
         message = String(error);
     }
@@ -26,7 +27,6 @@ export const useAppLogic = () => {
     const [query, setQuery] = useState<string>('');
     const [selectedFile, setSelectedFile] = useState<FileData | null>(null);
     const [researchUpdates, setResearchUpdates] = useState<ResearchUpdate[]>([]);
-    const [allCitations, setAllCitations] = useState<Citation[]>([]);
     const [finalData, setFinalData] = useState<FinalResearchData | null>(null);
     const [mode, setMode] = useState<ResearchMode>('Balanced');
     const [appState, setAppState] = useState<AppState>('idle');
@@ -36,67 +36,10 @@ export const useAppLogic = () => {
     const [isVisualizing, setIsVisualizing] = useState<boolean>(false);
     const [visualizedReportHtml, setVisualizedReportHtml] = useState<string | null>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
-    const [lastError, setLastError] = useState<string | null>(null);
-    const [canContinueResearch, setCanContinueResearch] = useState(true);
 
     const abortControllerRef = useRef<AbortController | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
-    const researchStartTimeRef = useRef<number>(0);
     const addNotification = useNotification();
-
-    const handleGenerateFinalReport = useCallback(async () => {
-        setAppState('synthesizing');
-        try {
-            const finalReportData = await synthesizeReport(query, researchUpdates, allCitations, mode, selectedFile);
-            const uniqueCitations = Array.from(new Map(allCitations.map(c => [c.url, c])).values());
-            const researchTime = researchStartTimeRef.current > 0 ? Date.now() - researchStartTimeRef.current : 0;
-            setFinalData({ ...finalReportData, citations: uniqueCitations, researchTimeMs: researchTime });
-        } catch(error) {
-            console.error("Synthesis failed:", error);
-            const message = getCleanErrorMessage(error);
-            addNotification({ type: 'error', title: 'Synthesis Failed', message });
-             setFinalData({ report: "An error occurred during the final report generation.", citations: [], researchTimeMs: 0 });
-        } finally {
-            setAppState('complete');
-        }
-
-    }, [query, researchUpdates, allCitations, mode, selectedFile, addNotification]);
-    
-    const executeResearch = useCallback(async () => {
-        setLastError(null);
-        abortControllerRef.current = new AbortController();
-
-        try {
-            const { report, citations, canContinue } = await runIterativeDeepResearch(
-                query,
-                (update) => setResearchUpdates(prev => [...prev, update]),
-                (newCitations) => setAllCitations(prev => [...prev, ...newCitations]),
-                abortControllerRef.current.signal,
-                mode,
-                clarifiedContext,
-                selectedFile,
-                researchUpdates,
-            );
-            
-            // This part runs if research completes without throwing an error
-            setCanContinueResearch(canContinue);
-            await handleGenerateFinalReport();
-
-        } catch (error: any) {
-            if (error.name !== 'AbortError') {
-                console.error("Research process failed:", error);
-                setLastError(getCleanErrorMessage(error));
-                setAppState('paused_error');
-            }
-            // AbortError is handled by the stop button, which calls handleGenerateFinalReport.
-        }
-    }, [query, mode, clarifiedContext, selectedFile, researchUpdates, handleGenerateFinalReport]);
-
-    useEffect(() => {
-        if (appState === 'researching') {
-            executeResearch();
-        }
-    }, [appState, executeResearch]);
 
     const handleClarificationResponse = useCallback(async (history: ClarificationTurn[]) => {
       setClarificationLoading(true);
@@ -112,11 +55,42 @@ export const useAppLogic = () => {
           console.error("Clarification step failed:", error);
           const message = getCleanErrorMessage(error);
           addNotification({type: 'error', title: 'Clarification Failed', message});
-          setAppState('idle');
+          setClarifiedContext('Clarification process failed. Proceeding with original query.');
+          setAppState('researching');
       } finally {
           setClarificationLoading(false);
       }
     }, [mode, selectedFile, addNotification]);
+
+    const startResearch = useCallback(async (context: string) => {
+      abortControllerRef.current = new AbortController();
+      const startTime = Date.now();
+      try {
+        const result = await runIterativeDeepResearch(query, (update) => {
+          setResearchUpdates(prev => [...prev, update]);
+        }, abortControllerRef.current.signal, mode, context, selectedFile);
+        setFinalData({ ...result, researchTimeMs: Date.now() - startTime });
+      } catch (error: any) {
+        const commonErrorData = { citations: [], researchTimeMs: Date.now() - startTime };
+        if (error.name === 'AbortError') {
+             addNotification({ type: 'info', title: 'Research Stopped', message: 'The research process was cancelled by the user.'});
+             setFinalData({ report: "The research process was cancelled.", ...commonErrorData });
+        } else {
+            console.error("Research failed:", error);
+            const message = getCleanErrorMessage(error);
+            addNotification({ type: 'error', title: 'Research Failed', message });
+            setFinalData({ report: "An error occurred during the research process.", ...commonErrorData });
+        }
+      } finally {
+        setAppState('complete');
+      }
+    }, [query, mode, selectedFile, addNotification]);
+
+    useEffect(() => {
+      if (appState === 'researching' && clarifiedContext) {
+          startResearch(clarifiedContext);
+      }
+    }, [appState, clarifiedContext, startResearch]);
 
     const startClarificationProcess = useCallback(() => {
         if (!query.trim() || appState !== 'idle') return;
@@ -127,7 +101,6 @@ export const useAppLogic = () => {
             return;
         }
 
-        researchStartTimeRef.current = Date.now();
         setAppState('clarifying');
         const initialQuery = selectedFile ? `${query}\n\n[File attached: ${selectedFile.name}]` : query;
         const initialHistory: ClarificationTurn[] = [{ role: 'user', content: initialQuery }];
@@ -143,11 +116,20 @@ export const useAppLogic = () => {
     
     const handleSkipClarification = useCallback(() => {
         if (appState !== 'clarifying') return;
-        const contextForResearch = clarificationHistory.length > 1 
-            ? `The user's initial query was "${query}". The following conversation was held to clarify: ${clarificationHistory.map(t => `${t.role}: ${t.content}`).join('\n')}`
-            : query;
+
+        const userHasProvidedAnswers = clarificationHistory.filter(t => t.role === 'user').length > 1;
+
+        let contextForResearch: string;
+
+        if (userHasProvidedAnswers) {
+            contextForResearch = `The user's initial query was "${query}". The following conversation was held to clarify the topic. The research should proceed based on this context:\n${clarificationHistory.map(t => `${t.role}: ${t.content}`).join('\n')}`;
+        } else {
+            contextForResearch = query;
+        }
+        
         setClarifiedContext(contextForResearch);
         setAppState('researching');
+
     }, [appState, clarificationHistory, query]);
 
     const handleVisualizeReport = useCallback(async (reportMarkdown: string) => {
@@ -166,18 +148,8 @@ export const useAppLogic = () => {
         }
     }, [mode, addNotification]);
 
-    const handleContinueFromError = () => setAppState('researching');
-    const handleGenerateReportFromError = () => handleGenerateFinalReport();
-    const handleContinueFromCompletion = () => {
-        setFinalData(null);
-        setAppState('researching');
-    };
-
     const handleCloseVisualizer = () => setVisualizedReportHtml(null);
-    const handleStopResearch = () => {
-        abortControllerRef.current?.abort();
-        handleGenerateFinalReport();
-    }
+    const handleStopResearch = () => abortControllerRef.current?.abort();
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
@@ -200,7 +172,6 @@ export const useAppLogic = () => {
         setAppState('idle');
         setFinalData(null);
         setResearchUpdates([]);
-        setAllCitations([]);
         setQuery('');
         setMode('Balanced');
         handleRemoveFile();
@@ -210,9 +181,6 @@ export const useAppLogic = () => {
         setVisualizedReportHtml(null);
         setIsVisualizing(false);
         setIsSettingsOpen(false);
-        setLastError(null);
-        setCanContinueResearch(true);
-        researchStartTimeRef.current = 0;
     }
 
     return {
@@ -220,7 +188,6 @@ export const useAppLogic = () => {
         clarificationHistory, clarificationLoading, fileInputRef, startClarificationProcess, 
         handleAnswerSubmit, handleStopResearch, handleFileChange, handleRemoveFile, handleReset,
         isVisualizing, visualizedReportHtml, handleVisualizeReport, handleCloseVisualizer, handleSkipClarification,
-        isSettingsOpen, setIsSettingsOpen, lastError, handleContinueFromError, handleGenerateReportFromError,
-        canContinueResearch, handleContinueFromCompletion,
+        isSettingsOpen, setIsSettingsOpen
     };
 };

@@ -10,7 +10,6 @@ import ReportVisualizer from './components/ReportVisualizer';
 import SettingsModal from './components/SettingsModal';
 import { useAppLogic } from './hooks/useAppLogic';
 import { ResearchMode } from './types';
-import Spinner from './components/Spinner';
 
 const App: React.FC = () => {
     return (
@@ -29,8 +28,7 @@ const AppContent: React.FC = () => {
       clarificationHistory, clarificationLoading, startClarificationProcess, handleAnswerSubmit,
       handleStopResearch, handleFileChange, handleRemoveFile, handleReset, fileInputRef,
       isVisualizing, visualizedReportHtml, handleVisualizeReport, handleCloseVisualizer, handleSkipClarification,
-      isSettingsOpen, setIsSettingsOpen, lastError, handleContinueFromError, handleGenerateReportFromError,
-      canContinueResearch, handleContinueFromCompletion
+      isSettingsOpen, setIsSettingsOpen,
   } = useAppLogic();
 
   const [isLogVisible, setIsLogVisible] = useState<boolean>(true);
@@ -104,24 +102,9 @@ const AppContent: React.FC = () => {
         
         {appState === 'clarifying' && (<ClarificationChat history={clarificationHistory} onAnswerSubmit={handleAnswerSubmit} onSkip={handleSkipClarification} isLoading={clarificationLoading}/>)}
         
-        {appState === 'researching' && (<LiquidButton onClick={handleStopResearch} className="w-full bg-red-500/30 hover:bg-red-500/40 border-red-500/50">Stop and Generate Report</LiquidButton>)}
-        
-        {appState === 'synthesizing' && (<div className="flex items-center justify-center gap-3 text-xl font-bold text-gray-800 dark:text-gray-200 animate-fade-in"><Spinner /><span>Synthesizing Final Report...</span></div>)}
+        {appState === 'researching' && (<LiquidButton onClick={handleStopResearch} className="w-full bg-red-500/30 hover:bg-red-500/40 border-red-500/50">Stop Research</LiquidButton>)}
 
-        {appState === 'paused_error' && (
-             <div className="animate-fade-in space-y-4 border-t border-border-light dark:border-border-dark pt-6 mt-6">
-                <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-700 dark:text-red-300">
-                    <h3 className="font-bold flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>Research Paused</h3>
-                    <p className="text-sm mt-2">{lastError}</p>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <LiquidButton onClick={handleContinueFromError}>Continue Research</LiquidButton>
-                    <LiquidButton onClick={handleGenerateReportFromError}>Generate Report Now</LiquidButton>
-                </div>
-            </div>
-        )}
-
-        {(appState === 'researching' || appState === 'paused_error' || (appState === 'complete' && researchUpdates.length > 0)) && (
+        {(appState === 'researching' || (appState === 'complete' && researchUpdates.length > 0)) && (
           <div className="animate-fade-in space-y-4">
             {appState === 'complete' && (<button onClick={() => setIsLogVisible(!isLogVisible)} className="flex items-center justify-between w-full text-left font-semibold text-lg p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"><span>{isLogVisible ? 'Hide' : 'Show'} Research Log</span><svg className={`w-5 h-5 transition-transform ${isLogVisible ? 'rotate-180' : ''}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></button>)}
             {isLogVisible && <ResearchProgress updates={researchUpdates} isResearching={appState === 'researching'} />}
@@ -135,12 +118,7 @@ const AppContent: React.FC = () => {
                     onVisualize={handleVisualizeReport}
                     isVisualizing={isVisualizing}
                  />
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                    <LiquidButton onClick={handleReset} className="w-full">Start New Research</LiquidButton>
-                    {canContinueResearch && (
-                        <LiquidButton onClick={handleContinueFromCompletion} className="w-full">Continue Research</LiquidButton>
-                    )}
-                 </div>
+                 <LiquidButton onClick={handleReset} className="w-full mt-4">Start New Research</LiquidButton>
             </div>
         )}
       </GlassCard>

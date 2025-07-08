@@ -1,14 +1,14 @@
 import { ai } from './geminiClient';
 import { getModel } from './models';
-import { ResearchUpdate, Citation, ResearchMode, FileData } from '../types';
+import { ResearchUpdate, Citation, FinalResearchData, ResearchMode, FileData } from '../types';
 
 export const synthesizeReport = async (
     query: string,
     history: ResearchUpdate[],
-    citations: Citation[], // Citations are passed for context, but not returned
+    citations: Citation[],
     mode: ResearchMode,
     fileData: FileData | null
-): Promise<{ report: string }> => {
+): Promise<Omit<FinalResearchData, 'researchTimeMs'>> => {
     const learnings = history.filter(h => h.type === 'read').map(h => h.content).join('\n\n---\n\n');
     const historyText = history.map(h => `${h.persona ? h.persona + ' ' : ''}${h.type}: ${Array.isArray(h.content) ? h.content.join(' | ') : h.content}`).join('\n');
 
@@ -82,7 +82,7 @@ You must generate a report that strictly adheres to the following structure and 
     
     const reportText = reportResponse.text.trim();
     if (!reportText) {
-        return { report: "Failed to generate a final report." };
+        return { report: "Failed to generate an initial report.", citations: [] };
     }
-    return { report: reportText };
+    return { report: reportText, citations: [] };
 };
