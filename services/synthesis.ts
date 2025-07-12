@@ -80,9 +80,14 @@ You must generate a report that strictly adheres to the following structure and 
         config: { temperature: 0.5 }
     });
     
-    const reportText = reportResponse.text.trim();
-    if (!reportText) {
-        return { report: "Failed to generate an initial report.", citations: [] };
+    if (!reportResponse) {
+        throw new Error("The API did not return a response during report synthesis. This might be due to content filters blocking the request.");
     }
-    return { report: reportText, citations: [] };
+
+    const reportText = reportResponse.text;
+    
+    if (!reportText) {
+        return { report: "Failed to generate an initial report. The response from the AI was empty.", citations: [] };
+    }
+    return { report: reportText.trim(), citations: [] };
 };
