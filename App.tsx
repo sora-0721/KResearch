@@ -28,7 +28,9 @@ const AppContent: React.FC = () => {
       clarificationHistory, clarificationLoading, startClarificationProcess, handleAnswerSubmit,
       handleStopResearch, handleFileChange, handleRemoveFile, handleReset, fileInputRef,
       isVisualizing, visualizedReportHtml, handleVisualizeReport, handleCloseVisualizer, handleSkipClarification,
+      isRegenerating, handleRegenerateReport,
       isSettingsOpen, setIsSettingsOpen,
+      isVisualizerOpen, handleVisualizerFeedback
   } = useAppLogic();
 
   const [isLogVisible, setIsLogVisible] = useState<boolean>(true);
@@ -63,7 +65,9 @@ const AppContent: React.FC = () => {
     { id: 'UltraFast', name: 'Ultra Fast', description: 'Lightning-fast results for quick checks.' },
   ];
 
-  const isVisualizerOpen = isVisualizing || !!visualizedReportHtml;
+  const handleVisualizationRequest = (reportMarkdown: string) => {
+    handleVisualizeReport(reportMarkdown, false);
+  }
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8 font-sans text-gray-800 dark:text-gray-200 transition-colors duration-300">
@@ -115,22 +119,25 @@ const AppContent: React.FC = () => {
             <div ref={finalReportRef} className="animate-fade-in space-y-6 border-t border-border-light dark:border-border-dark pt-6 mt-6">
                  <FinalReport 
                     data={finalData} 
-                    onVisualize={handleVisualizeReport}
+                    onVisualize={handleVisualizationRequest}
                     isVisualizing={isVisualizing}
+                    onRegenerate={handleRegenerateReport}
+                    isRegenerating={isRegenerating}
                  />
                  <LiquidButton onClick={handleReset} className="w-full mt-4">Start New Research</LiquidButton>
             </div>
         )}
       </GlassCard>
 
-      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} currentMode={mode} />
 
       <ReportVisualizer 
         isOpen={isVisualizerOpen}
         isLoading={isVisualizing} 
         htmlContent={visualizedReportHtml} 
         onClose={handleCloseVisualizer} 
-        onRegenerate={finalData?.report ? () => handleVisualizeReport(finalData.report) : undefined}
+        onRegenerate={finalData?.report ? () => handleVisualizeReport(finalData.report, true) : undefined}
+        onSubmitFeedback={handleVisualizerFeedback}
       />
       
       <footer className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">

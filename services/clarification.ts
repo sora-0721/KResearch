@@ -19,7 +19,7 @@ export const clarifyQuery = async (
 **Workflow:**
 1.  You will receive a user's research query and the conversation history.
 2.  Critically analyze the query to identify its core subject and potential areas of focus.
-3.  **If the query is broad (e.g., "AI in healthcare"), ask a targeted question to narrow the user's interest.** Your question should present distinct, meaningful sub-topics.
+3.  **If the query is broad (e.g., "AI in healthcare"), ask a targeted question to present distinct, meaningful sub-topics.**
 4.  **If the user has provided enough detail or after 1-2 clarifying questions, provide a final, refined research topic summary.** This summary will be used to guide the research.
 5.  If the user explicitly states they want information on "everything" or provides a very broad but clear topic without wanting to narrow it down, your final summary should reflect this broad scope.
 
@@ -78,7 +78,7 @@ Text to analyze: "${generatedText}"
     };
 
     const formattingResponse = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-preview-04-17', // Use a fast model for this simple formatting task
+        model: 'gemini-2.5-flash-lite-preview-06-17',
         contents: [{ role: 'user', parts: [{ text: formattingPrompt }] }],
         config: {
             responseMimeType: "application/json",

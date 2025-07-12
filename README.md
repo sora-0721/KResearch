@@ -60,7 +60,7 @@ This project is a static web application but uses a local development server for
 1. **Clone the repository:**
    ```sh
    git clone https://github.com/KuekHaoYang/KResearch
-   cd research
+   cd Kresearch
    ```
 2. **Install dependencies:**
    Make sure you have [Node.js](https://nodejs.org/) installed, then run:
@@ -82,7 +82,7 @@ Create a `.env` file in the root of the project (if your serving method supports
 
 ```dotenv
 # .env file
-API_KEY="YOUR_GEMINI_API_KEY"
+GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
 ```
 
 The application code directly accesses this key via `process.env.API_KEY`. You must ensure your local server or deployment environment makes this variable accessible to the frontend code.

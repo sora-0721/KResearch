@@ -1,50 +1,42 @@
 import { settingsService } from './settingsService';
 import { ResearchMode, AgentRole } from '../types';
 
-type ModelSet = {
-    planner: string;
-    searcher: string;
-    synthesizer: string;
-};
-
-// Default models used when no override is set
-const defaultResearchModeModels: Record<ResearchMode, ModelSet> = {
-    Balanced: {
-        planner: 'gemini-2.5-pro',
-        searcher: 'gemini-2.5-flash-lite-preview-06-17',
-        synthesizer: 'gemini-2.5-flash'
+const defaultModels: Record<AgentRole, Record<ResearchMode, string>> = {
+    planner: {
+        Balanced: 'gemini-2.5-pro',
+        DeepDive: 'gemini-2.5-pro',
+        Fast: 'gemini-2.5-flash',
+        UltraFast: 'gemini-2.5-flash-lite-preview-06-17',
     },
-    DeepDive: {
-        planner: 'gemini-2.5-pro',
-        searcher: 'gemini-2.5-pro',
-        synthesizer: 'gemini-2.5-pro'
+    searcher: {
+        Balanced: 'gemini-2.5-flash-lite-preview-06-17',
+        DeepDive: 'gemini-2.5-pro',
+        Fast: 'gemini-2.5-flash',
+        UltraFast: 'gemini-2.5-flash-lite-preview-06-17',
     },
-    Fast: {
-        planner: 'gemini-2.5-flash',
-        searcher: 'gemini-2.5-flash',
-        synthesizer: 'gemini-2.5-flash'
+    synthesizer: {
+        Balanced: 'gemini-2.5-flash',
+        DeepDive: 'gemini-2.5-pro',
+        Fast: 'gemini-2.5-flash',
+        UltraFast: 'gemini-2.5-flash-lite-preview-06-17',
     },
-    UltraFast: {
-        planner: 'gemini-2.5-flash-lite-preview-06-17',
-        searcher: 'gemini-2.5-flash-lite-preview-06-17',
-        synthesizer: 'gemini-2.5-flash-lite-preview-06-17'
+    clarification: {
+        Balanced: 'gemini-2.5-flash',
+        DeepDive: 'gemini-2.5-pro',
+        Fast: 'gemini-2.5-flash',
+        UltraFast: 'gemini-2.5-flash-lite-preview-06-17',
+    },
+    visualizer: {
+        Balanced: 'gemini-2.5-flash',
+        DeepDive: 'gemini-2.5-pro',
+        Fast: 'gemini-2.5-flash',
+        UltraFast: 'gemini-2.5-flash-lite-preview-06-17',
     }
 };
 
-const defaultClarificationModels: Record<ResearchMode, string> = {
-    Balanced: 'gemini-2.5-flash',
-    DeepDive: 'gemini-2.5-pro',
-    Fast: 'gemini-2.5-flash',
-    UltraFast: 'gemini-2.5-flash-lite-preview-06-17',
-};
-
-const defaultVisualizerModels: Record<ResearchMode, string> = {
-    Balanced: 'gemini-2.5-flash',
-    DeepDive: 'gemini-2.5-pro',
-    Fast: 'gemini-2.5-flash',
-    UltraFast: 'gemini-2.5-flash-lite-preview-06-17',
-};
-
+export const getDefaultModelForRole = (role: AgentRole, mode: ResearchMode): string => {
+    return defaultModels[role][mode];
+}
 
 /**
  * Gets the appropriate model for a given agent role and research mode.
@@ -59,21 +51,5 @@ export const getModel = (role: AgentRole, mode: ResearchMode): string => {
     if (override) {
         return override;
     }
-
-    // Fallback to default mode-based models
-    switch (role) {
-        case 'planner':
-            return defaultResearchModeModels[mode].planner;
-        case 'searcher':
-            return defaultResearchModeModels[mode].searcher;
-        case 'synthesizer':
-            return defaultResearchModeModels[mode].synthesizer;
-        case 'clarification':
-            return defaultClarificationModels[mode];
-        case 'visualizer':
-            return defaultVisualizerModels[mode];
-        default:
-            // A safe fallback
-            return 'gemini-2.5-flash';
-    }
+    return getDefaultModelForRole(role, mode);
 };

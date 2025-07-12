@@ -10,9 +10,9 @@ const DEFAULT_SETTINGS: AppSettings = {
     visualizer: null,
   },
   researchParams: {
-    minCycles: 3,
-    maxCycles: 17,
-    maxDebateRounds: 6,
+    minCycles: 7,
+    maxCycles: 20,
+    maxDebateRounds: 20,
   },
 };
 

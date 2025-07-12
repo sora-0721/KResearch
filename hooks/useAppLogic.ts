@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { clarifyQuery, runIterativeDeepResearch, generateVisualReport } from '../services';
+import { synthesizeReport, clarifyQuery, runIterativeDeepResearch, generateVisualReport, regenerateVisualReportWithFeedback } from '../services';
 import { ResearchUpdate, FinalResearchData, ResearchMode, FileData, AppState, ClarificationTurn } from '../types';
 import { apiKeyService } from '../services/apiKeyService';
 import { useNotification } from '../contextx/NotificationContext';
@@ -8,12 +8,9 @@ const getCleanErrorMessage = (error: any): string => {
     let message = 'An unknown error occurred.';
     if (error instanceof Error) {
         try {
-            // Attempt to parse the message as a JSON object, which is common for API errors
             const parsed = JSON.parse(error.message);
-            // Extract the user-friendly message from the nested structure
             message = parsed?.error?.message || error.message;
         } catch (e) {
-            // If it's not JSON, use the raw message
             message = error.message;
         }
     } else {
@@ -35,6 +32,8 @@ export const useAppLogic = () => {
     const [clarifiedContext, setClarifiedContext] = useState<string>('');
     const [isVisualizing, setIsVisualizing] = useState<boolean>(false);
     const [visualizedReportHtml, setVisualizedReportHtml] = useState<string | null>(null);
+    const [isVisualizerOpen, setIsVisualizerOpen] = useState<boolean>(false);
+    const [isRegenerating, setIsRegenerating] = useState<boolean>(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
     const abortControllerRef = useRef<AbortController | null>(null);
@@ -132,23 +131,79 @@ export const useAppLogic = () => {
 
     }, [appState, clarificationHistory, query]);
 
-    const handleVisualizeReport = useCallback(async (reportMarkdown: string) => {
-        if (!reportMarkdown) return;
+    const handleVisualizeReport = useCallback(async (reportMarkdown: string, forceRegenerate: boolean = false) => {
+        // If a visualization is ALREADY in progress, just open the panel to show the status.
+        if (isVisualizing) {
+            setIsVisualizerOpen(true);
+            return;
+        }
+
+        // If content exists and we are NOT forcing a regeneration, just open the panel.
+        if (visualizedReportHtml && !forceRegenerate) {
+            setIsVisualizerOpen(true);
+            return;
+        }
+        
+        // If we're here, it means we need to generate.
+        if (!reportMarkdown) return; // safety
+
         setIsVisualizing(true);
-        setVisualizedReportHtml(null);
+        setIsVisualizerOpen(true);
+        
+        // If forcing regeneration, clear the old content immediately to prevent showing stale data.
+        if (forceRegenerate) {
+            setVisualizedReportHtml(null);
+        }
+        
         try {
             const html = await generateVisualReport(reportMarkdown, mode);
             setVisualizedReportHtml(html);
         } catch(error) {
             console.error("Failed to generate visual report:", error);
             const message = getCleanErrorMessage(error);
+            setVisualizedReportHtml(null); // Ensure it's cleared on failure
             addNotification({type: 'error', title: 'Visualization Failed', message});
         } finally {
             setIsVisualizing(false);
         }
-    }, [mode, addNotification]);
+    }, [mode, addNotification, visualizedReportHtml, isVisualizing]);
 
-    const handleCloseVisualizer = () => setVisualizedReportHtml(null);
+    const handleVisualizerFeedback = useCallback(async (feedback: string, file: FileData | null) => {
+        if (!visualizedReportHtml || !finalData?.report) return;
+        setIsVisualizing(true);
+        try {
+            const html = await regenerateVisualReportWithFeedback(finalData.report, visualizedReportHtml, feedback, file, mode);
+            setVisualizedReportHtml(html);
+        } catch (error) {
+            console.error("Failed to update visual report with feedback:", error);
+            const message = getCleanErrorMessage(error);
+            // Re-throw the error so the UI component can catch it and display contextual feedback
+            throw new Error(message);
+        } finally {
+            setIsVisualizing(false);
+        }
+    }, [mode, finalData?.report, visualizedReportHtml]);
+
+
+    const handleRegenerateReport = useCallback(async () => {
+        if (!finalData) return;
+        setIsRegenerating(true);
+        try {
+            const regeneratedReportData = await synthesizeReport(query, researchUpdates, finalData.citations, mode, selectedFile);
+            setFinalData(prev => {
+                if (!prev) return null;
+                return { ...prev, report: regeneratedReportData.report };
+            });
+        } catch(error) {
+            console.error("Failed to regenerate report:", error);
+            const message = getCleanErrorMessage(error);
+            addNotification({ type: 'error', title: 'Regeneration Failed', message });
+        } finally {
+            setIsRegenerating(false);
+        }
+    }, [finalData, query, researchUpdates, mode, selectedFile, addNotification]);
+
+    const handleCloseVisualizer = () => setIsVisualizerOpen(false);
     const handleStopResearch = () => abortControllerRef.current?.abort();
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -180,6 +235,8 @@ export const useAppLogic = () => {
         setClarificationLoading(false);
         setVisualizedReportHtml(null);
         setIsVisualizing(false);
+        setIsVisualizerOpen(false);
+        setIsRegenerating(false);
         setIsSettingsOpen(false);
     }
 
@@ -187,7 +244,9 @@ export const useAppLogic = () => {
         query, setQuery, selectedFile, researchUpdates, finalData, mode, setMode, appState,
         clarificationHistory, clarificationLoading, fileInputRef, startClarificationProcess, 
         handleAnswerSubmit, handleStopResearch, handleFileChange, handleRemoveFile, handleReset,
-        isVisualizing, visualizedReportHtml, handleVisualizeReport, handleCloseVisualizer, handleSkipClarification,
-        isSettingsOpen, setIsSettingsOpen
+        isVisualizing, visualizedReportHtml, isVisualizerOpen, handleVisualizeReport, handleCloseVisualizer, handleSkipClarification,
+        isRegenerating, handleRegenerateReport,
+        isSettingsOpen, setIsSettingsOpen,
+        handleVisualizerFeedback
     };
 };
