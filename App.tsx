@@ -111,7 +111,9 @@ const AppContent: React.FC = () => {
         {(appState === 'researching' || (appState === 'complete' && researchUpdates.length > 0)) && (
           <div className="animate-fade-in space-y-4">
             {appState === 'complete' && (<button onClick={() => setIsLogVisible(!isLogVisible)} className="flex items-center justify-between w-full text-left font-semibold text-lg p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"><span>{isLogVisible ? 'Hide' : 'Show'} Research Log</span><svg className={`w-5 h-5 transition-transform ${isLogVisible ? 'rotate-180' : ''}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></button>)}
-            {isLogVisible && <ResearchProgress updates={researchUpdates} isResearching={appState === 'researching'} />}
+            <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isLogVisible ? 'max-h-[30rem]' : 'max-h-0'}`}>
+                <ResearchProgress updates={researchUpdates} isResearching={appState === 'researching'} />
+            </div>
           </div>
         )}
         
