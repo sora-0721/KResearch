@@ -28,7 +28,7 @@ const AppContent: React.FC = () => {
       clarificationHistory, clarificationLoading, startClarificationProcess, handleAnswerSubmit,
       handleStopResearch, handleFileChange, handleRemoveFile, handleReset, fileInputRef,
       isVisualizing, visualizedReportHtml, handleVisualizeReport, handleCloseVisualizer, handleSkipClarification,
-      isRegenerating, handleRegenerateReport,
+      isRegenerating, handleRegenerateReport, handleReportRewrite,
       isSettingsOpen, setIsSettingsOpen,
       isVisualizerOpen, handleVisualizerFeedback
   } = useAppLogic();
@@ -125,6 +125,7 @@ const AppContent: React.FC = () => {
                     isVisualizing={isVisualizing}
                     onRegenerate={handleRegenerateReport}
                     isRegenerating={isRegenerating}
+                    onRewrite={handleReportRewrite}
                  />
                  <LiquidButton onClick={handleReset} className="w-full mt-4">Start New Research</LiquidButton>
             </div>

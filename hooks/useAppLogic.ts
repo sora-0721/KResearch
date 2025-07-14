@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { synthesizeReport, clarifyQuery, runIterativeDeepResearch, generateVisualReport, regenerateVisualReportWithFeedback } from '../services';
+import { synthesizeReport, rewriteReport, clarifyQuery, runIterativeDeepResearch, generateVisualReport, regenerateVisualReportWithFeedback } from '../services';
 import { ResearchUpdate, FinalResearchData, ResearchMode, FileData, AppState, ClarificationTurn } from '../types';
 import { apiKeyService } from '../services/apiKeyService';
 import { useNotification } from '../contextx/NotificationContext';
@@ -132,25 +132,21 @@ export const useAppLogic = () => {
     }, [appState, clarificationHistory, query]);
 
     const handleVisualizeReport = useCallback(async (reportMarkdown: string, forceRegenerate: boolean = false) => {
-        // If a visualization is ALREADY in progress, just open the panel to show the status.
         if (isVisualizing) {
             setIsVisualizerOpen(true);
             return;
         }
 
-        // If content exists and we are NOT forcing a regeneration, just open the panel.
         if (visualizedReportHtml && !forceRegenerate) {
             setIsVisualizerOpen(true);
             return;
         }
         
-        // If we're here, it means we need to generate.
-        if (!reportMarkdown) return; // safety
+        if (!reportMarkdown) return;
 
         setIsVisualizing(true);
         setIsVisualizerOpen(true);
         
-        // If forcing regeneration, clear the old content immediately to prevent showing stale data.
         if (forceRegenerate) {
             setVisualizedReportHtml(null);
         }
@@ -161,7 +157,7 @@ export const useAppLogic = () => {
         } catch(error) {
             console.error("Failed to generate visual report:", error);
             const message = getCleanErrorMessage(error);
-            setVisualizedReportHtml(null); // Ensure it's cleared on failure
+            setVisualizedReportHtml(null);
             addNotification({type: 'error', title: 'Visualization Failed', message});
         } finally {
             setIsVisualizing(false);
@@ -177,7 +173,6 @@ export const useAppLogic = () => {
         } catch (error) {
             console.error("Failed to update visual report with feedback:", error);
             const message = getCleanErrorMessage(error);
-            // Re-throw the error so the UI component can catch it and display contextual feedback
             throw new Error(message);
         } finally {
             setIsVisualizing(false);
@@ -194,6 +189,7 @@ export const useAppLogic = () => {
                 if (!prev) return null;
                 return { ...prev, report: regeneratedReportData.report };
             });
+             addNotification({ type: 'success', title: 'Report Regenerated', message: 'A new version of the report has been generated.'});
         } catch(error) {
             console.error("Failed to regenerate report:", error);
             const message = getCleanErrorMessage(error);
@@ -202,6 +198,25 @@ export const useAppLogic = () => {
             setIsRegenerating(false);
         }
     }, [finalData, query, researchUpdates, mode, selectedFile, addNotification]);
+
+    const handleReportRewrite = useCallback(async (instruction: string, file: FileData | null) => {
+        if (!finalData?.report || isRegenerating) return;
+        setIsRegenerating(true);
+        try {
+            const rewrittenReport = await rewriteReport(finalData.report, instruction, mode, file);
+            setFinalData(prev => {
+                if (!prev) return null;
+                return { ...prev, report: rewrittenReport };
+            });
+            addNotification({ type: 'success', title: 'Report Updated', message: 'The report has been successfully rewritten.' });
+        } catch (error) {
+            console.error("Failed to rewrite report:", error);
+            const message = getCleanErrorMessage(error);
+            addNotification({ type: 'error', title: 'Rewrite Failed', message });
+        } finally {
+            setIsRegenerating(false);
+        }
+    }, [finalData, isRegenerating, mode, addNotification]);
 
     const handleCloseVisualizer = () => setIsVisualizerOpen(false);
     const handleStopResearch = () => abortControllerRef.current?.abort();
@@ -245,7 +260,7 @@ export const useAppLogic = () => {
         clarificationHistory, clarificationLoading, fileInputRef, startClarificationProcess, 
         handleAnswerSubmit, handleStopResearch, handleFileChange, handleRemoveFile, handleReset,
         isVisualizing, visualizedReportHtml, isVisualizerOpen, handleVisualizeReport, handleCloseVisualizer, handleSkipClarification,
-        isRegenerating, handleRegenerateReport,
+        isRegenerating, handleRegenerateReport, handleReportRewrite,
         isSettingsOpen, setIsSettingsOpen,
         handleVisualizerFeedback
     };

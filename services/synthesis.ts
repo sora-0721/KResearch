@@ -80,3 +80,50 @@ Respond ONLY with the raw markdown content of the final report, starting with th
     }
     return { report: reportText.trim(), citations: [] };
 };
+
+export const rewriteReport = async (
+    originalReport: string,
+    instruction: string,
+    mode: ResearchMode,
+    file: FileData | null
+): Promise<string> => {
+    const prompt = `You are an expert copy editor. Your task is to rewrite the provided Markdown report based on a specific instruction.
+You must adhere to these rules:
+1.  The output MUST be only the raw Markdown of the rewritten report. Do not add any conversational text, introductions, or explanations.
+2.  Preserve the original meaning and data of the report unless the instruction explicitly asks to change it.
+3.  Maintain the original Markdown formatting (headings, lists, etc.) as much as possible.
+
+**Original Report:**
+<REPORT>
+${originalReport}
+</REPORT>
+
+**Instruction:**
+<INSTRUCTION>
+${instruction}
+</INSTRUCTION>
+
+**Attached File (if any, provides additional context for the instruction):**
+<FILE_CONTEXT>
+${file ? `A file named '${file.name}' was attached.` : "No file was attached."}
+</FILE_CONTEXT>
+
+Respond with the rewritten report now.`;
+
+    const parts: ({ text: string } | { inlineData: { mimeType: string; data: string; } })[] = [{ text: prompt }];
+    if (file) {
+        parts.push({ inlineData: { mimeType: file.mimeType, data: file.data } });
+    }
+
+    const response = await ai.models.generateContent({
+        model: getModel('synthesizer', mode),
+        contents: { parts },
+        config: { temperature: 0.7 }
+    });
+
+    if (!response || !response.text) {
+        throw new Error("The API did not return a response during report rewrite. This might be due to content filters blocking the request.");
+    }
+
+    return response.text.trim();
+};

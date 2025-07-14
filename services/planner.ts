@@ -31,6 +31,7 @@ export const runDynamicConversationalPlanner = async (
     let currentConversation: { persona: AgentPersona; thought: string }[] = [];
     let nextPersona: AgentPersona = 'Alpha';
     let debateTurns = 0;
+    let consecutiveFinishAttempts = 0;
 
     while (debateTurns < maxDebateRounds) {
         checkSignal();
@@ -80,10 +81,22 @@ export const runDynamicConversationalPlanner = async (
 
         let effectiveAction = parsedResponse.action;
         
+        if (effectiveAction === 'finish') {
+            consecutiveFinishAttempts++;
+        } else {
+            consecutiveFinishAttempts = 0;
+        }
+        
         if (effectiveAction === 'finish' && searchCycles < minCycles) {
-             const thought = `Rule violation: Cannot finish before ${minCycles} search cycles. Forcing debate to continue.`;
-             onUpdate({ id: idCounter.current++, type: 'thought' as const, persona: nextPersona, content: thought });
-             effectiveAction = 'continue_debate';
+             if (consecutiveFinishAttempts >= 2) {
+                const thought = `Agent consensus to finish has been detected. Overriding the minimum cycle rule to conclude research.`;
+                onUpdate({ id: idCounter.current++, type: 'thought' as const, content: thought });
+                // Let the action proceed as 'finish' by not changing it
+             } else {
+                const thought = `Rule violation: Cannot finish before ${minCycles} search cycles. Forcing debate to continue.`;
+                onUpdate({ id: idCounter.current++, type: 'thought' as const, persona: nextPersona, content: thought });
+                effectiveAction = 'continue_debate';
+             }
         }
 
         if (effectiveAction === 'finish') {

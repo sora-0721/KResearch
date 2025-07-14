@@ -2,4 +2,4 @@ export { clarifyQuery } from './clarification';
 export { runIterativeDeepResearch } from './research';
 export { generateVisualReport, regenerateVisualReportWithFeedback } from './visualizer';
 export { settingsService } from './settingsService';
-export { synthesizeReport } from './synthesis';
+export { synthesizeReport, rewriteReport } from './synthesis';
