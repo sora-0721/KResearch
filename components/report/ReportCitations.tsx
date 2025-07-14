@@ -13,7 +13,7 @@ const ReportCitations: React.FC<ReportCitationsProps> = ({ citations }) => {
       <h3 className="text-2xl font-bold mb-4">Citations</h3>
       <ul className="list-none p-0 space-y-2">
         {citations.map((citation, index) => (
-          <li key={index} className="text-sm p-3 bg-glass-light dark:bg-glass-dark rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+          <li key={index} className="text-sm p-3 bg-glass-light dark:bg-glass-dark rounded-2xl hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
             <a href={citation.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 dark:text-blue-400 hover:underline transition-colors font-medium break-words">
               {citation.title || citation.url}
             </a>

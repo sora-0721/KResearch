@@ -80,10 +80,35 @@ const ParamSettings: React.FC<ParamSettingsProps> = ({ settings, setSettings }) 
                 <div key={key} className="space-y-2">
                     <label htmlFor={key} className="font-semibold text-gray-700 dark:text-gray-300 text-sm">{label}</label>
                     <div className="flex items-center gap-4">
-                        <input type="number" id={key} value={settings.researchParams[key as keyof ResearchParams]} onChange={e => handleParamChange(key as keyof ResearchParams, parseInt(e.target.value, 10))} disabled={isUncapped[key as keyof UncappedState]} className="w-full p-2 rounded-lg bg-white/60 dark:bg-black/20 border border-transparent focus:border-glow-light dark:focus:border-glow-dark focus:ring-1 focus:ring-glow-light/50 dark:focus:ring-glow-dark/50 focus:outline-none transition-all disabled:opacity-50" />
-                        <label className="flex items-center gap-2 cursor-pointer text-sm">
-                            <input type="checkbox" checked={isUncapped[key as keyof UncappedState]} onChange={() => handleUncappedToggle(key as keyof UncappedState)} className="w-4 h-4 rounded text-blue-500 bg-black/20 border-transparent focus:ring-blue-500" />
-                            Uncapped
+                        <input type="number" id={key} value={settings.researchParams[key as keyof ResearchParams]} onChange={e => handleParamChange(key as keyof ResearchParams, parseInt(e.target.value, 10))} disabled={isUncapped[key as keyof UncappedState]} className="w-full p-2 rounded-2xl bg-white/60 dark:bg-black/20 border border-transparent focus:border-glow-light dark:focus:border-glow-dark focus:ring-1 focus:ring-glow-light/50 dark:focus:ring-glow-dark/50 focus:outline-none transition-all disabled:opacity-50" />
+                        <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
+                            <div className="relative">
+                                <input 
+                                    type="checkbox" 
+                                    checked={isUncapped[key as keyof UncappedState]} 
+                                    onChange={() => handleUncappedToggle(key as keyof UncappedState)} 
+                                    className="sr-only peer"
+                                    aria-label={`Toggle uncapped for ${label}`}
+                                />
+                                <div className="
+                                    w-11 h-6 rounded-full 
+                                    bg-glass-light dark:bg-glass-dark 
+                                    border border-border-light dark:border-border-dark
+                                    peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-glow-light/50 dark:peer-focus:ring-glow-dark/50
+                                    transition-colors duration-300
+                                    peer-checked:bg-glow-light dark:peer-checked:bg-glow-dark
+                                "></div>
+                                <div className="
+                                    absolute left-1 top-1
+                                    w-4 h-4 rounded-full
+                                    bg-white/90 dark:bg-gray-300
+                                    border border-gray-300/50
+                                    shadow-md
+                                    transition-transform duration-300 ease-in-out
+                                    peer-checked:translate-x-5
+                                "></div>
+                            </div>
+                            <span>Uncapped</span>
                         </label>
                     </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400">{help}</p>

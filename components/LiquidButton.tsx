@@ -9,7 +9,7 @@ const LiquidButton: React.FC<LiquidButtonProps> = ({ children, className = '', .
   return (
     <button
       className={`
-        px-6 py-3 rounded-[10px] 
+        px-6 py-3 rounded-2xl 
         font-semibold text-gray-800 dark:text-gray-200
         bg-white/40 dark:bg-glass-dark/70
         border border-border-light dark:border-border-dark

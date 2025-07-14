@@ -77,7 +77,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentM
         <div className="flex flex-col md:flex-row flex-grow min-h-[400px]">
           <nav className="flex md:flex-col p-4 border-b md:border-b-0 md:border-r border-border-light dark:border-border-dark">
             {tabs.map(tab => (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`px-4 py-2 text-sm md:text-base text-left rounded-lg font-semibold transition-colors ${activeTab === tab.id ? 'bg-glow-light/20 dark:bg-glow-dark/30 text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/10'}`}>{tab.label}</button>
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`px-4 py-2 text-sm md:text-base text-left rounded-2xl font-semibold transition-colors ${activeTab === tab.id ? 'bg-glow-light/20 dark:bg-glow-dark/30 text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/10'}`}>{tab.label}</button>
             ))}
           </nav>
 

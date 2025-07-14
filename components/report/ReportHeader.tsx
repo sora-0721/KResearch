@@ -70,8 +70,8 @@ const ReportHeader: React.FC<ReportHeaderProps> = ({ report, citations, onVisual
             {isCopyPopoverOpen && (
                 <div className="absolute bottom-full right-0 mb-2 w-max z-10 animate-fade-in">
                 <GlassCard className="p-2 flex flex-col gap-1">
-                    <button onClick={() => copyToClipboard(report, false)} className="text-left w-full text-sm px-3 py-1.5 rounded-md hover:bg-black/10 dark:hover:bg-white/10 transition-colors">Report Only</button>
-                    <button onClick={() => copyToClipboard(report, true)} className="text-left w-full text-sm px-3 py-1.5 rounded-md hover:bg-black/10 dark:hover:bg-white/10 transition-colors">Report & Citations</button>
+                    <button onClick={() => copyToClipboard(report, false)} className="text-left w-full text-sm px-3 py-1.5 rounded-2xl hover:bg-black/10 dark:hover:bg-white/10 transition-colors">Report Only</button>
+                    <button onClick={() => copyToClipboard(report, true)} className="text-left w-full text-sm px-3 py-1.5 rounded-2xl hover:bg-black/10 dark:hover:bg-white/10 transition-colors">Report & Citations</button>
                 </GlassCard>
                 </div>
             )}

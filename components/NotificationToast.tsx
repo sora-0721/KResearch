@@ -51,7 +51,7 @@ const NotificationToast: React.FC<NotificationToastProps> = ({ notification, onC
                 w-full bg-card-bg-light dark:bg-glass-dark 
                 backdrop-blur-[25px]
                 border-l-4 ${BORDER_COLORS[notification.type]}
-                rounded-lg 
+                rounded-2xl 
                 shadow-glass shadow-shadow-light dark:shadow-shadow-dark
                 flex items-start p-4 gap-3
                 animate-fade-in

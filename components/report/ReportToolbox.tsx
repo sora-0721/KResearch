@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import GlassCard from '../GlassCard';
 import Spinner from '../Spinner';
 import { FileData } from '../../types';
+import LiquidSlider from '../LiquidSlider';
 
 // --- Tool Icons ---
 const EmojiIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M15.182 15.182a4.5 4.5 0 0 1-6.364 0M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM9 9.75h.008v.008H9V9.75Zm6 0h.008v.008H15V9.75Z" /></svg>;
@@ -18,8 +19,6 @@ const SliderPanel: React.FC<{ title: string; options: string[]; onSelect: (value
     const [value, setValue] = useState(initialValue);
     const displayOption = options[options.length - 1 - value];
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => setValue(parseInt(e.target.value, 10));
-
     const handleInteractionEnd = () => {
         if (isRewriting) return;
         const selectedOption = options[options.length - 1 - value];
@@ -31,7 +30,15 @@ const SliderPanel: React.FC<{ title: string; options: string[]; onSelect: (value
             <h4 className="font-semibold">{title}</h4>
             <div className="flex items-center gap-4 h-48">
                 <div className="w-8 flex justify-center items-center">
-                    <input type="range" min="0" max={options.length - 1} value={value} onChange={handleChange} onMouseUp={handleInteractionEnd} onTouchEnd={handleInteractionEnd} disabled={isRewriting} style={{ writingMode: 'vertical-lr' }} className="w-2 h-36 slider-vertical accent-glow-dark dark:accent-glow-light"/>
+                    <LiquidSlider
+                        min={0}
+                        max={options.length - 1}
+                        value={value}
+                        onChange={setValue}
+                        onInteractionEnd={handleInteractionEnd}
+                        disabled={isRewriting}
+                        height={144}
+                    />
                 </div>
                 <div className="flex flex-col justify-between h-40 text-xs text-gray-500 dark:text-gray-400 w-24 text-left">
                     <span>{options[options.length - 1]}</span>
@@ -48,7 +55,7 @@ const EmojiPanel: React.FC<{ onSelect: (value: string) => void; isRewriting: boo
         <h4 className="font-semibold text-center">Add Emojis</h4>
         <div className="grid grid-cols-2 gap-2">
             {['Words', 'Sections', 'Lists', 'Remove'].map(opt => (
-                <button key={opt} onClick={() => onSelect(`Add emojis to ${opt.toLowerCase()}`)} disabled={isRewriting} className="p-2 rounded-lg text-sm text-center hover:bg-black/10 dark:hover:bg-white/10 disabled:opacity-50">{opt}</button>
+                <button key={opt} onClick={() => onSelect(`Add emojis to ${opt.toLowerCase()}`)} disabled={isRewriting} className="p-2 rounded-2xl text-sm text-center hover:bg-black/10 dark:hover:bg-white/10 disabled:opacity-50">{opt}</button>
             ))}
         </div>
     </div>
@@ -83,16 +90,16 @@ const CustomPanel: React.FC<{ onSelect: (instruction: string, file: FileData | n
     return (
         <div className="p-3 space-y-3">
             <h4 className="font-semibold text-center">Custom Edit</h4>
-            <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="e.g., Rewrite this in a more casual tone, using the attached file for context." disabled={isRewriting} className="w-full h-24 p-2 text-sm rounded-lg resize-none bg-black/10 dark:bg-black/20 border-transparent focus:border-glow-light dark:focus:border-glow-dark focus:ring-1 focus:outline-none"/>
+            <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="e.g., Rewrite this in a more casual tone, using the attached file for context." disabled={isRewriting} className="w-full h-24 p-2 text-sm rounded-2xl resize-none bg-white/40 dark:bg-black/20 border-transparent focus:border-glow-light dark:focus:border-glow-dark focus:ring-1 focus:outline-none"/>
             <div className="flex items-center justify-between gap-2">
                 {!file ? (
-                    <label htmlFor="edit-file-upload" className="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg cursor-pointer bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors" title="Attach file"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>Attach</label>
+                    <label htmlFor="edit-file-upload" className="flex items-center gap-2 px-3 py-1.5 text-xs rounded-2xl cursor-pointer bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors" title="Attach file"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>Attach</label>
                 ) : (
-                    <div className="flex items-center justify-between px-2 py-1 text-xs rounded-lg bg-blue-500/10 dark:bg-blue-400/10 border border-blue-500/20 w-full max-w-[150px]"><span className="truncate" title={file.name}>{file.name}</span><button onClick={handleRemoveFile} className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10" title="Remove file"><svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg></button></div>
+                    <div className="flex items-center justify-between px-2 py-1 text-xs rounded-2xl bg-blue-500/10 dark:bg-blue-400/10 border border-blue-500/20 w-full max-w-[150px]"><span className="truncate" title={file.name}>{file.name}</span><button onClick={handleRemoveFile} className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10" title="Remove file"><svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg></button></div>
                 )}
                  <input type="file" id="edit-file-upload" ref={fileInputRef} className="hidden" onChange={handleFileChange} disabled={isRewriting} />
             </div>
-            <button onClick={handleSubmit} disabled={isRewriting || (!text.trim() && !file)} className="w-full px-4 py-2 text-sm rounded-lg bg-glow-light/20 dark:bg-glow-dark/30 hover:bg-glow-light/30 dark:hover:bg-glow-dark/40 disabled:opacity-50 flex justify-center">{isRewriting ? <Spinner /> : "Apply"}</button>
+            <button onClick={handleSubmit} disabled={isRewriting || (!text.trim() && !file)} className="w-full px-4 py-2 text-sm rounded-2xl bg-glow-light/20 dark:bg-glow-dark/30 hover:bg-glow-light/30 dark:hover:bg-glow-dark/40 disabled:opacity-50 flex justify-center">{isRewriting ? <Spinner /> : "Apply"}</button>
         </div>
     );
 };
@@ -114,7 +121,7 @@ const ReportToolbox: React.FC<ReportToolboxProps> = ({ onRewrite, isRewriting })
             setActiveTool(null);
             return;
         }
-        setActiveTool(current => (current === toolId ? null : toolId));
+        setActiveTool(current => (current === toolId ? null : current));
     };
 
     const handleInstructionSelect = (instruction: string, file: FileData | null = null) => {
@@ -146,10 +153,10 @@ const ReportToolbox: React.FC<ReportToolboxProps> = ({ onRewrite, isRewriting })
             <GlassCard className="p-2 flex flex-col items-center gap-2">
                 {tools.map(tool => (
                     <div key={tool.id} className="relative group">
-                        <button data-toolbox-button onClick={() => handleToolClick(tool.id)} disabled={isRewriting && activeTool !== tool.id} className={`p-3 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${activeTool === tool.id ? 'bg-glow-dark/30 dark:bg-glow-light/20' : 'hover:bg-black/10 dark:hover:bg-white/10'}`} aria-label={tool.label}>
+                        <button data-toolbox-button onClick={() => handleToolClick(tool.id)} disabled={isRewriting && activeTool !== tool.id} className={`p-3 rounded-2xl transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${activeTool === tool.id ? 'bg-glow-dark/30 dark:bg-glow-light/20' : 'hover:bg-black/10 dark:hover:bg-white/10'}`} aria-label={tool.label}>
                             {isRewriting && activeTool === tool.id ? <Spinner/> : tool.icon}
                         </button>
-                        <div className="absolute right-full top-1/2 -translate-y-1/2 mr-3 px-2 py-1 bg-gray-900 text-white text-xs rounded-md pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">{tool.label}</div>
+                        <div className="absolute right-full top-1/2 -translate-y-1/2 mr-3 px-2 py-1 bg-gray-900 text-white text-xs rounded-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">{tool.label}</div>
                     </div>
                 ))}
             </GlassCard>

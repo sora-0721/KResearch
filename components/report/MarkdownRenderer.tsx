@@ -51,7 +51,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ report }) => {
                 const textNode = codeNode.children?.[0];
                 if (textNode && textNode.type === 'text') {
                   return (
-                    <div className="p-4 my-4 bg-glass-light dark:bg-glass-dark rounded-lg flex justify-center items-center overflow-x-auto">
+                    <div className="p-4 my-4 bg-glass-light dark:bg-glass-dark rounded-2xl flex justify-center items-center overflow-x-auto">
                       <div key={textNode.value} className="mermaid" style={{ minWidth: '100%', textAlign: 'center' }}>
                         {textNode.value}
                       </div>
@@ -61,7 +61,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ report }) => {
               }
             }
             return (
-              <div className="my-4 bg-black/20 dark:bg-black/40 backdrop-blur-[25px] border border-border-light/50 dark:border-border-dark/50 rounded-lg overflow-x-auto">
+              <div className="my-4 bg-black/20 dark:bg-black/40 backdrop-blur-[25px] border border-border-light/50 dark:border-border-dark/50 rounded-2xl overflow-x-auto">
                   <pre className="!bg-transparent !p-4" {...props}>{children}</pre>
               </div>
             );
