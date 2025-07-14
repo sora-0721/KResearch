@@ -121,7 +121,7 @@ const ReportToolbox: React.FC<ReportToolboxProps> = ({ onRewrite, isRewriting })
             setActiveTool(null);
             return;
         }
-        setActiveTool(current => (current === toolId ? null : current));
+        setActiveTool(current => (current === toolId ? null : toolId));
     };
 
     const handleInstructionSelect = (instruction: string, file: FileData | null = null) => {
@@ -131,8 +131,11 @@ const ReportToolbox: React.FC<ReportToolboxProps> = ({ onRewrite, isRewriting })
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            const target = event.target as Node;
-            if (popoverRef.current && !popoverRef.current.contains(target) && !target.parentElement?.closest('[data-toolbox-button]')) {
+            if (
+                popoverRef.current &&
+                !popoverRef.current.contains(event.target as Node) &&
+                !(event.target as Element).closest('[data-toolbox-button]')
+            ) {
                 setActiveTool(null);
             }
         };
@@ -149,29 +152,29 @@ const ReportToolbox: React.FC<ReportToolboxProps> = ({ onRewrite, isRewriting })
     ];
 
     return (
-        <div className="relative">
-            <GlassCard className="p-2 flex flex-col items-center gap-2">
-                {tools.map(tool => (
-                    <div key={tool.id} className="relative group">
-                        <button data-toolbox-button onClick={() => handleToolClick(tool.id)} disabled={isRewriting && activeTool !== tool.id} className={`p-3 rounded-2xl transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${activeTool === tool.id ? 'bg-glow-dark/30 dark:bg-glow-light/20' : 'hover:bg-black/10 dark:hover:bg-white/10'}`} aria-label={tool.label}>
+        <GlassCard className="p-2 flex flex-col items-center gap-2">
+            {tools.map(tool => (
+                <div key={tool.id} className="relative">
+                    <div className="relative group">
+                         <button data-toolbox-button onClick={() => handleToolClick(tool.id)} disabled={isRewriting && activeTool !== tool.id} className={`p-3 rounded-2xl transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${activeTool === tool.id ? 'bg-glow-dark/30 dark:bg-glow-light/20' : 'hover:bg-black/10 dark:hover:bg-white/10'}`} aria-label={tool.label}>
                             {isRewriting && activeTool === tool.id ? <Spinner/> : tool.icon}
                         </button>
                         <div className="absolute right-full top-1/2 -translate-y-1/2 mr-3 px-2 py-1 bg-gray-900 text-white text-xs rounded-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">{tool.label}</div>
                     </div>
-                ))}
-            </GlassCard>
-            
-            {activeTool && (
-                 <div ref={popoverRef} className="absolute right-full top-1/2 -translate-y-1/2 mr-4 w-64 z-20 animate-fade-in">
-                    <GlassCard>
-                        {activeTool === 'length' && <SliderPanel title="Adjust Length" options={['Shortest', 'Shorter', 'Current Length', 'Longer', 'Longest']} defaultOption="Current Length" onSelect={handleInstructionSelect} isRewriting={isRewriting} instructionPrefix="Change the length of the report to" />}
-                        {activeTool === 'readingLevel' && <SliderPanel title="Reading Level" options={['Kindergarten', 'Middle School', 'High School', 'Current Level', 'College', 'Graduate School']} defaultOption="Current Level" onSelect={handleInstructionSelect} isRewriting={isRewriting} instructionPrefix="Change the reading level to" />}
-                        {activeTool === 'emoji' && <EmojiPanel onSelect={handleInstructionSelect} isRewriting={isRewriting} />}
-                        {activeTool === 'custom' && <CustomPanel onSelect={handleInstructionSelect} isRewriting={isRewriting} />}
-                    </GlassCard>
+                    
+                    {activeTool === tool.id && (
+                         <div ref={popoverRef} className="absolute right-full top-1/2 -translate-y-1/2 mr-3 w-64 z-20 animate-fade-in">
+                            <GlassCard>
+                                {tool.id === 'length' && <SliderPanel title="Adjust Length" options={['Shortest', 'Shorter', 'Current Length', 'Longer', 'Longest']} defaultOption="Current Length" onSelect={handleInstructionSelect} isRewriting={isRewriting} instructionPrefix="Change the length of the report to" />}
+                                {tool.id === 'readingLevel' && <SliderPanel title="Reading Level" options={['Kindergarten', 'Middle School', 'High School', 'Current Level', 'College', 'Graduate School']} defaultOption="Current Level" onSelect={handleInstructionSelect} isRewriting={isRewriting} instructionPrefix="Change the reading level to" />}
+                                {tool.id === 'emoji' && <EmojiPanel onSelect={handleInstructionSelect} isRewriting={isRewriting} />}
+                                {tool.id === 'custom' && <CustomPanel onSelect={handleInstructionSelect} isRewriting={isRewriting} />}
+                            </GlassCard>
+                        </div>
+                    )}
                 </div>
-            )}
-        </div>
+            ))}
+        </GlassCard>
     );
 };
 
