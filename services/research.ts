@@ -10,13 +10,27 @@ export const runIterativeDeepResearch = async (
   signal: AbortSignal,
   mode: ResearchMode,
   clarifiedContext: string,
-  fileData: FileData | null
+  fileData: FileData | null,
+  initialSearchResult: { text: string, citations: Citation[] } | null
 ): Promise<FinalResearchData> => {
   console.log(`Starting DYNAMIC CONVERSATIONAL research for: ${query}`);
 
   let history: ResearchUpdate[] = [];
   const idCounter = { current: 0 };
   let allCitations: Citation[] = [];
+  
+  if (initialSearchResult) {
+      const searchUpdate = { id: idCounter.current++, type: 'search' as const, content: [query] };
+      const readUpdate = { 
+          id: idCounter.current++, 
+          type: 'read' as const, 
+          content: initialSearchResult.text, 
+          source: initialSearchResult.citations.map(c => c.url) 
+      };
+      history.push(searchUpdate, readUpdate);
+      allCitations.push(...initialSearchResult.citations);
+  }
+
   const { maxCycles } = settingsService.getSettings().researchParams;
   
   const checkSignal = () => {

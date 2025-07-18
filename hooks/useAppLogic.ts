@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { synthesizeReport, rewriteReport, clarifyQuery, runIterativeDeepResearch, generateVisualReport, regenerateVisualReportWithFeedback } from '../services';
-import { ResearchUpdate, FinalResearchData, ResearchMode, FileData, AppState, ClarificationTurn } from '../types';
+import { ResearchUpdate, FinalResearchData, ResearchMode, FileData, AppState, ClarificationTurn, Citation } from '../types';
 import { apiKeyService } from '../services/apiKeyService';
 import { useNotification } from '../contextx/NotificationContext';
+import { executeSingleSearch } from '../services/search';
 
 const getCleanErrorMessage = (error: any): string => {
     let message = 'An unknown error occurred.';
@@ -30,6 +31,7 @@ export const useAppLogic = () => {
     const [clarificationHistory, setClarificationHistory] = useState<ClarificationTurn[]>([]);
     const [clarificationLoading, setClarificationLoading] = useState<boolean>(false);
     const [clarifiedContext, setClarifiedContext] = useState<string>('');
+    const [initialSearchResult, setInitialSearchResult] = useState<{ text: string, citations: Citation[] } | null>(null);
     const [isVisualizing, setIsVisualizing] = useState<boolean>(false);
     const [visualizedReportHtml, setVisualizedReportHtml] = useState<string | null>(null);
     const [isVisualizerOpen, setIsVisualizerOpen] = useState<boolean>(false);
@@ -40,10 +42,10 @@ export const useAppLogic = () => {
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const addNotification = useNotification();
 
-    const handleClarificationResponse = useCallback(async (history: ClarificationTurn[]) => {
+    const handleClarificationResponse = useCallback(async (history: ClarificationTurn[], searchResult: { text: string; citations: Citation[] } | null) => {
       setClarificationLoading(true);
       try {
-          const response = await clarifyQuery(history, mode, selectedFile);
+          const response = await clarifyQuery(history, mode, selectedFile, searchResult);
           if (response.type === 'question') {
               setClarificationHistory(prev => [...prev, { role: 'model', content: response.content }]);
           } else if (response.type === 'summary') {
@@ -61,13 +63,13 @@ export const useAppLogic = () => {
       }
     }, [mode, selectedFile, addNotification]);
 
-    const startResearch = useCallback(async (context: string) => {
+    const startResearch = useCallback(async (context: string, searchResult: { text: string, citations: Citation[] } | null) => {
       abortControllerRef.current = new AbortController();
       const startTime = Date.now();
       try {
         const result = await runIterativeDeepResearch(query, (update) => {
           setResearchUpdates(prev => [...prev, update]);
-        }, abortControllerRef.current.signal, mode, context, selectedFile);
+        }, abortControllerRef.current.signal, mode, context, selectedFile, searchResult);
         setFinalData({ ...result, researchTimeMs: Date.now() - startTime });
       } catch (error: any) {
         const commonErrorData = { citations: [], researchTimeMs: Date.now() - startTime };
@@ -87,11 +89,11 @@ export const useAppLogic = () => {
 
     useEffect(() => {
       if (appState === 'researching' && clarifiedContext) {
-          startResearch(clarifiedContext);
+          startResearch(clarifiedContext, initialSearchResult);
       }
-    }, [appState, clarifiedContext, startResearch]);
+    }, [appState, clarifiedContext, startResearch, initialSearchResult]);
 
-    const startClarificationProcess = useCallback(() => {
+    const startClarificationProcess = useCallback(async () => {
         if (!query.trim() || appState !== 'idle') return;
 
         if (!apiKeyService.hasKey()) {
@@ -100,18 +102,33 @@ export const useAppLogic = () => {
             return;
         }
 
+        setAppState('researching'); // Show log immediately
+        setResearchUpdates([]); // Clear previous logs
+
+        let searchResult: { text: string; citations: Citation[] } | null = null;
+        try {
+            setResearchUpdates(prev => [...prev, { id: prev.length, type: 'search', content: [query] }]);
+            searchResult = await executeSingleSearch(query, mode);
+            setInitialSearchResult(searchResult);
+            setResearchUpdates(prev => [...prev, { id: prev.length, type: 'read', content: searchResult.text, source: searchResult.citations.map(c => c.url) }]);
+        } catch (error) {
+            console.error("Initial search failed:", error);
+            const message = getCleanErrorMessage(error);
+            addNotification({type: 'error', title: 'Initial Search Failed', message});
+        }
+
         setAppState('clarifying');
         const initialQuery = selectedFile ? `${query}\n\n[File attached: ${selectedFile.name}]` : query;
         const initialHistory: ClarificationTurn[] = [{ role: 'user', content: initialQuery }];
         setClarificationHistory(initialHistory);
-        handleClarificationResponse(initialHistory);
-    }, [query, appState, selectedFile, handleClarificationResponse, addNotification]);
+        handleClarificationResponse(initialHistory, searchResult);
+    }, [query, appState, selectedFile, mode, addNotification, handleClarificationResponse]);
 
     const handleAnswerSubmit = useCallback((answer: string) => {
         const newHistory: ClarificationTurn[] = [...clarificationHistory, { role: 'user', content: answer }];
         setClarificationHistory(newHistory);
-        handleClarificationResponse(newHistory);
-    }, [clarificationHistory, handleClarificationResponse]);
+        handleClarificationResponse(newHistory, initialSearchResult);
+    }, [clarificationHistory, handleClarificationResponse, initialSearchResult]);
     
     const handleSkipClarification = useCallback(() => {
         if (appState !== 'clarifying') return;
@@ -248,6 +265,7 @@ export const useAppLogic = () => {
         setClarificationHistory([]);
         setClarifiedContext('');
         setClarificationLoading(false);
+        setInitialSearchResult(null);
         setVisualizedReportHtml(null);
         setIsVisualizing(false);
         setIsVisualizerOpen(false);

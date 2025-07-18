@@ -1,7 +1,7 @@
 import { ai } from './geminiClient';
 import { getModel } from './models';
 import { parseJsonFromMarkdown } from './utils';
-import { ResearchMode, FileData, ClarificationTurn } from '../types';
+import { ResearchMode, FileData, ClarificationTurn, Citation } from '../types';
 
 export interface ClarificationResponse {
     type: 'question' | 'summary';
@@ -11,11 +11,22 @@ export interface ClarificationResponse {
 export const clarifyQuery = async (
     history: ClarificationTurn[],
     mode: ResearchMode,
-    fileData: FileData | null
+    fileData: FileData | null,
+    initialSearchResult: { text: string, citations: Citation[] } | null
 ): Promise<ClarificationResponse> => {
     // --- STEP 1: Generate the clarification text ---
-    const generationPrompt = `You are a Research Analyst AI. Your primary goal is to help a user refine a broad research topic into a specific, actionable research angle by asking clarifying questions. Your responses must be in English.
+        const searchContext = initialSearchResult
+        ? `
+**Initial Search Context (To Avoid Redundancy):**
+An initial search on the topic has already been performed, yielding this summary:
+<SEARCH_SUMMARY>
+${initialSearchResult.text}
+</SEARCH_SUMMARY>
+Use this context to ask a more specific question. DO NOT ask about things already covered in this summary.`
+        : '';
 
+    const generationPrompt = `You are a Research Analyst AI. Your primary goal is to help a user refine a broad research topic into a specific, actionable research angle by asking clarifying questions. Your responses must be in English.
+${searchContext}
 **Workflow:**
 1.  You will receive a user's research query and the conversation history.
 2.  Critically analyze the query to identify its core subject and potential areas of focus.
