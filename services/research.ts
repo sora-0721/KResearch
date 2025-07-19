@@ -11,15 +11,16 @@ export const runIterativeDeepResearch = async (
   mode: ResearchMode,
   clarifiedContext: string,
   fileData: FileData | null,
-  initialSearchResult: { text: string, citations: Citation[] } | null
+  initialSearchResult: { text: string, citations: Citation[] } | null,
+  existingHistory: ResearchUpdate[]
 ): Promise<FinalResearchData> => {
-  console.log(`Starting DYNAMIC CONVERSATIONAL research for: ${query}`);
+  console.log(`Starting/Continuing DYNAMIC CONVERSATIONAL research for: ${query}`);
 
-  let history: ResearchUpdate[] = [];
-  const idCounter = { current: 0 };
+  let history: ResearchUpdate[] = [...existingHistory];
+  const idCounter = { current: existingHistory.length };
   let allCitations: Citation[] = [];
   
-  if (initialSearchResult) {
+  if (existingHistory.length === 0 && initialSearchResult) {
       const searchUpdate = { id: idCounter.current++, type: 'search' as const, content: [query] };
       const readUpdate = { 
           id: idCounter.current++, 
@@ -29,7 +30,17 @@ export const runIterativeDeepResearch = async (
       };
       history.push(searchUpdate, readUpdate);
       allCitations.push(...initialSearchResult.citations);
+  } else {
+      existingHistory.forEach(update => {
+          if (update.type === 'read' && Array.isArray(update.source)) {
+              update.source.forEach(url => allCitations.push({ url, title: url }));
+          } else if (update.type === 'search' && Array.isArray(update.content)) {
+             // In a more complex system, we'd re-fetch citation titles.
+             // For now, this is sufficient to repopulate the list.
+          }
+      });
   }
+
 
   const { maxCycles } = settingsService.getSettings().researchParams;
   

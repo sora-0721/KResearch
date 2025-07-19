@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { synthesizeReport, rewriteReport, clarifyQuery, runIterativeDeepResearch, generateVisualReport, regenerateVisualReportWithFeedback } from '../services';
 import { ResearchUpdate, FinalResearchData, ResearchMode, FileData, AppState, ClarificationTurn, Citation } from '../types';
-import { apiKeyService } from '../services/apiKeyService';
+import { AllKeysFailedError, apiKeyService } from '../services/apiKeyService';
 import { useNotification } from '../contextx/NotificationContext';
 import { executeSingleSearch } from '../services/search';
 
@@ -41,6 +41,40 @@ export const useAppLogic = () => {
     const abortControllerRef = useRef<AbortController | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const addNotification = useNotification();
+    const researchExecutionRef = useRef<boolean>(false);
+    
+    const startResearch = useCallback(async (context: string) => {
+        if (!abortControllerRef.current || abortControllerRef.current.signal.aborted) {
+            abortControllerRef.current = new AbortController();
+        }
+        setAppState('researching');
+        const startTime = Date.now();
+        try {
+            const result = await runIterativeDeepResearch(query, (update) => {
+                setResearchUpdates(prev => [...prev, update]);
+            }, abortControllerRef.current!.signal, mode, context, selectedFile, initialSearchResult, researchUpdates);
+            setFinalData({ ...result, researchTimeMs: Date.now() - startTime });
+            setAppState('complete');
+        } catch (error: any) {
+            if (error instanceof AllKeysFailedError) {
+                addNotification({ type: 'error', title: 'All API Keys Failed', message: 'You can retry the operation or check your keys in Settings.' });
+                setAppState('paused');
+                return;
+            }
+
+            const commonErrorData = { citations: [], researchTimeMs: Date.now() - startTime };
+            if (error.name === 'AbortError') {
+                addNotification({ type: 'info', title: 'Research Stopped', message: 'The research process was cancelled by the user.'});
+                setFinalData({ report: "The research process was cancelled.", ...commonErrorData });
+            } else {
+                console.error("Research failed:", error);
+                const message = getCleanErrorMessage(error);
+                addNotification({ type: 'error', title: 'Research Failed', message });
+                setFinalData({ report: "An error occurred during the research process.", ...commonErrorData });
+            }
+            setAppState('complete');
+        }
+    }, [query, mode, selectedFile, addNotification, initialSearchResult, researchUpdates]);
 
     const handleClarificationResponse = useCallback(async (history: ClarificationTurn[], searchResult: { text: string; citations: Citation[] } | null) => {
       setClarificationLoading(true);
@@ -53,45 +87,32 @@ export const useAppLogic = () => {
               setAppState('researching');
           }
       } catch (error) {
+            if (error instanceof AllKeysFailedError) {
+                addNotification({ type: 'error', title: 'API Keys Failed', message: 'All API keys failed. You can retry the operation.' });
+                setAppState('paused');
+                // For now, only the main research loop is pausable. This will fall through.
+            }
           console.error("Clarification step failed:", error);
           const message = getCleanErrorMessage(error);
           addNotification({type: 'error', title: 'Clarification Failed', message});
           setClarifiedContext('Clarification process failed. Proceeding with original query.');
           setAppState('researching');
       } finally {
-          setClarificationLoading(false);
+          if(appState !== 'paused') {
+            setClarificationLoading(false);
+          }
       }
-    }, [mode, selectedFile, addNotification]);
-
-    const startResearch = useCallback(async (context: string, searchResult: { text: string, citations: Citation[] } | null) => {
-      abortControllerRef.current = new AbortController();
-      const startTime = Date.now();
-      try {
-        const result = await runIterativeDeepResearch(query, (update) => {
-          setResearchUpdates(prev => [...prev, update]);
-        }, abortControllerRef.current.signal, mode, context, selectedFile, searchResult);
-        setFinalData({ ...result, researchTimeMs: Date.now() - startTime });
-      } catch (error: any) {
-        const commonErrorData = { citations: [], researchTimeMs: Date.now() - startTime };
-        if (error.name === 'AbortError') {
-             addNotification({ type: 'info', title: 'Research Stopped', message: 'The research process was cancelled by the user.'});
-             setFinalData({ report: "The research process was cancelled.", ...commonErrorData });
-        } else {
-            console.error("Research failed:", error);
-            const message = getCleanErrorMessage(error);
-            addNotification({ type: 'error', title: 'Research Failed', message });
-            setFinalData({ report: "An error occurred during the research process.", ...commonErrorData });
-        }
-      } finally {
-        setAppState('complete');
-      }
-    }, [query, mode, selectedFile, addNotification]);
+    }, [mode, selectedFile, addNotification, appState]);
 
     useEffect(() => {
-      if (appState === 'researching' && clarifiedContext) {
-          startResearch(clarifiedContext, initialSearchResult);
+      if (appState === 'researching' && clarifiedContext && !researchExecutionRef.current) {
+          researchExecutionRef.current = true;
+          startResearch(clarifiedContext)
+            .finally(() => {
+                researchExecutionRef.current = false;
+            });
       }
-    }, [appState, clarifiedContext, startResearch, initialSearchResult]);
+    }, [appState, clarifiedContext, startResearch]);
 
     const startClarificationProcess = useCallback(async () => {
         if (!query.trim() || appState !== 'idle') return;
@@ -147,6 +168,11 @@ export const useAppLogic = () => {
         setAppState('researching');
 
     }, [appState, clarificationHistory, query]);
+
+    const handleContinueResearch = () => {
+        if (appState !== 'paused') return;
+        setAppState('researching');
+    }
 
     const handleVisualizeReport = useCallback(async (reportMarkdown: string, forceRegenerate: boolean = false) => {
         if (isVisualizing) {
@@ -236,7 +262,11 @@ export const useAppLogic = () => {
     }, [finalData, isRegenerating, mode, addNotification]);
 
     const handleCloseVisualizer = () => setIsVisualizerOpen(false);
-    const handleStopResearch = () => abortControllerRef.current?.abort();
+    
+    const handleStopResearch = () => {
+        abortControllerRef.current?.abort();
+        researchExecutionRef.current = false;
+    };
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
@@ -256,6 +286,7 @@ export const useAppLogic = () => {
 
     const handleReset = () => {
         abortControllerRef.current?.abort();
+        researchExecutionRef.current = false;
         setAppState('idle');
         setFinalData(null);
         setResearchUpdates([]);
@@ -280,6 +311,7 @@ export const useAppLogic = () => {
         isVisualizing, visualizedReportHtml, isVisualizerOpen, handleVisualizeReport, handleCloseVisualizer, handleSkipClarification,
         isRegenerating, handleRegenerateReport, handleReportRewrite,
         isSettingsOpen, setIsSettingsOpen,
-        handleVisualizerFeedback
+        handleVisualizerFeedback,
+        handleContinueResearch,
     };
 };

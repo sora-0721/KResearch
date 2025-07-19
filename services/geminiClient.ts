@@ -1,5 +1,5 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
-import { apiKeyService } from "./apiKeyService";
+import { apiKeyService, AllKeysFailedError } from "./apiKeyService";
 
 // This is a utility function that should probably be somewhere generic,
 // but for this change, having it here is fine to avoid creating a new file.
@@ -52,7 +52,7 @@ async function executeWithRetry<T>(
     // All keys have failed
     const finalErrorMessage = getCleanErrorMessage(lastError);
     console.error(`All ${maxAttempts} API keys failed for operation '${operationName}'. Last error:`, lastError);
-    throw new Error(`All API keys failed. Last error: ${finalErrorMessage}`);
+    throw new AllKeysFailedError(`All API keys failed. Last error: ${finalErrorMessage}`);
 }
 
 // The new 'ai' object that will replace the old one.

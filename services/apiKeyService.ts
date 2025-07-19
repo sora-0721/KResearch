@@ -1,3 +1,10 @@
+export class AllKeysFailedError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'AllKeysFailedError';
+    }
+}
+
 class ApiKeyService {
     private userApiKeys: string[] = [];
     private readonly hasEnvKey: boolean;
