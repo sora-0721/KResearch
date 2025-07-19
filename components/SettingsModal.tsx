@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNotification } from '../contextx/NotificationContext';
 import { apiKeyService } from '../services/apiKeyService';
-import { settingsService } from '../services/settingsService';
+import { DEFAULT_SETTINGS, settingsService } from '../services/settingsService';
 import { ResearchMode } from '../types';
 import GlassCard from './GlassCard';
 import LiquidButton from './LiquidButton';
@@ -47,8 +47,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentM
     setTimeout(() => {
         setIsSaving(false);
         addNotification({type: 'success', title: 'Settings Saved', message: 'Your settings have been updated.'});
-        onClose();
     }, 500);
+  };
+
+  const handleRestoreDefaults = () => {
+    setSettings(DEFAULT_SETTINGS);
+    addNotification({type: 'info', title: 'Defaults Loaded', message: 'Settings have been reset to default. Click "Save" to apply.'});
   };
 
   if (!isRendered) return null;
@@ -61,12 +65,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentM
 
   return (
     <div
-      className={`fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4 transition-opacity duration-300 ease-in-out ${isActive ? 'opacity-100' : 'opacity-0'}`}
+      className={`fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-md z-50 flex items-start justify-center p-4 overflow-y-auto transition-opacity duration-300 ease-in-out ${isActive ? 'opacity-100' : 'opacity-0'}`}
       onClick={(e) => e.target === e.currentTarget && onClose()}
       onTransitionEnd={() => !isActive && setIsRendered(false)}
     >
       <GlassCard
-        className={`w-full max-w-2xl flex flex-col p-0 bg-slate-100/90 transition-all duration-300 ease-in-out overflow-hidden ${isActive ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}
+        className={`w-full max-w-2xl flex flex-col my-auto p-0 bg-slate-100/90 transition-all duration-300 ease-in-out overflow-hidden ${isActive ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex items-center justify-between p-6 shrink-0 border-b border-border-light dark:border-border-dark">
@@ -74,10 +78,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentM
           <button onClick={onClose} className="p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors" title="Close"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
         </header>
 
-        <div className="flex flex-col md:flex-row flex-grow min-h-[400px]">
-          <nav className="flex md:flex-col p-4 border-b md:border-b-0 md:border-r border-border-light dark:border-border-dark">
+        <div className="flex flex-col md:flex-row flex-grow min-h-0">
+          <nav className="flex md:flex-col p-4 border-b md:border-b-0 md:border-r border-border-light dark:border-border-dark overflow-x-auto md:overflow-x-visible">
             {tabs.map(tab => (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`px-4 py-2 text-sm md:text-base text-left rounded-2xl font-semibold transition-colors ${activeTab === tab.id ? 'bg-glow-light/20 dark:bg-glow-dark/30 text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/10'}`}>{tab.label}</button>
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`px-4 py-2 text-sm md:text-base text-left rounded-2xl font-semibold transition-colors whitespace-nowrap ${activeTab === tab.id ? 'bg-glow-light/20 dark:bg-glow-dark/30 text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/10'}`}>{tab.label}</button>
             ))}
           </nav>
 
@@ -88,9 +92,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentM
           </main>
         </div>
 
-        <footer className="flex justify-end gap-3 mt-auto p-6 border-t border-border-light dark:border-border-dark">
-          <LiquidButton onClick={onClose} className="bg-transparent hover:bg-black/5 dark:hover:bg-white/5 text-gray-600 dark:text-gray-400 hover:shadow-none hover:-translate-y-0 active:translate-y-px">Cancel</LiquidButton>
-          <LiquidButton onClick={handleSave} disabled={isSaving}>{isSaving ? <><Spinner /> Saving...</> : 'Save & Close'}</LiquidButton>
+        <footer className="flex justify-between items-center gap-3 mt-auto p-6 border-t border-border-light dark:border-border-dark">
+            <LiquidButton onClick={handleRestoreDefaults} disabled={isSaving} className="bg-red-500/10 hover:bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/20">Restore Defaults</LiquidButton>
+            <div className="flex gap-3">
+                <LiquidButton onClick={onClose} className="bg-transparent hover:bg-black/5 dark:hover:bg-white/5 text-gray-600 dark:text-gray-400 hover:shadow-none hover:-translate-y-0 active:translate-y-px">Cancel</LiquidButton>
+                <LiquidButton onClick={handleSave} disabled={isSaving}>{isSaving ? <><Spinner /> Saving...</> : 'Save'}</LiquidButton>
+            </div>
         </footer>
       </GlassCard>
     </div>

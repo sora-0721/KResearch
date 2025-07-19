@@ -1,7 +1,7 @@
 import { apiKeyService } from './apiKeyService';
 import { AppSettings } from '../types';
 
-const DEFAULT_SETTINGS: AppSettings = {
+export const DEFAULT_SETTINGS: AppSettings = {
   modelOverrides: {
     planner: null,
     searcher: null,
@@ -58,39 +58,50 @@ class SettingsService {
   }
   
   public async fetchAvailableModels(): Promise<string[]> {
-    const apiKey = apiKeyService.getNextApiKey();
-    if (!apiKey) {
+    const apiKeys = apiKeyService.getApiKeys();
+    if (apiKeys.length === 0) {
       this.availableModels = [];
       throw new Error("API Key not set.");
     }
     
-    // Return cached models if available to avoid refetching
-    if(this.availableModels.length > 0) return this.availableModels;
+    if (this.availableModels.length > 0) return this.availableModels;
 
-    try {
-      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=50', {
-        headers: {
-          'x-goog-api-key': apiKey
+    const allModelNames = new Set<string>();
+    let lastError: any = null;
+
+    for (const key of apiKeys) {
+        try {
+            const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=50', {
+                headers: { 'x-goog-api-key': key }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => null);
+                const errorMessage = errorData?.error?.message || response.statusText;
+                throw new Error(`Failed with key ending in ...${key.slice(-4)}: ${errorMessage}`);
+            }
+
+            const data = await response.json() as { models?: { name: string }[] };
+            const modelNames = (data.models || [])
+                .map((m: { name: string }) => m.name.replace(/^models\//, ''))
+                .filter((name: string) => name.includes('gemini'));
+            
+            modelNames.forEach(name => allModelNames.add(name));
+            lastError = null;
+        } catch (error) {
+            console.warn(`Could not fetch models for one of the keys:`, error);
+            lastError = error;
         }
-      });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        const errorMessage = errorData?.error?.message || response.statusText;
-        throw new Error(`Failed to fetch models: ${errorMessage}`);
-      }
-      const data = await response.json() as { models?: { name: string }[] };
-      const modelNames = (data.models || [])
-        .map((m: { name: string }) => m.name.replace(/^models\//, ''))
-        .filter((name: string) => name.includes('gemini'))
-        .sort();
-
-      this.availableModels = [...new Set(modelNames)];
-      return this.availableModels;
-    } catch (error) {
-      console.error("Error fetching available models:", error);
-      this.availableModels = [];
-      throw error;
     }
+
+    if (allModelNames.size === 0) {
+        console.error("Error fetching available models from any key:", lastError);
+        this.availableModels = [];
+        throw lastError || new Error("Failed to fetch models from any of the provided API keys.");
+    }
+    
+    this.availableModels = Array.from(allModelNames).sort();
+    return this.availableModels;
   }
 }
 

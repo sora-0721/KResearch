@@ -80,11 +80,16 @@ export const runIterativeDeepResearch = async (
       const searchResults = await Promise.all(searchPromises);
       checkSignal();
       
-      const combinedText = searchResults.map(r => r.text).join('\n\n');
+      const readContents = searchResults.map(r => r.text);
       const combinedCitations = searchResults.flatMap(r => r.citations);
       allCitations.push(...combinedCitations);
       
-      const readUpdate = { id: idCounter.current++, type: 'read' as const, content: combinedText, source: Array.from(new Set(combinedCitations.map(c => c.url))) };
+      const readUpdate = { 
+        id: idCounter.current++, 
+        type: 'read' as const, 
+        content: readContents, 
+        source: Array.from(new Set(combinedCitations.map(c => c.url))) 
+      };
       history.push(readUpdate);
       onUpdate(readUpdate);
     } else if (!plan.should_finish) {

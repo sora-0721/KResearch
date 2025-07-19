@@ -86,11 +86,19 @@ const ResearchProgress: React.FC<ResearchProgressProps> = ({ updates, isResearch
                     </div>
                 ) : update.type === 'read' ? (
                     <div>
-                    <span className="font-semibold capitalize text-gray-800 dark:text-gray-200">Read & Synthesized</span>
-                    {Array.isArray(update.source) &&
-                        <span className="text-xs text-gray-500 ml-1">({update.source.length} sources)</span>
-                    }
-                    <p className="mt-1 text-xs text-gray-600 dark:text-gray-400 italic truncate">{String(update.content)}</p>
+                        <span className="font-semibold capitalize text-gray-800 dark:text-gray-200">Read & Synthesized</span>
+                        {Array.isArray(update.source) &&
+                            <span className="text-xs text-gray-500 ml-1">({update.source.length} sources)</span>
+                        }
+                        {Array.isArray(update.content) ? (
+                             <div className="mt-2 space-y-2 text-xs text-gray-600 dark:text-gray-400">
+                                {update.content.map((item, index) => (
+                                    <p key={index} className="p-2 rounded-xl bg-black/5 dark:bg-white/5 italic">{item}</p>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="mt-1 text-xs text-gray-600 dark:text-gray-400 italic">{String(update.content)}</p>
+                        )}
                     </div>
                 ) : update.type === 'thought' ? (
                     <div>
