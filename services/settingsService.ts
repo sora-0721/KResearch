@@ -58,7 +58,7 @@ class SettingsService {
   }
   
   public async fetchAvailableModels(): Promise<string[]> {
-    const apiKey = apiKeyService.getApiKey();
+    const apiKey = apiKeyService.getNextApiKey();
     if (!apiKey) {
       this.availableModels = [];
       throw new Error("API Key not set.");

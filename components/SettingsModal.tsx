@@ -22,7 +22,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentM
   const [isActive, setIsActive] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [settings, setSettings] = useState(() => settingsService.getSettings());
-  const [apiKey, setApiKey] = useState(() => apiKeyService.getApiKey() || '');
+  const [apiKey, setApiKey] = useState(() => apiKeyService.getApiKeysString());
   
   const addNotification = useNotification();
   
@@ -30,7 +30,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentM
     if (isOpen) {
       setIsRendered(true);
       setSettings(settingsService.getSettings()); // Re-fetch on open
-      setApiKey(apiKeyService.getApiKey() || '');
+      setApiKey(apiKeyService.getApiKeysString());
       const timer = setTimeout(() => setIsActive(true), 10);
       return () => clearTimeout(timer);
     } else {
@@ -41,7 +41,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentM
   const handleSave = () => {
     setIsSaving(true);
     if (!apiKeyService.isEnvKey()) {
-        apiKeyService.setApiKey(apiKey);
+        apiKeyService.setApiKeys(apiKey);
     }
     settingsService.save(settings);
     setTimeout(() => {
