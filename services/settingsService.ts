@@ -40,7 +40,7 @@ class SettingsService {
     return JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
   }
 
-  public save(newSettings: Partial<AppSettings>) {
+  public save(newSettings: AppSettings) {
     const toStore: AppSettings = {
         modelOverrides: newSettings.modelOverrides || this.settings.modelOverrides,
         researchParams: newSettings.researchParams || this.settings.researchParams,
@@ -57,14 +57,14 @@ class SettingsService {
     return this.settings;
   }
   
-  public async fetchAvailableModels(): Promise<string[]> {
+  public async fetchAvailableModels(forceRefetch: boolean = false): Promise<string[]> {
     const apiKeys = apiKeyService.getApiKeys();
     if (apiKeys.length === 0) {
       this.availableModels = [];
       throw new Error("API Key not set.");
     }
     
-    if (this.availableModels.length > 0) return this.availableModels;
+    if (this.availableModels.length > 0 && !forceRefetch) return this.availableModels;
 
     const allModelNames = new Set<string>();
     let lastError: any = null;
@@ -87,7 +87,9 @@ class SettingsService {
                 .filter((name: string) => name.includes('gemini'));
             
             modelNames.forEach(name => allModelNames.add(name));
-            lastError = null;
+            // We only need one successful key to get the models.
+            lastError = null; 
+            break;
         } catch (error) {
             console.warn(`Could not fetch models for one of the keys:`, error);
             lastError = error;

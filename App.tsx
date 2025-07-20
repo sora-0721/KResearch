@@ -8,6 +8,7 @@ import ThemeSwitcher from './components/ThemeSwitcher';
 import ClarificationChat from './components/ClarificationChat';
 import ReportVisualizer from './components/ReportVisualizer';
 import SettingsModal from './components/SettingsModal';
+import HistoryPanel from './components/HistoryPanel';
 import { useAppLogic } from './hooks/useAppLogic';
 import { ResearchMode } from './types';
 
@@ -24,7 +25,7 @@ const AppContent: React.FC = () => {
   const finalReportRef = useRef<HTMLDivElement>(null);
   
   const {
-      query, setQuery, selectedFile, researchUpdates, finalData, mode, setMode, appState,
+      query, setQuery, guidedQuery, setGuidedQuery, selectedFile, researchUpdates, finalData, mode, setMode, appState,
       clarificationHistory, clarificationLoading, startClarificationProcess, handleAnswerSubmit,
       handleStopResearch, handleFileChange, handleRemoveFile, handleReset, fileInputRef,
       isVisualizing, visualizedReportHtml, handleVisualizeReport, handleCloseVisualizer, handleSkipClarification,
@@ -33,9 +34,12 @@ const AppContent: React.FC = () => {
       isVisualizerOpen, handleVisualizerFeedback,
       handleContinueResearch,
       handleGenerateReportFromPause,
+      history, loadFromHistory, deleteHistoryItem, clearHistory
   } = useAppLogic();
 
   const [isLogVisible, setIsLogVisible] = useState<boolean>(true);
+  const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
+  const [isGuidedSearchOpen, setIsGuidedSearchOpen] = useState(false);
   
   useEffect(() => {
     if (isDarkMode) {
@@ -53,12 +57,21 @@ const AppContent: React.FC = () => {
     }
   }, [appState, finalData]);
 
+  const handleStart = () => {
+    startClarificationProcess(guidedQuery);
+  };
+  
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      startClarificationProcess();
+      handleStart();
     }
   };
+  
+  const handleLoadFromHistory = (id: string) => {
+    loadFromHistory(id);
+    setIsHistoryOpen(false);
+  }
 
   const modes: { id: ResearchMode, name: string, description: string }[] = [
     { id: 'Balanced', name: 'Balanced', description: 'Optimal mix for quality and speed.' },
@@ -74,6 +87,10 @@ const AppContent: React.FC = () => {
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8 font-sans text-gray-800 dark:text-gray-200 transition-colors duration-300">
       <div className="absolute top-4 right-4 z-10 flex items-center gap-4">
+        <button onClick={() => setIsHistoryOpen(true)} className="p-2 rounded-full cursor-pointer hover:bg-black/10 dark:hover:bg-white/10 transition-colors" title="History">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <span className="sr-only">History</span>
+        </button>
         <ThemeSwitcher isDarkMode={isDarkMode} onToggle={() => setIsDarkMode(!isDarkMode)} />
         <a href="https://github.com/KuekHaoYang/KResearch" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full cursor-pointer hover:bg-black/10 dark:hover:bg-white/10 transition-colors" title="View on GitHub">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="h-6 w-6 text-gray-600 dark:text-gray-400">
@@ -107,8 +124,23 @@ const AppContent: React.FC = () => {
                   <label htmlFor="file-upload" className="p-2 rounded-full cursor-pointer hover:bg-black/10 dark:hover:bg-white/10 transition-colors" title="Attach file"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg><span className="sr-only">Attach file</span></label>
               </div>
             </div>
+            <div className="rounded-2xl bg-white/40 dark:bg-black/20 border border-transparent focus-within:border-glow-light dark:focus-within:border-glow-dark focus-within:ring-2 focus-within:ring-glow-light/50 dark:focus-within:ring-glow-dark/50 transition-all duration-300">
+                <button onClick={() => setIsGuidedSearchOpen(prev => !prev)} className={`flex items-center justify-between w-full text-left p-4 text-sm text-gray-600 dark:text-gray-400 font-medium ${isGuidedSearchOpen ? 'pb-2' : ''}`} aria-expanded={isGuidedSearchOpen} aria-controls="guided-search-panel">
+                    <span>Advanced: Guide Initial Search</span>
+                    <svg className={`w-5 h-5 transition-transform duration-300 ${isGuidedSearchOpen ? 'rotate-180' : ''}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </button>
+                <div id="guided-search-panel" className={`transition-all duration-500 ease-in-out overflow-hidden ${isGuidedSearchOpen ? 'max-h-40' : 'max-h-0'}`}>
+                    <textarea
+                        value={guidedQuery}
+                        onChange={(e) => setGuidedQuery(e.target.value)}
+                        placeholder="Initial search topics, one per line..."
+                        className="w-full h-24 px-4 pb-4 bg-transparent resize-none focus:outline-none transition-all duration-300 placeholder:text-gray-500/80 dark:placeholder:text-gray-500/80"
+                        disabled={appState !== 'idle'}
+                    />
+                </div>
+            </div>
             {selectedFile && <div className="flex items-center justify-between px-3 py-2 text-sm rounded-2xl bg-blue-500/10 dark:bg-blue-400/10 border border-blue-500/20 dark:border-blue-400/20"><span className="truncate text-gray-700 dark:text-gray-300" title={selectedFile.name}>{selectedFile.name}</span><button onClick={handleRemoveFile} className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10" title="Remove file"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg><span className="sr-only">Remove file</span></button></div>}
-            <LiquidButton onClick={startClarificationProcess} disabled={appState !== 'idle' || !query.trim()} className="w-full">Start Research</LiquidButton>
+            <LiquidButton onClick={handleStart} disabled={appState !== 'idle' || !query.trim()} className="w-full">Start Research</LiquidButton>
           </div>
         )}
         
@@ -146,6 +178,15 @@ const AppContent: React.FC = () => {
             </div>
         )}
       </GlassCard>
+      
+      <HistoryPanel
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        history={history}
+        onLoad={handleLoadFromHistory}
+        onDelete={deleteHistoryItem}
+        onClear={clearHistory}
+      />
 
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} currentMode={mode} />
 

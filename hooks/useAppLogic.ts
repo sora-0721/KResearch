@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { synthesizeReport, rewriteReport, clarifyQuery, runIterativeDeepResearch, generateVisualReport, regenerateVisualReportWithFeedback } from '../services';
-import { ResearchUpdate, FinalResearchData, ResearchMode, FileData, AppState, ClarificationTurn, Citation } from '../types';
-import { AllKeysFailedError, apiKeyService } from '../services/apiKeyService';
+import { ResearchUpdate, FinalResearchData, ResearchMode, FileData, AppState, ClarificationTurn, Citation, HistoryItem } from '../types';
+import { AllKeysFailedError, apiKeyService, historyService } from '../services';
 import { useNotification } from '../contextx/NotificationContext';
 import { executeSingleSearch } from '../services/search';
 
@@ -43,6 +43,7 @@ const getCleanErrorMessage = (error: any): string => {
 
 export const useAppLogic = () => {
     const [query, setQuery] = useState<string>('');
+    const [guidedQuery, setGuidedQuery] = useState<string>('');
     const [selectedFile, setSelectedFile] = useState<FileData | null>(null);
     const [researchUpdates, setResearchUpdates] = useState<ResearchUpdate[]>([]);
     const [finalData, setFinalData] = useState<FinalResearchData | null>(null);
@@ -57,6 +58,7 @@ export const useAppLogic = () => {
     const [isVisualizerOpen, setIsVisualizerOpen] = useState<boolean>(false);
     const [isRegenerating, setIsRegenerating] = useState<boolean>(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+    const [history, setHistory] = useState<HistoryItem[]>(() => historyService.getHistory());
 
     const abortControllerRef = useRef<AbortController | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -73,8 +75,23 @@ export const useAppLogic = () => {
             const result = await runIterativeDeepResearch(query, (update) => {
                 setResearchUpdates(prev => [...prev, update]);
             }, abortControllerRef.current!.signal, mode, context, selectedFile, initialSearchResult, researchUpdates);
-            setFinalData({ ...result, researchTimeMs: Date.now() - startTime });
+            
+            const resultData = { ...result, researchTimeMs: Date.now() - startTime };
+            setFinalData(resultData);
             setAppState('complete');
+            
+            historyService.addHistoryItem({
+                query,
+                mode,
+                selectedFile,
+                finalData: resultData,
+                researchUpdates,
+                clarificationHistory,
+                initialSearchResult,
+                clarifiedContext: context,
+            });
+            setHistory(historyService.getHistory());
+
         } catch (error: any) {
             if (error instanceof AllKeysFailedError) {
                 addNotification({ type: 'error', title: 'All API Keys Failed', message: 'You can retry the operation or check your keys in Settings.' });
@@ -94,7 +111,7 @@ export const useAppLogic = () => {
             }
             setAppState('complete');
         }
-    }, [query, mode, selectedFile, addNotification, initialSearchResult, researchUpdates]);
+    }, [query, mode, selectedFile, addNotification, initialSearchResult, researchUpdates, clarificationHistory]);
 
     const handleClarificationResponse = useCallback(async (history: ClarificationTurn[], searchResult: { text: string; citations: Citation[] } | null) => {
       setClarificationLoading(true);
@@ -110,13 +127,13 @@ export const useAppLogic = () => {
             if (error instanceof AllKeysFailedError) {
                 addNotification({ type: 'error', title: 'API Keys Failed', message: 'All API keys failed. You can retry the operation.' });
                 setAppState('paused');
-                // For now, only the main research loop is pausable. This will fall through.
+            } else {
+              console.error("Clarification step failed:", error);
+              const message = getCleanErrorMessage(error);
+              addNotification({type: 'error', title: 'Clarification Failed', message});
+              setClarifiedContext('Clarification process failed. Proceeding with original query.');
+              setAppState('researching');
             }
-          console.error("Clarification step failed:", error);
-          const message = getCleanErrorMessage(error);
-          addNotification({type: 'error', title: 'Clarification Failed', message});
-          setClarifiedContext('Clarification process failed. Proceeding with original query.');
-          setAppState('researching');
       } finally {
           if(appState !== 'paused') {
             setClarificationLoading(false);
@@ -134,7 +151,7 @@ export const useAppLogic = () => {
       }
     }, [appState, clarifiedContext, startResearch]);
 
-    const startClarificationProcess = useCallback(async () => {
+    const startClarificationProcess = useCallback(async (guidedSearchQuery?: string) => {
         if (!query.trim() || appState !== 'idle') return;
 
         if (!apiKeyService.hasKey()) {
@@ -143,15 +160,49 @@ export const useAppLogic = () => {
             return;
         }
 
-        setAppState('researching'); // Show log immediately
-        setResearchUpdates([]); // Clear previous logs
+        setAppState('researching');
+        setResearchUpdates([]);
 
-        let searchResult: { text: string; citations: Citation[] } | null = null;
+        let searchResultForClarification: { text: string; citations: Citation[] } | null = null;
         try {
-            setResearchUpdates(prev => [...prev, { id: prev.length, type: 'search', content: [query] }]);
-            searchResult = await executeSingleSearch(query, mode);
-            setInitialSearchResult(searchResult);
-            setResearchUpdates(prev => [...prev, { id: prev.length, type: 'read', content: searchResult.text, source: searchResult.citations.map(c => c.url) }]);
+            const guidedQueries = guidedSearchQuery?.split(/[\n,]+/).map(q => q.trim()).filter(Boolean) || [];
+            const queriesToSearch = [query.trim(), ...guidedQueries].filter(Boolean);
+
+            if (queriesToSearch.length === 0) {
+                addNotification({ type: 'warning', title: 'Empty Query', message: 'Cannot start research with an empty query.' });
+                setAppState('idle');
+                return;
+            }
+
+            setResearchUpdates(prev => [...prev, { id: prev.length, type: 'search', content: queriesToSearch }]);
+            
+            const searchPromises = queriesToSearch.map(q => executeSingleSearch(q, mode));
+            const searchResults = await Promise.all(searchPromises);
+            
+            const allSummaries: string[] = [];
+            const allCitations: Citation[] = [];
+
+            // Collect all summaries and citations from the initial search results.
+            searchResults.forEach(result => {
+                allSummaries.push(result.text);
+                allCitations.push(...result.citations);
+            });
+
+            // Create a single "read" update for all initial search results to match the format of subsequent reads.
+            setResearchUpdates(prev => [...prev, { 
+                id: prev.length, 
+                type: 'read', 
+                content: allSummaries, // Now an array of strings
+                source: Array.from(new Set(allCitations.map(c => c.url))) 
+            }]);
+            
+            searchResultForClarification = {
+                text: allSummaries.join('\n\n'),
+                citations: Array.from(new Map(allCitations.map(c => [c.url, c])).values()),
+            };
+            
+            setInitialSearchResult(searchResultForClarification);
+            
         } catch (error) {
             console.error("Initial search failed:", error);
             const message = getCleanErrorMessage(error);
@@ -162,7 +213,7 @@ export const useAppLogic = () => {
         const initialQuery = selectedFile ? `${query}\n\n[File attached: ${selectedFile.name}]` : query;
         const initialHistory: ClarificationTurn[] = [{ role: 'user', content: initialQuery }];
         setClarificationHistory(initialHistory);
-        handleClarificationResponse(initialHistory, searchResult);
+        handleClarificationResponse(initialHistory, searchResultForClarification);
     }, [query, appState, selectedFile, mode, addNotification, handleClarificationResponse]);
 
     const handleAnswerSubmit = useCallback((answer: string) => {
@@ -354,6 +405,7 @@ export const useAppLogic = () => {
         setFinalData(null);
         setResearchUpdates([]);
         setQuery('');
+        setGuidedQuery('');
         setMode('Balanced');
         handleRemoveFile();
         setClarificationHistory([]);
@@ -366,9 +418,40 @@ export const useAppLogic = () => {
         setIsRegenerating(false);
         setIsSettingsOpen(false);
     }
+    
+    const loadFromHistory = (id: string) => {
+        const item = historyService.getHistoryItem(id);
+        if (item) {
+            handleReset(); // Ensure clean state before loading
+            setTimeout(() => {
+                setQuery(item.query);
+                setMode(item.mode);
+                setSelectedFile(item.selectedFile);
+                setFinalData(item.finalData);
+                setResearchUpdates(item.researchUpdates);
+                setClarificationHistory(item.clarificationHistory);
+                setInitialSearchResult(item.initialSearchResult);
+                setClarifiedContext(item.clarifiedContext);
+                setAppState('complete');
+            }, 50)
+        }
+    };
+
+    const deleteHistoryItem = (id: string) => {
+        historyService.removeHistoryItem(id);
+        setHistory(historyService.getHistory());
+        addNotification({type: 'info', title: 'History item removed', message: 'The selected item has been deleted from your research history.'});
+    };
+
+    const clearHistory = () => {
+        historyService.clearHistory();
+        setHistory([]);
+        addNotification({type: 'info', title: 'History cleared', message: 'All items have been removed from your research history.'});
+    };
+
 
     return {
-        query, setQuery, selectedFile, researchUpdates, finalData, mode, setMode, appState,
+        query, setQuery, guidedQuery, setGuidedQuery, selectedFile, researchUpdates, finalData, mode, setMode, appState,
         clarificationHistory, clarificationLoading, fileInputRef, startClarificationProcess, 
         handleAnswerSubmit, handleStopResearch, handleFileChange, handleRemoveFile, handleReset,
         isVisualizing, visualizedReportHtml, isVisualizerOpen, handleVisualizeReport, handleCloseVisualizer, handleSkipClarification,
@@ -377,5 +460,6 @@ export const useAppLogic = () => {
         handleVisualizerFeedback,
         handleContinueResearch,
         handleGenerateReportFromPause,
+        history, loadFromHistory, deleteHistoryItem, clearHistory
     };
 };

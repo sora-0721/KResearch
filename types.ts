@@ -59,3 +59,16 @@ export interface FileData {
   mimeType: string;
   data: string; // base64 encoded string
 }
+
+export interface HistoryItem {
+  id: string;
+  query: string;
+  mode: ResearchMode;
+  finalData: FinalResearchData;
+  researchUpdates: ResearchUpdate[];
+  clarificationHistory: ClarificationTurn[];
+  selectedFile: FileData | null;
+  date: string; // ISO string
+  initialSearchResult: { text: string; citations: Citation[] } | null;
+  clarifiedContext: string;
+}

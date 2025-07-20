@@ -4,3 +4,4 @@ export { generateVisualReport, regenerateVisualReportWithFeedback } from './visu
 export { settingsService } from './settingsService';
 export { synthesizeReport, rewriteReport } from './synthesis';
 export { AllKeysFailedError, apiKeyService } from './apiKeyService';
+export { historyService } from './historyService';

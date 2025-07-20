@@ -20,7 +20,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentM
   const [activeTab, setActiveTab] = useState('api');
   const [isRendered, setIsRendered] = useState(false);
   const [isActive, setIsActive] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [settings, setSettings] = useState(() => settingsService.getSettings());
   const [apiKey, setApiKey] = useState(() => apiKeyService.getApiKeysString());
   
@@ -37,22 +36,24 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentM
       setIsActive(false);
     }
   }, [isOpen]);
+  
+  // Auto-save settings when they change
+  useEffect(() => {
+    if (!isActive) return;
 
-  const handleSave = () => {
-    setIsSaving(true);
-    if (!apiKeyService.isEnvKey()) {
-        apiKeyService.setApiKeys(apiKey);
-    }
-    settingsService.save(settings);
-    setTimeout(() => {
-        setIsSaving(false);
-        addNotification({type: 'success', title: 'Settings Saved', message: 'Your settings have been updated.'});
-    }, 500);
-  };
+    const handler = setTimeout(() => {
+        settingsService.save(settings);
+        if (!apiKeyService.isEnvKey()) {
+            apiKeyService.setApiKeys(apiKey);
+        }
+    }, 500); // Debounce for 500ms
+
+    return () => clearTimeout(handler);
+  }, [settings, apiKey, isActive]);
 
   const handleRestoreDefaults = () => {
     setSettings(DEFAULT_SETTINGS);
-    addNotification({type: 'info', title: 'Defaults Loaded', message: 'Settings have been reset to default. Click "Save" to apply.'});
+    addNotification({type: 'info', title: 'Defaults Loaded', message: 'Settings have been reset to default and saved.'});
   };
 
   if (!isRendered) return null;
@@ -85,7 +86,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentM
             ))}
           </nav>
 
-          <main className="p-6 flex-grow overflow-y-auto">
+          <main className="p-6 flex-grow overflow-y-auto h-[480px]">
             {activeTab === 'api' && <ApiSettings apiKey={apiKey} setApiKey={setApiKey} />}
             {activeTab === 'models' && <ModelSettings settings={settings} setSettings={setSettings} currentMode={currentMode} />}
             {activeTab === 'params' && <ParamSettings settings={settings} setSettings={setSettings} />}
@@ -93,10 +94,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentM
         </div>
 
         <footer className="flex justify-between items-center gap-3 mt-auto p-6 border-t border-border-light dark:border-border-dark">
-            <LiquidButton onClick={handleRestoreDefaults} disabled={isSaving} className="bg-red-500/10 hover:bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/20">Restore Defaults</LiquidButton>
-            <div className="flex gap-3">
-                <LiquidButton onClick={onClose} className="bg-transparent hover:bg-black/5 dark:hover:bg-white/5 text-gray-600 dark:text-gray-400 hover:shadow-none hover:-translate-y-0 active:translate-y-px">Cancel</LiquidButton>
-                <LiquidButton onClick={handleSave} disabled={isSaving}>{isSaving ? <><Spinner /> Saving...</> : 'Save'}</LiquidButton>
+            <LiquidButton onClick={handleRestoreDefaults} className="bg-red-500/10 hover:bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/20">Restore Defaults</LiquidButton>
+            <div className="flex items-center gap-3">
+                <LiquidButton onClick={onClose} className="bg-transparent hover:bg-black/5 dark:hover:bg-white/5 text-gray-600 dark:text-gray-400 hover:shadow-none hover:-translate-y-0 active:translate-y-px">Close</LiquidButton>
             </div>
         </footer>
       </GlassCard>
