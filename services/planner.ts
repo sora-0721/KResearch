@@ -20,14 +20,14 @@ export const runDynamicConversationalPlanner = async (
     idCounter: { current: number },
     mode: ResearchMode,
     clarifiedContext: string,
-    fileData: FileData | null
+    fileData: FileData | null,
+    searchCycles: number
 ): Promise<{ search_queries: string[], should_finish: boolean, finish_reason?: string }> => {
     const { minCycles, maxDebateRounds, maxCycles } = settingsService.getSettings().researchParams;
 
     const searchHistoryText = researchHistory.filter(h => h.type === 'search').map(h => (Array.isArray(h.content) ? h.content : [h.content]).join(', ')).join('; ');
     const readHistoryText = researchHistory.filter(h => h.type === 'read').map(h => h.content).join('\n---\n');
-    const searchCycles = researchHistory.filter(h => h.type === 'search').length;
-
+    
     let currentConversation: { persona: AgentPersona; thought: string }[] = [];
     let nextPersona: AgentPersona = 'Alpha';
     let debateTurns = 0;

@@ -64,7 +64,7 @@ const ReportHeader: React.FC<ReportHeaderProps> = ({ report, citations, onVisual
       <h2 className="text-3xl font-bold">Final Report</h2>
       <div className="flex items-center gap-2">
         <div className="relative" ref={copyPopoverRef}>
-            <LiquidButton onClick={() => setIsCopyPopoverOpen(p => !p)} disabled={isVisualizing || isRegenerating || copyStatus !== 'idle'} className="px-4 py-2 text-sm shrink-0">
+            <LiquidButton onClick={() => setIsCopyPopoverOpen(p => !p)} disabled={isVisualizing || isRegenerating || copyStatus !== 'idle'} className="px-4 py-2 text-sm shrink-0 flex justify-center">
                 {copyStatus === 'success' ? "Copied!" : copyStatus === 'error' ? "Failed!" : "Copy"}
             </LiquidButton>
             {isCopyPopoverOpen && (
@@ -76,10 +76,10 @@ const ReportHeader: React.FC<ReportHeaderProps> = ({ report, citations, onVisual
                 </div>
             )}
         </div>
-        <LiquidButton onClick={onRegenerate} disabled={isRegenerating || isVisualizing || regenStatus !== 'idle'} className="px-4 py-2 text-sm shrink-0 flex items-center justify-center gap-2 w-44">
-            {isRegenerating ? <><Spinner /><span>Regenerating...</span></> : regenStatus === 'success' ? "Success!" : "Regenerate Report"}
+        <LiquidButton onClick={onRegenerate} disabled={isRegenerating || isVisualizing || regenStatus !== 'idle'} className="px-4 py-2 text-sm shrink-0 flex items-center justify-center gap-2">
+            {isRegenerating ? <><Spinner /><span>Regenerating</span></> : regenStatus === 'success' ? "Success!" : "Regenerate Report"}
         </LiquidButton>
-        <LiquidButton onClick={() => onVisualize(report)} disabled={isVisualizing || isRegenerating} className="px-4 py-2 text-sm shrink-0 flex items-center gap-2">
+        <LiquidButton onClick={() => onVisualize(report)} disabled={isVisualizing || isRegenerating} className="px-4 py-2 text-sm shrink-0 flex items-center justify-center gap-2">
             {isVisualizing ? <><Spinner /><span>Visualizing...</span></> : "Visualize"}
         </LiquidButton>
       </div>

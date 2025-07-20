@@ -50,14 +50,26 @@ const ParamSettings: React.FC<ParamSettingsProps> = ({ settings, setSettings }) 
             return;
         }
 
-        const newParams = { ...settings.researchParams, [key]: value };
+        const currentParams = settings.researchParams;
+        let newParams = { ...currentParams, [key]: value };
+        let newUserParams = { ...userParamValues };
+
+        // Validation logic to ensure minCycles <= maxCycles
+        if (key === 'minCycles' && !isUncapped.maxCycles && value > newParams.maxCycles) {
+            newParams.maxCycles = value;
+            newUserParams.maxCycles = value;
+        }
+        if (key === 'maxCycles' && !isUncapped.minCycles && value < newParams.minCycles) {
+            newParams.minCycles = value;
+            newUserParams.minCycles = value;
+        }
         
         // Only update the stored "user value" if the new value is not an uncapped trigger.
-        // This preserves the last valid "capped" value for restoration.
         if (value !== UNCAPPED_VALUES[key]) {
-            setUserParamValues(prev => ({ ...prev, [key]: value }));
+            newUserParams = { ...newUserParams, [key]: value };
         }
-
+        
+        setUserParamValues(newUserParams);
         setSettings(prev => ({ ...prev, researchParams: newParams }));
     };
 
@@ -65,7 +77,16 @@ const ParamSettings: React.FC<ParamSettingsProps> = ({ settings, setSettings }) 
         const willBeUncapped = !isUncapped[key];
         // If un-capping, use the uncapped value. If re-capping, use the last known user value.
         const valueToSet = willBeUncapped ? UNCAPPED_VALUES[key] : userParamValues[key];
-        const newParams = { ...settings.researchParams, [key]: valueToSet };
+        let newParams = { ...settings.researchParams, [key]: valueToSet };
+
+        // After toggling, re-validate constraints
+        if (key === 'maxCycles' && !willBeUncapped && newParams.maxCycles < newParams.minCycles) {
+            newParams.minCycles = newParams.maxCycles;
+        }
+        if (key === 'minCycles' && !willBeUncapped && newParams.minCycles > newParams.maxCycles) {
+            newParams.maxCycles = newParams.minCycles;
+        }
+
         setSettings(prev => ({ ...prev, researchParams: newParams }));
     };
 

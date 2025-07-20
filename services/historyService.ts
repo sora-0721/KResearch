@@ -1,4 +1,4 @@
-import { HistoryItem } from '../types';
+import { HistoryItem, FinalResearchData } from '../types';
 
 const HISTORY_KEY = 'k-research-history';
 
@@ -16,7 +16,7 @@ class HistoryService {
         }
     }
 
-    public addHistoryItem(itemData: Omit<HistoryItem, 'id' | 'date'>): void {
+    public addHistoryItem(itemData: Omit<HistoryItem, 'id' | 'date'>): string {
         const history = this.getHistory();
         const newItem: HistoryItem = {
             ...itemData,
@@ -31,6 +31,16 @@ class HistoryService {
 
         history.unshift(newItem); // Add to the top
         this.saveHistory(history);
+        return newItem.id;
+    }
+
+    public updateHistoryItem(id: string, updatedFinalData: FinalResearchData): void {
+        const history = this.getHistory();
+        const itemIndex = history.findIndex(item => item.id === id);
+        if (itemIndex > -1) {
+            history[itemIndex].finalData = updatedFinalData;
+            this.saveHistory(history);
+        }
     }
 
     public removeHistoryItem(id: string): void {

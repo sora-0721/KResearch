@@ -20,26 +20,18 @@ export const runIterativeDeepResearch = async (
   const idCounter = { current: existingHistory.length };
   let allCitations: Citation[] = [];
   
-  if (existingHistory.length === 0 && initialSearchResult) {
-      const searchUpdate = { id: idCounter.current++, type: 'search' as const, content: [query] };
-      const readUpdate = { 
-          id: idCounter.current++, 
-          type: 'read' as const, 
-          content: initialSearchResult.text, 
-          source: initialSearchResult.citations.map(c => c.url) 
-      };
-      history.push(searchUpdate, readUpdate);
+  if (initialSearchResult) {
       allCitations.push(...initialSearchResult.citations);
-  } else {
-      existingHistory.forEach(update => {
-          if (update.type === 'read' && Array.isArray(update.source)) {
-              update.source.forEach(url => allCitations.push({ url, title: url }));
-          } else if (update.type === 'search' && Array.isArray(update.content)) {
-             // In a more complex system, we'd re-fetch citation titles.
-             // For now, this is sufficient to repopulate the list.
-          }
-      });
   }
+  existingHistory.forEach(update => {
+      if (update.type === 'read' && Array.isArray(update.source)) {
+          update.source.forEach(url => {
+              if (!allCitations.some(c => c.url === url)) {
+                  allCitations.push({ url, title: url });
+              }
+          });
+      }
+  });
 
 
   const { maxCycles } = settingsService.getSettings().researchParams;
@@ -55,8 +47,11 @@ export const runIterativeDeepResearch = async (
 
   while (true) {
     checkSignal();
-    const searchCycles = history.filter(h => h.type === 'search').length;
-    if (searchCycles >= maxCycles) {
+    const totalSearchUpdates = history.filter(h => h.type === 'search').length;
+    // The initial search happens before this loop. It shouldn't count towards the max cycle limit.
+    const internalSearchCycles = initialSearchResult ? Math.max(0, totalSearchUpdates - 1) : totalSearchUpdates;
+
+    if (internalSearchCycles >= maxCycles) {
         const finishUpdate = { id: idCounter.current++, type: 'thought' as const, content: `Maximum research cycles (${maxCycles}) reached. Forcing conclusion to synthesize report.` };
         history.push(finishUpdate);
         onUpdate(finishUpdate);
@@ -66,7 +61,8 @@ export const runIterativeDeepResearch = async (
     await new Promise(resolve => setTimeout(resolve, 1000));
     checkSignal();
     
-    const plan = await runDynamicConversationalPlanner(query, history, onPlannerUpdate, checkSignal, idCounter, mode, clarifiedContext, fileData);
+    // The planner needs the *total* number of searches to make decisions about minCycles.
+    const plan = await runDynamicConversationalPlanner(query, history, onPlannerUpdate, checkSignal, idCounter, mode, clarifiedContext, fileData, totalSearchUpdates);
     
     checkSignal();
 

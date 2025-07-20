@@ -59,12 +59,20 @@ export const useAppLogic = () => {
     const [isRegenerating, setIsRegenerating] = useState<boolean>(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
     const [history, setHistory] = useState<HistoryItem[]>(() => historyService.getHistory());
+    const [currentHistoryId, setCurrentHistoryId] = useState<string | null>(null);
 
     const abortControllerRef = useRef<AbortController | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const addNotification = useNotification();
     const researchExecutionRef = useRef<boolean>(false);
     
+     useEffect(() => {
+        if (currentHistoryId && finalData && appState === 'complete') {
+            historyService.updateHistoryItem(currentHistoryId, finalData);
+            setHistory(historyService.getHistory());
+        }
+    }, [finalData, currentHistoryId, appState]);
+
     const startResearch = useCallback(async (context: string) => {
         if (!abortControllerRef.current || abortControllerRef.current.signal.aborted) {
             abortControllerRef.current = new AbortController();
@@ -80,7 +88,7 @@ export const useAppLogic = () => {
             setFinalData(resultData);
             setAppState('complete');
             
-            historyService.addHistoryItem({
+            const newHistoryId = historyService.addHistoryItem({
                 query,
                 mode,
                 selectedFile,
@@ -90,6 +98,7 @@ export const useAppLogic = () => {
                 initialSearchResult,
                 clarifiedContext: context,
             });
+            setCurrentHistoryId(newHistoryId);
             setHistory(historyService.getHistory());
 
         } catch (error: any) {
@@ -417,6 +426,7 @@ export const useAppLogic = () => {
         setIsVisualizerOpen(false);
         setIsRegenerating(false);
         setIsSettingsOpen(false);
+        setCurrentHistoryId(null);
     }
     
     const loadFromHistory = (id: string) => {
@@ -432,6 +442,7 @@ export const useAppLogic = () => {
                 setClarificationHistory(item.clarificationHistory);
                 setInitialSearchResult(item.initialSearchResult);
                 setClarifiedContext(item.clarifiedContext);
+                setCurrentHistoryId(item.id);
                 setAppState('complete');
             }, 50)
         }
