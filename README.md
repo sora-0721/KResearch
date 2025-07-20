@@ -15,10 +15,11 @@
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
-- [Configuration](#configuration)
 - [Usage](#usage)
+- [Configuration](#configuration)
 - [Contributing](#contributing)
 - [License](#license)
+- [Contact](#contact)
 - [Acknowledgements](#acknowledgements)
 
 ## About The Project
@@ -52,59 +53,63 @@ This section will guide you through setting up and running the KResearch applica
 
 You must have a Google Gemini API key to use this application.
 *   **Google Gemini API Key**: Obtain from [Google AI Studio](https://aistudio.google.com/app/apikey).
+*   **Node.js**: It's recommended to use a recent LTS version.
+*   A package manager like **npm** or **yarn**.
 
 ### Installation
 
-This project is a static web application but uses a local development server for better module handling and live reloading.
+1.  Clone the repo
+    ```sh
+    git clone https://github.com/KuekHaoYang/KResearch.git
+    cd KResearch
+    ```
+2.  Install NPM packages
+    ```sh
+    npm install
+    ```
+3.  Set up your environment variables as described in the [Configuration](#configuration) section.
 
-1. **Clone the repository:**
-   ```sh
-   git clone https://github.com/KuekHaoYang/KResearch
-   cd Kresearch
-   ```
-2. **Install dependencies:**
-   Make sure you have [Node.js](https://nodejs.org/) installed, then run:
-   ```sh
-   npm install
-   ```
-3. **Start the development server:**
-   ```sh
-   npm run dev
-   ```
-4. **Open in browser:**
-   Once the server is running, open your browser and navigate to the local address provided (e.g., `http://localhost:5173`, `http://localhost:3000`, etc., depending on your setup).
-
-## Configuration
-
-The application requires the Google Gemini API key to be available as an environment variable.
-
-Create a `.env` file in the root of the project (if your serving method supports it) or ensure the `API_KEY` is set in the environment where the application is hosted.
-
-```dotenv
-# .env file
-GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
-```
-
-The application code directly accesses this key via `process.env.API_KEY`. You must ensure your local server or deployment environment makes this variable accessible to the frontend code.
 
 ## Usage
 
-Once the application is running in your browser:
+Start the development server:
+```sh
+npm run dev
+```
+Then navigate to the local address provided in your terminal (e.g., `http://localhost:5173`) in your browser.
 
-1.  **Select a Research Mode**: Choose from 'Balanced', 'Deep Dive', 'Fast', or 'Ultra Fast' depending on the desired depth and speed.
+1.  **Select a Research Mode**: Choose from 'Balanced', 'Deep Dive', 'Fast', or 'Ultra Fast'.
 2.  **Enter Your Query**: Type your research topic or question into the main text area.
-3.  **Start Research**: Click the "Start Research" button or press `Enter` (without `Shift`).
+3.  **Start Research**: Click the "Start Research" button or press `Enter`.
 4.  **Monitor Progress**: Observe the research log as the AI agents work. You can stop the process at any time.
-5.  **Review Results**: Once complete, the final report, knowledge graph, and citations will be displayed. You can copy the report text to your clipboard.
-6.  **New Research**: Click "Start New Research" to clear the results and begin again.
+5.  **Review Results**: Once complete, the final report, knowledge graph, and citations will be displayed.
+
+## Configuration
+
+The application requires a Google Gemini API key to function. The key is accessed via `process.env.API_KEY`.
+
+For local development, create a `.env` file in the root of the project and add your key:
+```dotenv
+# .env file
+API_KEY="YOUR_GEMINI_API_KEY"
+```
+Alternatively, you can enter the API key directly in the application's **Settings** modal. This key will be stored securely in your browser's local storage.
 
 ## Contributing
 
-Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**. Please refer to the project's issue tracker for ways to contribute. If you have suggestions, please open an issue to discuss it first.
 
 ## License
 
-Distributed under the MIT License. See `LICENSE` for more information. 
+Distributed under the MIT License. See `LICENSE` for more information.
+
+## Contact
+
+Kuek Hao Yang - [@KuekHaoYang](https://github.com/KuekHaoYang)
+
+Project Link: [https://github.com/KuekHaoYang/KResearch](https://github.com/KuekHaoYang/KResearch)
+
+For issues, questions, or feature requests, please use the [GitHub Issues](https://github.com/KuekHaoYang/KResearch/issues) page.
 
 ## Acknowledgements
 *   Powered by the Google Gemini API.
