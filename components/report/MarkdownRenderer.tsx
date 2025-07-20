@@ -15,15 +15,19 @@ interface MarkdownRendererProps {
 const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ report }) => {
   useEffect(() => {
     if (report && window.mermaid) {
-      const timer = setTimeout(() => {
+      const timer = setTimeout(async () => {
         try {
           const mermaidElements = document.querySelectorAll('.mermaid');
           if (mermaidElements.length) {
             mermaidElements.forEach(el => el.removeAttribute('data-processed'));
-            window.mermaid.run({ nodes: mermaidElements });
+            // The mermaid.run() function can return a promise that rejects on parse error.
+            // Awaiting it inside a try/catch prevents an unhandled rejection.
+            await window.mermaid.run({ nodes: mermaidElements });
           }
         } catch(e) {
-          console.error("Error rendering mermaid graphs:", e);
+          // Now we catch the error properly. We can log it for debugging.
+          // This prevents the [object Object] from appearing if some global handler was picking it up.
+          console.error("Error rendering Mermaid graphs:", e);
         }
       }, 100);
       return () => clearTimeout(timer);

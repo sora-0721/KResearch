@@ -32,6 +32,7 @@ const AppContent: React.FC = () => {
       isSettingsOpen, setIsSettingsOpen,
       isVisualizerOpen, handleVisualizerFeedback,
       handleContinueResearch,
+      handleGenerateReportFromPause,
   } = useAppLogic();
 
   const [isLogVisible, setIsLogVisible] = useState<boolean>(true);
@@ -109,7 +110,12 @@ const AppContent: React.FC = () => {
         
         {appState === 'researching' && (<LiquidButton onClick={handleStopResearch} className="w-full bg-red-500/30 hover:bg-red-500/40 border-red-500/50">Stop Research</LiquidButton>)}
         
-        {appState === 'paused' && (<LiquidButton onClick={handleContinueResearch} className="w-full">Continue Research</LiquidButton>)}
+        {appState === 'paused' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 animate-fade-in">
+              <LiquidButton onClick={handleContinueResearch} className="w-full">Continue Research</LiquidButton>
+              <LiquidButton onClick={handleGenerateReportFromPause} className="w-full bg-transparent hover:bg-black/5 dark:hover:bg-white/5 text-gray-600 dark:text-gray-400 hover:shadow-none hover:-translate-y-0 active:translate-y-px">Generate Report</LiquidButton>
+          </div>
+        )}
 
         {(appState === 'researching' || appState === 'paused' || (appState === 'complete' && researchUpdates.length > 0)) && (
           <div className="animate-fade-in space-y-4">

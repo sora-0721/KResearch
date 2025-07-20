@@ -6,18 +6,38 @@ import { useNotification } from '../contextx/NotificationContext';
 import { executeSingleSearch } from '../services/search';
 
 const getCleanErrorMessage = (error: any): string => {
-    let message = 'An unknown error occurred.';
-    if (error instanceof Error) {
+    if (!error) return 'An unknown error occurred.';
+    if (typeof error === 'string') return error;
+
+    // Prioritize a 'message' or 'str' property, common in error-like objects (e.g., Mermaid)
+    if (error.message && typeof error.message === 'string') {
         try {
+            // Check for Gemini's nested error format
             const parsed = JSON.parse(error.message);
-            message = parsed?.error?.message || error.message;
+            return parsed?.error?.message || error.message;
         } catch (e) {
-            message = error.message;
+            return error.message;
         }
-    } else {
-        message = String(error);
     }
-    return message;
+
+    if (error.str && typeof error.str === 'string') {
+        return error.str;
+    }
+
+    if (error instanceof Error) {
+        return error.message;
+    }
+
+    // Fallback for other objects
+    if (typeof error === 'object' && error !== null) {
+        try {
+            return JSON.stringify(error, null, 2);
+        } catch {
+            return 'Received an un-stringifiable error object.';
+        }
+    }
+
+    return String(error);
 };
 
 
@@ -174,6 +194,49 @@ export const useAppLogic = () => {
         setAppState('researching');
     }
 
+    const handleGenerateReportFromPause = useCallback(async () => {
+        if (appState !== 'paused') return;
+    
+        const getCitationsFromHistory = (history: ResearchUpdate[]): Citation[] => {
+            const citationsMap = new Map<string, Citation>();
+            history.forEach(update => {
+                if (update.type === 'read' && Array.isArray(update.source)) {
+                    update.source.forEach(url => {
+                        if (typeof url === 'string' && !citationsMap.has(url)) {
+                            citationsMap.set(url, { url, title: url });
+                        }
+                    });
+                }
+            });
+            return Array.from(citationsMap.values());
+        };
+
+        setAppState('researching');
+        const startTime = Date.now();
+        try {
+            const citations = getCitationsFromHistory(researchUpdates);
+            const result = await synthesizeReport(query, researchUpdates, citations, mode, selectedFile);
+            
+            setFinalData({ 
+                ...result, 
+                citations,
+                researchTimeMs: Date.now() - startTime 
+            });
+
+            setAppState('complete');
+            addNotification({ type: 'success', title: 'Report Generated', message: 'Report generated from the research completed so far.' });
+        } catch (error: any) {
+            if (error instanceof AllKeysFailedError) {
+                 addNotification({ type: 'error', title: 'All API Keys Failed', message: 'Synthesis failed. Please check your keys in Settings.' });
+            } else {
+                console.error("Synthesis from paused state failed:", error);
+                const message = getCleanErrorMessage(error);
+                addNotification({ type: 'error', title: 'Synthesis Failed', message });
+            }
+            setAppState('paused');
+        }
+    }, [appState, researchUpdates, query, mode, selectedFile, addNotification]);
+
     const handleVisualizeReport = useCallback(async (reportMarkdown: string, forceRegenerate: boolean = false) => {
         if (isVisualizing) {
             setIsVisualizerOpen(true);
@@ -313,5 +376,6 @@ export const useAppLogic = () => {
         isSettingsOpen, setIsSettingsOpen,
         handleVisualizerFeedback,
         handleContinueResearch,
+        handleGenerateReportFromPause,
     };
 };
