@@ -15,10 +15,7 @@ const formatDuration = (ms: number) => {
 
     const padded = (num: number) => String(num).padStart(2, '0');
 
-    if (hours > 0) {
-        return `${padded(hours)}:${padded(minutes)}:${padded(seconds)}`;
-    }
-    return `${padded(minutes)}:${padded(seconds)}`;
+    return `${padded(hours)}:${padded(minutes)}:${padded(seconds)}`;
 }
 
 const ReportSummary: React.FC<ReportSummaryProps> = ({ researchTimeMs, citationCount, searchCycleCount }) => {
