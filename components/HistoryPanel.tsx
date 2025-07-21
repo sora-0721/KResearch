@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { HistoryItem } from '../types';
 import GlassCard from './GlassCard';
 import LiquidButton from './LiquidButton';
@@ -13,6 +13,12 @@ interface HistoryPanelProps {
 }
 
 const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, history, onLoad, onDelete, onClear }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredHistory = history.filter(item =>
+    item.query.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className={`fixed inset-0 z-50 transition-all duration-500 ease-in-out ${isOpen ? 'visible' : 'invisible'}`}>
       {/* Backdrop */}
@@ -29,16 +35,28 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, history, o
           ${isOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
       >
-        <header className="flex items-center justify-between p-6 shrink-0 border-b border-border-light dark:border-border-dark">
-          <h2 className="text-2xl font-bold">Research History</h2>
-          <button onClick={onClose} className="p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors" title="Close">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
+        <header className="flex flex-col gap-4 p-6 shrink-0 border-b border-border-light dark:border-border-dark">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold">Research History</h2>
+            <button onClick={onClose} className="p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors" title="Close">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+          <div className="relative">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search history..."
+              className="w-full pl-10 pr-4 py-2 rounded-2xl bg-white/40 dark:bg-black/20 border border-transparent focus:border-glow-light dark:focus:border-glow-dark focus:ring-1 focus:ring-glow-light/50 dark:focus:ring-glow-dark/50 focus:outline-none transition-all duration-300"
+            />
+            <svg xmlns="http://www.w3.org/2000/svg" className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+          </div>
         </header>
 
         <div className="flex-grow p-6 overflow-y-auto space-y-4">
-          {history.length > 0 ? (
-            history.map(item => (
+          {filteredHistory.length > 0 ? (
+            filteredHistory.map(item => (
               <GlassCard key={item.id} className="p-4 flex flex-col gap-3 animate-fade-in">
                 <p className="font-semibold truncate text-gray-800 dark:text-gray-200" title={item.query}>{item.query}</p>
                 <div className="flex justify-between items-center">
@@ -54,8 +72,9 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, history, o
             ))
           ) : (
             <div className="text-center text-gray-500 dark:text-gray-400 mt-8">
-              <p>No history yet.</p>
-              <p className="text-sm">Completed research will appear here.</p>
+              <p>No {history.length > 0 ? 'matching' : ''} history found.</p>
+               {history.length > 0 && searchTerm && <p className="text-sm">Try a different search term.</p>}
+               {history.length === 0 && <p className="text-sm">Completed research will appear here.</p>}
             </div>
           )}
         </div>

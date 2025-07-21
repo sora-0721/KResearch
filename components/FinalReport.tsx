@@ -16,7 +16,7 @@ interface FinalReportProps {
 }
 
 const FinalReport: React.FC<FinalReportProps> = ({ data, onVisualize, isVisualizing, onRegenerate, isRegenerating, onRewrite }) => {
-  const { report, citations, researchTimeMs } = data;
+  const { report, citations, researchTimeMs, searchCycles } = data;
   
   return (
     <div className="flex gap-8">
@@ -32,7 +32,11 @@ const FinalReport: React.FC<FinalReportProps> = ({ data, onVisualize, isVisualiz
         
         <MarkdownRenderer report={report} />
 
-        <ReportSummary researchTimeMs={researchTimeMs} citationCount={citations.length} />
+        <ReportSummary 
+          researchTimeMs={researchTimeMs} 
+          citationCount={citations.length} 
+          searchCycleCount={searchCycles}
+        />
 
         <ReportCitations citations={citations} />
       </div>

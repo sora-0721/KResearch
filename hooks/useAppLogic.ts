@@ -86,6 +86,7 @@ export const useAppLogic = () => {
             
             const resultData = { ...result, researchTimeMs: Date.now() - startTime };
             setFinalData(resultData);
+            setResearchUpdates(resultData.researchUpdates); // Set final, definitive history
             setAppState('complete');
             
             const newHistoryId = historyService.addHistoryItem({
@@ -93,7 +94,6 @@ export const useAppLogic = () => {
                 mode,
                 selectedFile,
                 finalData: resultData,
-                researchUpdates,
                 clarificationHistory,
                 initialSearchResult,
                 clarifiedContext: context,
@@ -108,7 +108,9 @@ export const useAppLogic = () => {
                 return;
             }
 
-            const commonErrorData = { citations: [], researchTimeMs: Date.now() - startTime };
+            const searchCycles = researchUpdates.filter(u => u.type === 'search').length > 0 ? researchUpdates.filter(u => u.type === 'search').length - 1 : 0;
+            const commonErrorData = { citations: [], researchTimeMs: Date.now() - startTime, researchUpdates, searchCycles };
+
             if (error.name === 'AbortError') {
                 addNotification({ type: 'info', title: 'Research Stopped', message: 'The research process was cancelled by the user.'});
                 setFinalData({ report: "The research process was cancelled.", ...commonErrorData });
@@ -120,7 +122,7 @@ export const useAppLogic = () => {
             }
             setAppState('complete');
         }
-    }, [query, mode, selectedFile, addNotification, initialSearchResult, researchUpdates, clarificationHistory]);
+    }, [query, mode, selectedFile, addNotification, initialSearchResult, clarificationHistory]);
 
     const handleClarificationResponse = useCallback(async (history: ClarificationTurn[], searchResult: { text: string; citations: Citation[] } | null) => {
       setClarificationLoading(true);
@@ -170,7 +172,7 @@ export const useAppLogic = () => {
         }
 
         setAppState('researching');
-        setResearchUpdates([]);
+        setResearchUpdates([]); // Clear previous logs for a new run
 
         let searchResultForClarification: { text: string; citations: Citation[] } | null = null;
         try {
@@ -183,7 +185,8 @@ export const useAppLogic = () => {
                 return;
             }
 
-            setResearchUpdates(prev => [...prev, { id: prev.length, type: 'search', content: queriesToSearch }]);
+            const initialSearchUpdate = { id: 0, type: 'search' as const, content: queriesToSearch };
+            setResearchUpdates([initialSearchUpdate]);
             
             const searchPromises = queriesToSearch.map(q => executeSingleSearch(q, mode));
             const searchResults = await Promise.all(searchPromises);
@@ -191,19 +194,18 @@ export const useAppLogic = () => {
             const allSummaries: string[] = [];
             const allCitations: Citation[] = [];
 
-            // Collect all summaries and citations from the initial search results.
             searchResults.forEach(result => {
                 allSummaries.push(result.text);
                 allCitations.push(...result.citations);
             });
 
-            // Create a single "read" update for all initial search results to match the format of subsequent reads.
-            setResearchUpdates(prev => [...prev, { 
-                id: prev.length, 
-                type: 'read', 
-                content: allSummaries, // Now an array of strings
+            const initialReadUpdate = { 
+                id: 1, 
+                type: 'read' as const, 
+                content: allSummaries,
                 source: Array.from(new Set(allCitations.map(c => c.url))) 
-            }]);
+            };
+            setResearchUpdates([initialSearchUpdate, initialReadUpdate]);
             
             searchResultForClarification = {
                 text: allSummaries.join('\n\n'),
@@ -277,10 +279,15 @@ export const useAppLogic = () => {
             const citations = getCitationsFromHistory(researchUpdates);
             const result = await synthesizeReport(query, researchUpdates, citations, mode, selectedFile);
             
+            const searchUpdatesCount = researchUpdates.filter(u => u.type === 'search').length;
+            const searchCycles = initialSearchResult ? Math.max(0, searchUpdatesCount - 1) : searchUpdatesCount;
+            
             setFinalData({ 
                 ...result, 
                 citations,
-                researchTimeMs: Date.now() - startTime 
+                researchTimeMs: Date.now() - startTime,
+                researchUpdates: researchUpdates, // Persist the partial log
+                searchCycles: searchCycles
             });
 
             setAppState('complete');
@@ -295,7 +302,7 @@ export const useAppLogic = () => {
             }
             setAppState('paused');
         }
-    }, [appState, researchUpdates, query, mode, selectedFile, addNotification]);
+    }, [appState, researchUpdates, query, mode, selectedFile, addNotification, initialSearchResult]);
 
     const handleVisualizeReport = useCallback(async (reportMarkdown: string, forceRegenerate: boolean = false) => {
         if (isVisualizing) {
@@ -438,7 +445,7 @@ export const useAppLogic = () => {
                 setMode(item.mode);
                 setSelectedFile(item.selectedFile);
                 setFinalData(item.finalData);
-                setResearchUpdates(item.researchUpdates);
+                setResearchUpdates(item.finalData.researchUpdates);
                 setClarificationHistory(item.clarificationHistory);
                 setInitialSearchResult(item.initialSearchResult);
                 setClarifiedContext(item.clarifiedContext);

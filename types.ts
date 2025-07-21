@@ -52,6 +52,8 @@ export interface FinalResearchData {
   report: string;
   citations: Citation[];
   researchTimeMs: number;
+  searchCycles: number;
+  researchUpdates: ResearchUpdate[];
 }
 
 export interface FileData {
@@ -65,7 +67,6 @@ export interface HistoryItem {
   query: string;
   mode: ResearchMode;
   finalData: FinalResearchData;
-  researchUpdates: ResearchUpdate[];
   clarificationHistory: ClarificationTurn[];
   selectedFile: FileData | null;
   date: string; // ISO string

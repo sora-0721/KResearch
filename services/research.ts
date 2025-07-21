@@ -13,7 +13,7 @@ export const runIterativeDeepResearch = async (
   fileData: FileData | null,
   initialSearchResult: { text: string, citations: Citation[] } | null,
   existingHistory: ResearchUpdate[]
-): Promise<FinalResearchData> => {
+): Promise<Omit<FinalResearchData, 'researchTimeMs'>> => {
   console.log(`Starting/Continuing DYNAMIC CONVERSATIONAL research for: ${query}`);
 
   let history: ResearchUpdate[] = [...existingHistory];
@@ -33,8 +33,8 @@ export const runIterativeDeepResearch = async (
       }
   });
 
-
   const { maxCycles } = settingsService.getSettings().researchParams;
+  let internalSearchCycles = 0;
   
   const checkSignal = () => {
     if (signal.aborted) throw new DOMException('Research aborted by user.', 'AbortError');
@@ -49,7 +49,7 @@ export const runIterativeDeepResearch = async (
     checkSignal();
     const totalSearchUpdates = history.filter(h => h.type === 'search').length;
     // The initial search happens before this loop. It shouldn't count towards the max cycle limit.
-    const internalSearchCycles = initialSearchResult ? Math.max(0, totalSearchUpdates - 1) : totalSearchUpdates;
+    internalSearchCycles = initialSearchResult ? Math.max(0, totalSearchUpdates - 1) : totalSearchUpdates;
 
     if (internalSearchCycles >= maxCycles) {
         const finishUpdate = { id: idCounter.current++, type: 'thought' as const, content: `Maximum research cycles (${maxCycles}) reached. Forcing conclusion to synthesize report.` };
@@ -110,5 +110,10 @@ export const runIterativeDeepResearch = async (
   const finalReportData = await synthesizeReport(query, history, allCitations, mode, fileData);
   const uniqueCitations = Array.from(new Map(allCitations.map(c => [c.url, c])).values());
 
-  return { ...finalReportData, citations: uniqueCitations, researchTimeMs: 0 };
+  return { 
+    ...finalReportData, 
+    citations: uniqueCitations,
+    researchUpdates: history,
+    searchCycles: internalSearchCycles
+  };
 };

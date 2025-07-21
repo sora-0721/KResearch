@@ -8,7 +8,7 @@ export const synthesizeReport = async (
     citations: Citation[],
     mode: ResearchMode,
     fileData: FileData | null
-): Promise<Omit<FinalResearchData, 'researchTimeMs'>> => {
+): Promise<Omit<FinalResearchData, 'researchTimeMs' | 'searchCycles' | 'researchUpdates' | 'citations'>> => {
     const learnings = history.filter(h => h.type === 'read').map(h => h.content).join('\n\n---\n\n');
     const historyText = history.map(h => `${h.persona ? h.persona + ' ' : ''}${h.type}: ${Array.isArray(h.content) ? h.content.join(' | ') : h.content}`).join('\n');
 
@@ -76,9 +76,9 @@ Respond ONLY with the raw markdown content of the final report, starting with th
     const reportText = reportResponse.text;
     
     if (!reportText) {
-        return { report: "Failed to generate an initial report. The response from the AI was empty.", citations: [] };
+        return { report: "Failed to generate an initial report. The response from the AI was empty." };
     }
-    return { report: reportText.trim(), citations: [] };
+    return { report: reportText.trim() };
 };
 
 export const rewriteReport = async (
