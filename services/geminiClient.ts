@@ -38,17 +38,32 @@ const getCleanErrorMessage = (error: any): string => {
     return String(error);
 };
 
+const sanitizeForLogging = (obj: any, truncateLength: number = 500) => {
+    if (!obj) return obj;
+    try {
+        // Deep clone and sanitize
+        return JSON.parse(JSON.stringify(obj, (key, value) => {
+            if (typeof value === 'string' && value.length > truncateLength) {
+                return value.substring(0, truncateLength) + '...[TRUNCATED]';
+            }
+            return value;
+        }));
+    } catch (e) {
+        return { error: "Failed to sanitize for logging" };
+    }
+};
+
 // The core executor with retry logic
 async function executeWithRetry<T>(
     apiCall: (client: GoogleGenAI) => Promise<T>,
-    operationName: string
+    operationName: string,
+    params: any
 ): Promise<T> {
     const keys = apiKeyService.getApiKeys();
     if (keys.length === 0) {
         throw new Error("No API keys provided. Please add at least one key in the application settings.");
     }
 
-    // Use the number of keys as the maximum number of attempts
     const maxAttempts = keys.length;
     let lastError: any = null;
 
@@ -57,20 +72,28 @@ async function executeWithRetry<T>(
         if (!key) {
             continue;
         }
+        
+        console.log(`[API Request] Operation: ${operationName}, Model: ${params.model}, Attempt: ${attempt}/${maxAttempts}, Key ending: ...${key.slice(-4)}`);
+        console.log(`[API Request] Parameters:`, sanitizeForLogging(params, 4000));
 
         try {
             const client = new GoogleGenAI({ apiKey: key });
             const result = await apiCall(client);
+
+            console.log(`[API Success] Operation: ${operationName}`);
+            console.log(`[API Response]:`, sanitizeForLogging(result));
+            
             return result;
         } catch (error) {
-            console.warn(`[Attempt ${attempt}/${maxAttempts}] API call for '${operationName}' with key ending in ...${key.slice(-4)} failed. Trying next key.`);
+            console.warn(`[API Call Failed: Attempt ${attempt}/${maxAttempts}] Operation: '${operationName}' with key ending in ...${key.slice(-4)}. Error: ${getCleanErrorMessage(error)}`);
             lastError = error;
         }
     }
 
     // All keys have failed
     const finalErrorMessage = getCleanErrorMessage(lastError);
-    console.error(`All ${maxAttempts} API keys failed for operation '${operationName}'. Last error:`, lastError);
+    console.error(`[API Error: All Keys Failed] Operation: '${operationName}'. Last error: ${finalErrorMessage}`);
+    console.error(`[API Error] Failed Parameters:`, sanitizeForLogging(params, 4000));
     throw new AllKeysFailedError(`All API keys failed. Last error: ${finalErrorMessage}`);
 }
 
@@ -79,13 +102,14 @@ async function executeWithRetry<T>(
 export const ai = {
     models: {
         generateContent: (params: any): Promise<GenerateContentResponse> => {
-            return executeWithRetry(client => client.models.generateContent(params), 'generateContent');
+            return executeWithRetry(client => client.models.generateContent(params), 'generateContent', params);
         },
         generateContentStream: (params: any): Promise<any> => {
-            return executeWithRetry(client => client.models.generateContentStream(params), 'generateContentStream');
+            // Logging will only show the initial object for streams, not each chunk.
+            return executeWithRetry(client => client.models.generateContentStream(params), 'generateContentStream', params);
         },
         generateImages: (params: any): Promise<any> => {
-            return executeWithRetry(client => client.models.generateImages(params), 'generateImages');
+            return executeWithRetry(client => client.models.generateImages(params), 'generateImages', params);
         },
     },
     // The chat API is not used in the app. This is a safe fallback that mimics the original (flawed) implementation.
