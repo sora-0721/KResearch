@@ -84,6 +84,22 @@ Then navigate to the local address provided in your terminal (e.g., `http://loca
 4.  **Monitor Progress**: Observe the research log as the AI agents work. You can stop the process at any time.
 5.  **Review Results**: Once complete, the final report, knowledge graph, and citations will be displayed.
 
+## Docker
+
+To build and run the application using Docker, use the following commands:
+
+Build the Docker image:
+```sh
+docker-compose build
+```
+
+Start the application:
+```sh
+docker-compose up
+```
+
+The application will be available at `http://localhost:8080`.
+
 ## Configuration
 
 The application requires a Google Gemini API key to function. The key is accessed via `process.env.API_KEY`.
