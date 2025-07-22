@@ -22,6 +22,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentM
   const [isActive, setIsActive] = useState(false);
   const [settings, setSettings] = useState(() => settingsService.getSettings());
   const [apiKey, setApiKey] = useState(() => apiKeyService.getApiKeysString());
+  const [apiBaseUrl, setApiBaseUrl] = useState(() => apiKeyService.getApiBaseUrl());
   
   const addNotification = useNotification();
   
@@ -30,6 +31,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentM
       setIsRendered(true);
       setSettings(settingsService.getSettings()); // Re-fetch on open
       setApiKey(apiKeyService.getApiKeysString());
+      setApiBaseUrl(apiKeyService.getApiBaseUrl());
       const timer = setTimeout(() => setIsActive(true), 10);
       return () => clearTimeout(timer);
     } else {
@@ -45,14 +47,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentM
         settingsService.save(settings);
         if (!apiKeyService.isEnvKey()) {
             apiKeyService.setApiKeys(apiKey);
+            apiKeyService.setApiBaseUrl(apiBaseUrl);
         }
     }, 500); // Debounce for 500ms
 
     return () => clearTimeout(handler);
-  }, [settings, apiKey, isActive]);
+  }, [settings, apiKey, apiBaseUrl, isActive]);
 
   const handleRestoreDefaults = () => {
     setSettings(DEFAULT_SETTINGS);
+    // Let the useEffect handle saving the updated state
+    setApiBaseUrl('https://generativelanguage.googleapis.com');
     addNotification({type: 'info', title: 'Defaults Loaded', message: 'Settings have been reset to default and saved.'});
   };
 
@@ -87,7 +92,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentM
           </nav>
 
           <main className="p-6 flex-grow overflow-y-auto h-[480px]">
-            {activeTab === 'api' && <ApiSettings apiKey={apiKey} setApiKey={setApiKey} />}
+            {activeTab === 'api' && <ApiSettings apiKey={apiKey} setApiKey={setApiKey} apiBaseUrl={apiBaseUrl} setApiBaseUrl={setApiBaseUrl} />}
             {activeTab === 'models' && <ModelSettings settings={settings} setSettings={setSettings} currentMode={currentMode} />}
             {activeTab === 'params' && <ParamSettings settings={settings} setSettings={setSettings} />}
           </main>

@@ -1,47 +1,31 @@
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { apiKeyService, AllKeysFailedError } from "./apiKeyService";
 
-// This is a utility function that should probably be somewhere generic,
-// but for this change, having it here is fine to avoid creating a new file.
+// Helper to get a clean error message from various error types
 const getCleanErrorMessage = (error: any): string => {
     if (!error) return 'An unknown error occurred.';
     if (typeof error === 'string') return error;
 
-    // Prioritize a 'message' or 'str' property, common in error-like objects (e.g., Mermaid)
     if (error.message && typeof error.message === 'string') {
         try {
-            // Check for Gemini's nested error format
             const parsed = JSON.parse(error.message);
             return parsed?.error?.message || error.message;
         } catch (e) {
             return error.message;
         }
     }
-
-    if (error.str && typeof error.str === 'string') {
-        return error.str;
-    }
-
-    if (error instanceof Error) {
-        return error.message;
-    }
-
-    // Fallback for other objects
+    if (error.str && typeof error.str === 'string') return error.str;
+    if (error instanceof Error) return error.message;
     if (typeof error === 'object' && error !== null) {
-        try {
-            return JSON.stringify(error, null, 2);
-        } catch {
-            return 'Received an un-stringifiable error object.';
-        }
+        try { return JSON.stringify(error, null, 2); }
+        catch { return 'Received an un-stringifiable error object.'; }
     }
-
     return String(error);
 };
 
+// Helper to sanitize potentially large objects for logging
 const sanitizeForLogging = (obj: any, truncateLength: number = 500) => {
     if (!obj) return obj;
     try {
-        // Deep clone and sanitize
         return JSON.parse(JSON.stringify(obj, (key, value) => {
             if (typeof value === 'string' && value.length > truncateLength) {
                 return value.substring(0, truncateLength) + '...[TRUNCATED]';
@@ -53,12 +37,47 @@ const sanitizeForLogging = (obj: any, truncateLength: number = 500) => {
     }
 };
 
-// The core executor with retry logic
-async function executeWithRetry<T>(
-    apiCall: (client: GoogleGenAI) => Promise<T>,
-    operationName: string,
-    params: any
-): Promise<T> {
+// Formats the flexible `contents` parameter from the SDK style to the strict REST API style
+function formatContentsForRest(contents: any): any[] {
+    if (typeof contents === 'string') {
+        return [{ role: 'user', parts: [{ text: contents }] }];
+    }
+    if (Array.isArray(contents)) {
+        return contents; // Assumes it's already a Content[] array
+    }
+    if (typeof contents === 'object' && contents !== null && contents.parts) {
+        // A single Content object, wrap it in an array and default the role
+        return [{ role: contents.role || 'user', parts: contents.parts }];
+    }
+    console.warn("Unknown contents format, passing through:", contents);
+    return [contents];
+}
+
+// Maps the SDK-style `params` object to a REST API-compatible request body
+function mapToRestBody(params: any): object {
+    const body: any = {};
+    if (params.contents) {
+        body.contents = formatContentsForRest(params.contents);
+    }
+    if (params.config) {
+        const { systemInstruction, tools, ...generationConfig } = params.config;
+        if (Object.keys(generationConfig).length > 0) {
+            body.generationConfig = generationConfig;
+        }
+        if (systemInstruction) {
+            body.systemInstruction = { parts: [{ text: systemInstruction }] };
+        }
+        if (tools) body.tools = tools;
+    }
+    return body;
+}
+
+const operationToRestMethod: Record<string, string> = {
+    'generateContent': 'generateContent',
+};
+
+// The core executor with retry logic, now using `fetch` instead of the SDK
+async function executeWithRetry(operationName: string, params: any): Promise<any> {
     const keys = apiKeyService.getApiKeys();
     if (keys.length === 0) {
         throw new Error("No API keys provided. Please add at least one key in the application settings.");
@@ -66,58 +85,74 @@ async function executeWithRetry<T>(
 
     const maxAttempts = keys.length;
     let lastError: any = null;
+    const baseUrl = apiKeyService.getApiBaseUrl();
+    const modelName = params.model;
+    const restMethod = operationToRestMethod[operationName];
+
+    if (!modelName || !restMethod) {
+        throw new Error(`Invalid model or operation for API call: ${modelName}, ${operationName}`);
+    }
+
+    const url = `${baseUrl}/v1beta/models/${modelName}:${restMethod}`;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         const key = apiKeyService.getNextApiKey();
-        if (!key) {
-            continue;
-        }
-        
-        console.log(`[API Request] Operation: ${operationName}, Model: ${params.model}, Attempt: ${attempt}/${maxAttempts}, Key ending: ...${key.slice(-4)}`);
+        if (!key) continue;
+
+        console.log(`[API Request] URL: ${url}, Attempt: ${attempt}/${maxAttempts}, Key: ...${key.slice(-4)}`);
         console.log(`[API Request] Parameters:`, sanitizeForLogging(params, 4000));
 
         try {
-            const client = new GoogleGenAI({ apiKey: key });
-            const result = await apiCall(client);
+            const body = mapToRestBody(params);
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+                body: JSON.stringify(body)
+            });
+
+            const responseText = await response.text();
+            if (!response.ok) {
+                try {
+                    const errorData = JSON.parse(responseText);
+                    throw new Error(errorData?.error?.message || `API Error: ${response.status}`);
+                } catch {
+                     throw new Error(`API Error: ${response.status} - ${responseText}`);
+                }
+            }
+            
+            const result = JSON.parse(responseText);
+
+            // Re-shape the REST response to mimic the SDK's GenerateContentResponse object
+            // This ensures compatibility with existing code that uses `.text` or `.candidates`
+            const sdkLikeResponse = {
+                ...result,
+                text: result?.candidates?.[0]?.content?.parts?.[0]?.text ?? '',
+            };
 
             console.log(`[API Success] Operation: ${operationName}`);
-            console.log(`[API Response]:`, sanitizeForLogging(result));
-            
-            return result;
+            console.log(`[API Response]:`, sanitizeForLogging(sdkLikeResponse));
+            return sdkLikeResponse;
+
         } catch (error) {
-            console.warn(`[API Call Failed: Attempt ${attempt}/${maxAttempts}] Operation: '${operationName}' with key ending in ...${key.slice(-4)}. Error: ${getCleanErrorMessage(error)}`);
+            const errorMessage = getCleanErrorMessage(error);
+            console.warn(`[API Call Failed: Attempt ${attempt}/${maxAttempts}] Operation: '${operationName}' with key ...${key.slice(-4)}. Error: ${errorMessage}`);
             lastError = error;
         }
     }
 
-    // All keys have failed
     const finalErrorMessage = getCleanErrorMessage(lastError);
     console.error(`[API Error: All Keys Failed] Operation: '${operationName}'. Last error: ${finalErrorMessage}`);
     console.error(`[API Error] Failed Parameters:`, sanitizeForLogging(params, 4000));
     throw new AllKeysFailedError(`All API keys failed. Last error: ${finalErrorMessage}`);
 }
 
-// The new 'ai' object that will replace the old one.
-// It exposes methods that wrap the actual API calls with our retry logic.
+// A simplified `ai` object that uses our fetch-based retry logic
 export const ai = {
     models: {
-        generateContent: (params: any): Promise<GenerateContentResponse> => {
-            return executeWithRetry(client => client.models.generateContent(params), 'generateContent', params);
+        generateContent: (params: any): Promise<any> => {
+            return executeWithRetry('generateContent', params);
         },
-        generateContentStream: (params: any): Promise<any> => {
-            // Logging will only show the initial object for streams, not each chunk.
-            return executeWithRetry(client => client.models.generateContentStream(params), 'generateContentStream', params);
-        },
-        generateImages: (params: any): Promise<any> => {
-            return executeWithRetry(client => client.models.generateImages(params), 'generateImages', params);
-        },
+        // Other methods like generateContentStream, generateImages, and chats are not used
+        // by the app and are omitted to avoid implementing their fetch-based logic.
     },
-    // The chat API is not used in the app. This is a safe fallback that mimics the original (flawed) implementation.
-    get chats() {
-        const key = apiKeyService.getNextApiKey();
-        if (!key) {
-             throw new Error("Cannot create chat: No API key available.");
-        }
-        return new GoogleGenAI({ apiKey: key }).chats;
-    }
 };

@@ -2,15 +2,15 @@
 
 > An advanced AI-powered deep research application that synthesizes information from numerous sources to generate comprehensive, well-documented reports on complex topics.
 
-<!-- Badges (Placeholders) -->
+<!-- Badges -->
 ![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)
 ![React](https://img.shields.io/badge/React-19-blue?style=flat-square&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?style=flat-square&logo=typescript)
 ![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-3.x-38B2AC?style=flat-square&logo=tailwind-css)
 
 ## Table of Contents
+
 - [About The Project](#about-the-project)
-  - [Key Features](#key-features)
   - [Built With](#built-with)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
@@ -26,8 +26,7 @@
 
 KResearch is a sophisticated research assistant designed to tackle complex topics by leveraging a multi-agent AI system. It automates the process of in-depth research by planning, executing, and synthesizing information from the web. The final output is a comprehensive, well-structured report complete with source citations and a visual knowledge graph, making it an invaluable tool for students, analysts, and anyone needing to quickly develop a deep understanding of a subject.
 
-### Key Features
-
+This project's key features include:
 *   **Conversational AI Agents**: Utilizes 'Alpha' (Strategist) and 'Beta' (Tactician) agents who collaborate to create an optimal research plan.
 *   **Iterative Research Cycles**: Performs multiple cycles of planning, searching, and reading to gather comprehensive insights.
 *   **Real-time Progress Tracking**: Visualizes the AI's entire thought process in a detailed, step-by-step timeline.
@@ -69,6 +68,15 @@ You must have a Google Gemini API key to use this application.
     ```
 3.  Set up your environment variables as described in the [Configuration](#configuration) section.
 
+## Configuration
+
+The application requires a Google Gemini API key to function.
+
+For local development, the application will look for a `.env` file in the root of the project. Create one and add your key:
+```dotenv
+API_KEY="YOUR_GEMINI_API_KEY"
+```
+Alternatively, you can enter the API key directly in the application's **Settings** modal. This key will be stored securely in your browser's local storage for subsequent sessions.
 
 ## Usage
 
@@ -128,5 +136,6 @@ Project Link: [https://github.com/KuekHaoYang/KResearch](https://github.com/Kuek
 For issues, questions, or feature requests, please use the [GitHub Issues](https://github.com/KuekHaoYang/KResearch/issues) page.
 
 ## Acknowledgements
+
 *   Powered by the Google Gemini API.
 *   UI inspired by modern glassmorphism design trends.

@@ -68,10 +68,11 @@ class SettingsService {
 
     const allModelNames = new Set<string>();
     let lastError: any = null;
+    const baseUrl = apiKeyService.getApiBaseUrl();
 
     for (const key of apiKeys) {
         try {
-            const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=50', {
+            const response = await fetch(`${baseUrl}/v1beta/models?pageSize=50`, {
                 headers: { 'x-goog-api-key': key }
             });
 

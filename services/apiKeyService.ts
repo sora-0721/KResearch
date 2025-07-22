@@ -5,10 +5,16 @@ export class AllKeysFailedError extends Error {
     }
 }
 
+const API_KEYS_STORAGE_KEY = 'gemini_api_keys';
+const API_BASE_URL_STORAGE_KEY = 'gemini_api_base_url';
+const DEFAULT_API_BASE_URL = 'https://generativelanguage.googleapis.com';
+
+
 class ApiKeyService {
     private userApiKeys: string[] = [];
     private readonly hasEnvKey: boolean;
     private currentKeyIndex = -1;
+    private apiBaseUrl: string;
 
     constructor() {
         const envKey = process.env.API_KEY;
@@ -18,12 +24,20 @@ class ApiKeyService {
             this.userApiKeys = this.parseKeys(envKey);
         } else {
             try {
-                const storedKeys = localStorage.getItem('gemini_api_keys');
+                const storedKeys = localStorage.getItem(API_KEYS_STORAGE_KEY);
                 this.userApiKeys = this.parseKeys(storedKeys || '');
             } catch (e) {
                 console.warn("Could not access localStorage. API keys will not be persisted.");
                 this.userApiKeys = [];
             }
+        }
+
+        try {
+            const storedBaseUrl = localStorage.getItem(API_BASE_URL_STORAGE_KEY);
+            this.apiBaseUrl = storedBaseUrl || DEFAULT_API_BASE_URL;
+        } catch (e) {
+            console.warn("Could not access localStorage. API base URL will not be persisted.");
+            this.apiBaseUrl = DEFAULT_API_BASE_URL;
         }
     }
     
@@ -51,6 +65,10 @@ class ApiKeyService {
         return this.userApiKeys.join('\n');
     }
 
+    public getApiBaseUrl(): string {
+        return this.apiBaseUrl;
+    }
+
     public getNextApiKey(): string | undefined {
         const keys = this.getApiKeys();
         if (keys.length === 0) {
@@ -65,13 +83,24 @@ class ApiKeyService {
             this.userApiKeys = this.parseKeys(keysString);
             try {
                 if (this.userApiKeys.length > 0) {
-                    localStorage.setItem('gemini_api_keys', keysString);
+                    localStorage.setItem(API_KEYS_STORAGE_KEY, keysString);
                 } else {
-                    localStorage.removeItem('gemini_api_keys');
+                    localStorage.removeItem(API_KEYS_STORAGE_KEY);
                 }
             } catch (e) {
                  console.warn("Could not access localStorage. API keys will not be persisted.");
             }
+        }
+    }
+
+    public setApiBaseUrl(url: string): void {
+        const newUrl = url.trim() || DEFAULT_API_BASE_URL;
+        this.apiBaseUrl = newUrl;
+        try {
+            if (this.isEnvKey()) return; // Do not save if env key is present
+            localStorage.setItem(API_BASE_URL_STORAGE_KEY, newUrl);
+        } catch (e) {
+            console.warn("Could not access localStorage. API base URL will not be persisted.");
         }
     }
 }
