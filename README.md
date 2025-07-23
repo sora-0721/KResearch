@@ -16,6 +16,7 @@
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
 - [Usage](#usage)
+- [Docker](#docker)
 - [Configuration](#configuration)
 - [Contributing](#contributing)
 - [License](#license)
@@ -68,16 +69,6 @@ You must have a Google Gemini API key to use this application.
     ```
 3.  Set up your environment variables as described in the [Configuration](#configuration) section.
 
-## Configuration
-
-The application requires a Google Gemini API key to function.
-
-For local development, the application will look for a `.env` file in the root of the project. Create one and add your key:
-```dotenv
-API_KEY="YOUR_GEMINI_API_KEY"
-```
-Alternatively, you can enter the API key directly in the application's **Settings** modal. This key will be stored securely in your browser's local storage for subsequent sessions.
-
 ## Usage
 
 Start the development server:
@@ -86,38 +77,48 @@ npm run dev
 ```
 Then navigate to the local address provided in your terminal (e.g., `http://localhost:5173`) in your browser.
 
-1.  **Select a Research Mode**: Choose from 'Balanced', 'Deep Dive', 'Fast', or 'Ultra Fast'.
-2.  **Enter Your Query**: Type your research topic or question into the main text area.
-3.  **Start Research**: Click the "Start Research" button or press `Enter`.
-4.  **Monitor Progress**: Observe the research log as the AI agents work. You can stop the process at any time.
-5.  **Review Results**: Once complete, the final report, knowledge graph, and citations will be displayed.
+1.  **Configure API Key**: If you haven't set up a `.env` file, enter your Google Gemini API key in the **Settings** modal.
+2.  **Select a Research Mode**: Choose from 'Balanced', 'Deep Dive', 'Fast', or 'Ultra Fast'.
+3.  **Enter Your Query**: Type your research topic or question into the main text area.
+4.  **Start Research**: Click the "Start Research" button or press `Enter`.
+5.  **Monitor Progress**: Observe the research log as the AI agents work. You can stop the process at any time.
+6.  **Review Results**: Once complete, the final report, knowledge graph, and citations will be displayed.
 
 ## Docker
 
-To build and run the application using Docker, use the following commands:
+The quickest way to run KResearch is by using the pre-built Docker image from [Docker Hub](https://hub.docker.com/r/kuekhaoyang/kresearch).
 
-Build the Docker image:
-```sh
-docker-compose build
-```
+1.  **Pull and run the container:**
+    Execute this command in your terminal to download and start the application.
 
-Start the application:
-```sh
-docker-compose up
-```
+    ```sh
+    docker run -p 8080:80 --name kresearch kuekhaoyang/kresearch:latest
+    ```
+    *   `-p 8080:80` maps your local port `8080` to the container's port `80`.
+    *   `--name kresearch` assigns the name `kresearch` to your container for easy management.
 
-The application will be available at `http://localhost:8080`.
+2.  **Access the application:**
+    Open your web browser and navigate to `http://localhost:8080`.
+
+3.  **Configure API Key:**
+    Once the application loads, click on the **Settings** icon and enter your Google Gemini API key. The key will be saved in your browser's local storage for future sessions.
 
 ## Configuration
 
-The application requires a Google Gemini API key to function. The key is accessed via `process.env.API_KEY`.
+The application requires a Google Gemini API key to function. You have two options for providing it:
 
-For local development, create a `.env` file in the root of the project and add your key:
-```dotenv
-# .env file
-API_KEY="YOUR_GEMINI_API_KEY"
-```
-Alternatively, you can enter the API key directly in the application's **Settings** modal. This key will be stored securely in your browser's local storage.
+### Option 1: In-app Settings (Recommended for Docker)
+Enter the API key directly in the application's **Settings** modal. The key is stored securely in your browser's local storage, so you only need to enter it once per browser. This is the required method when using the `docker run` command above.
+
+### Option 2: Environment File (For Local Development)
+For local development (`npm run dev`) or `docker-compose`, you can create a `.env` file in the root of the project. The application will automatically load the key from this file.
+
+1.  Create a file named `.env` in the project root.
+2.  Add your API key to the file:
+    ```dotenv
+    # .env
+    API_KEY="YOUR_GEMINI_API_KEY"
+    ```
 
 ## Contributing
 
