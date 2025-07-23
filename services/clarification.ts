@@ -89,7 +89,7 @@ Text to analyze: "${generatedText}"
     };
 
     const formattingResponse = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-lite-preview-06-17',
+        model: 'gemini-2.5-flash-lite',
         contents: [{ role: 'user', parts: [{ text: formattingPrompt }] }],
         config: {
             responseMimeType: "application/json",

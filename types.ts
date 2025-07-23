@@ -1,9 +1,11 @@
-export type ResearchUpdateType = 'thought' | 'search' | 'read';
+export type ResearchUpdateType = 'thought' | 'search' | 'read' | 'outline';
 export type AgentPersona = 'Alpha' | 'Beta';
 export type ResearchMode = 'Balanced' | 'DeepDive' | 'Fast' | 'UltraFast';
 export type AppState = 'idle' | 'clarifying' | 'researching' | 'paused' | 'complete';
-export type AgentRole = 'planner' | 'searcher' | 'synthesizer' | 'clarification' | 'visualizer';
+export type AgentRole = 'planner' | 'searcher' | 'synthesizer' | 'clarification' | 'visualizer' | 'outline';
 export type NotificationType = 'success' | 'error' | 'info' | 'warning';
+export type TranslationStyle = 'literal' | 'colloquial';
+
 
 export interface Notification {
   id: number;
@@ -48,8 +50,14 @@ export interface Citation {
   title: string;
 }
 
+export interface ReportVersion {
+  content: string;
+  version: number;
+}
+
 export interface FinalResearchData {
-  report: string;
+  reports: ReportVersion[];
+  activeReportIndex: number;
   citations: Citation[];
   researchTimeMs: number;
   searchCycles: number;
@@ -65,6 +73,7 @@ export interface FileData {
 export interface HistoryItem {
   id: string;
   query: string;
+  title?: string;
   mode: ResearchMode;
   finalData: FinalResearchData;
   clarificationHistory: ClarificationTurn[];

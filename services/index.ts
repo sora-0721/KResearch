@@ -5,3 +5,5 @@ export { settingsService } from './settingsService';
 export { synthesizeReport, rewriteReport } from './synthesis';
 export { AllKeysFailedError, apiKeyService } from './apiKeyService';
 export { historyService } from './historyService';
+export { generateOutline } from './outline';
+export { translateText } from './translation';

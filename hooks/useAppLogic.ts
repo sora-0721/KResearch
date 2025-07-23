@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { synthesizeReport, rewriteReport, clarifyQuery, runIterativeDeepResearch, generateVisualReport, regenerateVisualReportWithFeedback } from '../services';
-import { ResearchUpdate, FinalResearchData, ResearchMode, FileData, AppState, ClarificationTurn, Citation, HistoryItem } from '../types';
+import { synthesizeReport, rewriteReport, clarifyQuery, runIterativeDeepResearch, generateVisualReport, regenerateVisualReportWithFeedback, generateOutline } from '../services';
+import { ResearchUpdate, FinalResearchData, ResearchMode, FileData, AppState, ClarificationTurn, Citation, HistoryItem, TranslationStyle, ReportVersion } from '../types';
 import { AllKeysFailedError, apiKeyService, historyService } from '../services';
 import { useNotification } from '../contextx/NotificationContext';
 import { executeSingleSearch } from '../services/search';
+import { translateText } from '../services/translation';
 
 const getCleanErrorMessage = (error: any): string => {
     if (!error) return 'An unknown error occurred.';
@@ -40,6 +41,10 @@ const getCleanErrorMessage = (error: any): string => {
     return String(error);
 };
 
+const extractTitleFromReport = (reportContent: string): string | null => {
+    const match = reportContent.match(/^#\s+(.*)/);
+    return match ? match[1] : null;
+};
 
 export const useAppLogic = () => {
     const [query, setQuery] = useState<string>('');
@@ -57,9 +62,11 @@ export const useAppLogic = () => {
     const [visualizedReportHtml, setVisualizedReportHtml] = useState<string | null>(null);
     const [isVisualizerOpen, setIsVisualizerOpen] = useState<boolean>(false);
     const [isRegenerating, setIsRegenerating] = useState<boolean>(false);
+    const [isRewriting, setIsRewriting] = useState<boolean>(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
     const [history, setHistory] = useState<HistoryItem[]>(() => historyService.getHistory());
     const [currentHistoryId, setCurrentHistoryId] = useState<string | null>(null);
+    const [translationLoading, setTranslationLoading] = useState<boolean>(false);
 
     const abortControllerRef = useRef<AbortController | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -68,10 +75,12 @@ export const useAppLogic = () => {
     
      useEffect(() => {
         if (currentHistoryId && finalData && appState === 'complete') {
-            historyService.updateHistoryItem(currentHistoryId, finalData);
+            const currentReport = finalData.reports[finalData.activeReportIndex];
+            const title = currentReport ? extractTitleFromReport(currentReport.content) : query;
+            historyService.updateHistoryItem(currentHistoryId, { finalData, title: title || query });
             setHistory(historyService.getHistory());
         }
-    }, [finalData, currentHistoryId, appState]);
+    }, [finalData, currentHistoryId, appState, query]);
 
     const startResearch = useCallback(async (context: string) => {
         if (!abortControllerRef.current || abortControllerRef.current.signal.aborted) {
@@ -89,8 +98,11 @@ export const useAppLogic = () => {
             setResearchUpdates(resultData.researchUpdates); // Set final, definitive history
             setAppState('complete');
             
+            const reportTitle = extractTitleFromReport(resultData.reports[0]?.content || '') || query;
+            
             const newHistoryId = historyService.addHistoryItem({
                 query,
+                title: reportTitle,
                 mode,
                 selectedFile,
                 finalData: resultData,
@@ -109,16 +121,21 @@ export const useAppLogic = () => {
             }
 
             const searchCycles = researchUpdates.filter(u => u.type === 'search').length > 0 ? researchUpdates.filter(u => u.type === 'search').length - 1 : 0;
-            const commonErrorData = { citations: [], researchTimeMs: Date.now() - startTime, researchUpdates, searchCycles };
+            const errorReport: ReportVersion = { content: "The research process was cancelled.", version: 1 };
+            const commonErrorData = {
+                reports: [errorReport], activeReportIndex: 0, citations: [],
+                researchTimeMs: Date.now() - startTime, researchUpdates, searchCycles
+            };
 
             if (error.name === 'AbortError') {
                 addNotification({ type: 'info', title: 'Research Stopped', message: 'The research process was cancelled by the user.'});
-                setFinalData({ report: "The research process was cancelled.", ...commonErrorData });
+                setFinalData(commonErrorData);
             } else {
                 console.error("Research failed:", error);
                 const message = getCleanErrorMessage(error);
                 addNotification({ type: 'error', title: 'Research Failed', message });
-                setFinalData({ report: "An error occurred during the research process.", ...commonErrorData });
+                const errorReportContent = { ...errorReport, content: "An error occurred during the research process."};
+                setFinalData({ ...commonErrorData, reports: [errorReportContent] });
             }
             setAppState('complete');
         }
@@ -277,7 +294,9 @@ export const useAppLogic = () => {
         const startTime = Date.now();
         try {
             const citations = getCitationsFromHistory(researchUpdates);
-            const result = await synthesizeReport(query, researchUpdates, citations, mode, selectedFile);
+            addNotification({ type: 'info', title: 'Generating Outline', message: 'Creating a structure for the final report.' });
+            const reportOutline = await generateOutline(query, researchUpdates, mode, selectedFile);
+            const result = await synthesizeReport(query, researchUpdates, citations, mode, selectedFile, reportOutline);
             
             const searchUpdatesCount = researchUpdates.filter(u => u.type === 'search').length;
             const searchCycles = initialSearchResult ? Math.max(0, searchUpdatesCount - 1) : searchUpdatesCount;
@@ -338,10 +357,10 @@ export const useAppLogic = () => {
     }, [mode, addNotification, visualizedReportHtml, isVisualizing]);
 
     const handleVisualizerFeedback = useCallback(async (feedback: string, file: FileData | null) => {
-        if (!visualizedReportHtml || !finalData?.report) return;
+        if (!visualizedReportHtml || !finalData?.reports[finalData.activeReportIndex]) return;
         setIsVisualizing(true);
         try {
-            const html = await regenerateVisualReportWithFeedback(finalData.report, visualizedReportHtml, feedback, file, mode);
+            const html = await regenerateVisualReportWithFeedback(finalData.reports[finalData.activeReportIndex].content, visualizedReportHtml, feedback, file, mode);
             setVisualizedReportHtml(html);
         } catch (error) {
             console.error("Failed to update visual report with feedback:", error);
@@ -350,17 +369,21 @@ export const useAppLogic = () => {
         } finally {
             setIsVisualizing(false);
         }
-    }, [mode, finalData?.report, visualizedReportHtml]);
+    }, [mode, finalData, visualizedReportHtml]);
 
 
     const handleRegenerateReport = useCallback(async () => {
         if (!finalData) return;
         setIsRegenerating(true);
         try {
-            const regeneratedReportData = await synthesizeReport(query, researchUpdates, finalData.citations, mode, selectedFile);
+            addNotification({ type: 'info', title: 'Generating New Outline', message: 'Re-structuring report before regeneration.' });
+            const reportOutline = await generateOutline(query, researchUpdates, mode, selectedFile);
+            const regeneratedReportData = await synthesizeReport(query, researchUpdates, finalData.citations, mode, selectedFile, reportOutline);
             setFinalData(prev => {
                 if (!prev) return null;
-                return { ...prev, report: regeneratedReportData.report };
+                const newVersion: ReportVersion = { content: regeneratedReportData.reports[0].content, version: prev.reports.length + 1 };
+                const updatedReports = [...prev.reports, newVersion];
+                return { ...prev, reports: updatedReports, activeReportIndex: updatedReports.length - 1 };
             });
              addNotification({ type: 'success', title: 'Report Regenerated', message: 'A new version of the report has been generated.'});
         } catch(error) {
@@ -373,13 +396,16 @@ export const useAppLogic = () => {
     }, [finalData, query, researchUpdates, mode, selectedFile, addNotification]);
 
     const handleReportRewrite = useCallback(async (instruction: string, file: FileData | null) => {
-        if (!finalData?.report || isRegenerating) return;
-        setIsRegenerating(true);
+        if (!finalData?.reports[finalData.activeReportIndex] || isRegenerating || isRewriting) return;
+        setIsRewriting(true);
         try {
-            const rewrittenReport = await rewriteReport(finalData.report, instruction, mode, file);
+            const currentReport = finalData.reports[finalData.activeReportIndex].content;
+            const rewrittenReport = await rewriteReport(currentReport, instruction, mode, file);
             setFinalData(prev => {
                 if (!prev) return null;
-                return { ...prev, report: rewrittenReport };
+                const newVersion: ReportVersion = { content: rewrittenReport, version: prev.reports.length + 1 };
+                const updatedReports = [...prev.reports, newVersion];
+                return { ...prev, reports: updatedReports, activeReportIndex: updatedReports.length - 1 };
             });
             addNotification({ type: 'success', title: 'Report Updated', message: 'The report has been successfully rewritten.' });
         } catch (error) {
@@ -387,9 +413,9 @@ export const useAppLogic = () => {
             const message = getCleanErrorMessage(error);
             addNotification({ type: 'error', title: 'Rewrite Failed', message });
         } finally {
-            setIsRegenerating(false);
+            setIsRewriting(false);
         }
-    }, [finalData, isRegenerating, mode, addNotification]);
+    }, [finalData, isRegenerating, isRewriting, mode, addNotification]);
 
     const handleCloseVisualizer = () => setIsVisualizerOpen(false);
     
@@ -432,8 +458,10 @@ export const useAppLogic = () => {
         setIsVisualizing(false);
         setIsVisualizerOpen(false);
         setIsRegenerating(false);
+        setIsRewriting(false);
         setIsSettingsOpen(false);
         setCurrentHistoryId(null);
+        setTranslationLoading(false);
     }
     
     const loadFromHistory = (id: string) => {
@@ -466,18 +494,79 @@ export const useAppLogic = () => {
         setHistory([]);
         addNotification({type: 'info', title: 'History cleared', message: 'All items have been removed from your research history.'});
     };
+    
+    const handleUpdateHistoryTitle = (id: string, newTitle: string) => {
+        historyService.updateHistoryItemTitle(id, newTitle);
+        setHistory(historyService.getHistory());
+        if (id === currentHistoryId) {
+            setFinalData(prev => {
+                if (!prev) return null;
+                const newReports = [...prev.reports];
+                const activeReport = newReports[prev.activeReportIndex];
+                const oldTitle = extractTitleFromReport(activeReport.content) || '';
+                // Replace only the first H1 occurrence
+                newReports[prev.activeReportIndex] = { ...activeReport, content: activeReport.content.replace(`# ${oldTitle}`, `# ${newTitle}`) };
+                return { ...prev, reports: newReports };
+            });
+        }
+    };
 
+    const handleNavigateVersion = (direction: 'prev' | 'next') => {
+        setFinalData(prev => {
+            if (!prev) return null;
+            let newIndex = prev.activeReportIndex;
+            if (direction === 'next' && newIndex < prev.reports.length - 1) {
+                newIndex++;
+            } else if (direction === 'prev' && newIndex > 0) {
+                newIndex--;
+            }
+            return { ...prev, activeReportIndex: newIndex };
+        });
+    };
+    
+    const handleTranslateReport = useCallback(async (language: string, style: TranslationStyle) => {
+        if (!finalData?.reports[finalData.activeReportIndex] || translationLoading) return;
+
+        setTranslationLoading(true);
+        try {
+            const currentReportContent = finalData.reports[finalData.activeReportIndex].content;
+            const translatedContent = await translateText(currentReportContent, language, style, mode);
+            
+            if (!translatedContent.trim()) {
+                throw new Error("Translation resulted in empty content.");
+            }
+
+            setFinalData(prev => {
+                if (!prev) return null;
+                const newVersion: ReportVersion = { 
+                    content: translatedContent, 
+                    version: prev.reports.length + 1 
+                };
+                const updatedReports = [...prev.reports, newVersion];
+                return { ...prev, reports: updatedReports, activeReportIndex: updatedReports.length - 1 };
+            });
+            addNotification({ type: 'success', title: 'Translation Complete', message: `Report translated and saved as a new version.` });
+        } catch (error) {
+            console.error("Failed to translate report:", error);
+            const message = getCleanErrorMessage(error);
+            addNotification({ type: 'error', title: 'Translation Failed', message });
+        } finally {
+            setTranslationLoading(false);
+        }
+    }, [finalData, translationLoading, mode, addNotification]);
 
     return {
         query, setQuery, guidedQuery, setGuidedQuery, selectedFile, researchUpdates, finalData, mode, setMode, appState,
         clarificationHistory, clarificationLoading, fileInputRef, startClarificationProcess, 
         handleAnswerSubmit, handleStopResearch, handleFileChange, handleRemoveFile, handleReset,
         isVisualizing, visualizedReportHtml, isVisualizerOpen, handleVisualizeReport, handleCloseVisualizer, handleSkipClarification,
-        isRegenerating, handleRegenerateReport, handleReportRewrite,
+        isRegenerating, isRewriting, handleRegenerateReport, handleReportRewrite,
         isSettingsOpen, setIsSettingsOpen,
         handleVisualizerFeedback,
         handleContinueResearch,
         handleGenerateReportFromPause,
-        history, loadFromHistory, deleteHistoryItem, clearHistory
+        history, loadFromHistory, deleteHistoryItem, clearHistory, handleUpdateHistoryTitle,
+        handleNavigateVersion,
+        handleTranslateReport, translationLoading
     };
 };

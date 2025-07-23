@@ -6,31 +6,37 @@ const defaultModels: Record<AgentRole, Record<ResearchMode, string>> = {
         Balanced: 'gemini-2.5-pro',
         DeepDive: 'gemini-2.5-pro',
         Fast: 'gemini-2.5-flash',
-        UltraFast: 'gemini-2.5-flash-lite-preview-06-17',
+        UltraFast: 'gemini-2.5-flash-lite',
     },
     searcher: {
-        Balanced: 'gemini-2.5-flash-lite-preview-06-17',
+        Balanced: 'gemini-2.5-flash-lite',
         DeepDive: 'gemini-2.5-pro',
         Fast: 'gemini-2.5-flash',
-        UltraFast: 'gemini-2.5-flash-lite-preview-06-17',
+        UltraFast: 'gemini-2.5-flash-lite',
+    },
+    outline: {
+        Balanced: 'gemini-2.5-flash',
+        DeepDive: 'gemini-2.5-pro',
+        Fast: 'gemini-2.5-flash',
+        UltraFast: 'gemini-2.5-flash-lite',
     },
     synthesizer: {
         Balanced: 'gemini-2.5-flash',
         DeepDive: 'gemini-2.5-pro',
         Fast: 'gemini-2.5-flash',
-        UltraFast: 'gemini-2.5-flash-lite-preview-06-17',
+        UltraFast: 'gemini-2.5-flash-lite',
     },
     clarification: {
         Balanced: 'gemini-2.5-flash',
         DeepDive: 'gemini-2.5-pro',
         Fast: 'gemini-2.5-flash',
-        UltraFast: 'gemini-2.5-flash-lite-preview-06-17',
+        UltraFast: 'gemini-2.5-flash-lite',
     },
     visualizer: {
         Balanced: 'gemini-2.5-flash',
         DeepDive: 'gemini-2.5-pro',
         Fast: 'gemini-2.5-flash',
-        UltraFast: 'gemini-2.5-flash-lite-preview-06-17',
+        UltraFast: 'gemini-2.5-flash-lite',
     }
 };
 

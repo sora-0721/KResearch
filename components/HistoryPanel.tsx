@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { HistoryItem } from '../types';
 import GlassCard from './GlassCard';
 import LiquidButton from './LiquidButton';
@@ -8,15 +8,48 @@ interface HistoryPanelProps {
   onClose: () => void;
   history: HistoryItem[];
   onLoad: (id: string) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id:string) => void;
   onClear: () => void;
+  onUpdateTitle: (id: string, newTitle: string) => void;
 }
 
-const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, history, onLoad, onDelete, onClear }) => {
+const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, history, onLoad, onDelete, onClear, onUpdateTitle }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editingId && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editingId]);
+
+  const handleEditClick = (item: HistoryItem) => {
+    setEditingId(item.id);
+    setEditingTitle(item.title || item.query);
+  };
+
+  const handleTitleSave = () => {
+    if (editingId && editingTitle.trim()) {
+      onUpdateTitle(editingId, editingTitle.trim());
+    }
+    setEditingId(null);
+    setEditingTitle('');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleTitleSave();
+    } else if (e.key === 'Escape') {
+      setEditingId(null);
+      setEditingTitle('');
+    }
+  };
 
   const filteredHistory = history.filter(item =>
-    item.query.toLowerCase().includes(searchTerm.toLowerCase())
+    (item.title || item.query).toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -58,7 +91,29 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, history, o
           {filteredHistory.length > 0 ? (
             filteredHistory.map(item => (
               <GlassCard key={item.id} className="p-4 flex flex-col gap-3 animate-fade-in">
-                <p className="font-semibold truncate text-gray-800 dark:text-gray-200" title={item.query}>{item.query}</p>
+                <div className="flex items-start justify-between gap-2">
+                   {editingId === item.id ? (
+                      <input 
+                        ref={inputRef}
+                        type="text" 
+                        value={editingTitle}
+                        onChange={(e) => setEditingTitle(e.target.value)}
+                        onBlur={handleTitleSave}
+                        onKeyDown={handleKeyDown}
+                        className="w-full font-semibold text-gray-800 dark:text-gray-200 bg-transparent focus:outline-none border-b border-glow-light dark:border-glow-dark"
+                      />
+                   ) : (
+                      <p className="font-semibold truncate text-gray-800 dark:text-gray-200 flex-grow" title={item.title || item.query}>{item.title || item.query}</p>
+                   )}
+                   <div className="flex items-center gap-1 flex-shrink-0">
+                      <span className="text-xs font-mono text-gray-500 dark:text-gray-400 select-none">
+                        (v{item.finalData.reports.length})
+                      </span>
+                      <button onClick={() => handleEditClick(item)} className="p-2 rounded-full text-gray-500/80 hover:bg-black/10 dark:hover:bg-white/10" title="Edit Title">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" /></svg>
+                      </button>
+                   </div>
+                </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-500 dark:text-gray-400">{new Date(item.date).toLocaleString()}</span>
                   <div className="flex gap-2">

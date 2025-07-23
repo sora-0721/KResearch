@@ -23,8 +23,8 @@ class HistoryService {
             id: Date.now().toString(),
             date: new Date().toISOString(),
         };
-        // Avoid adding duplicates based on the initial query
-        const existingIndex = history.findIndex(item => item.query === newItem.query);
+        // Avoid adding duplicates based on the initial query if it's a new item
+        const existingIndex = history.findIndex(item => item.id === newItem.id || (item.query === newItem.query && item.title === newItem.query));
         if (existingIndex > -1) {
             history.splice(existingIndex, 1);
         }
@@ -34,11 +34,21 @@ class HistoryService {
         return newItem.id;
     }
 
-    public updateHistoryItem(id: string, updatedFinalData: FinalResearchData): void {
+    public updateHistoryItem(id: string, itemData: { finalData: FinalResearchData; title: string }): void {
         const history = this.getHistory();
         const itemIndex = history.findIndex(item => item.id === id);
         if (itemIndex > -1) {
-            history[itemIndex].finalData = updatedFinalData;
+            history[itemIndex].finalData = itemData.finalData;
+            history[itemIndex].title = itemData.title;
+            this.saveHistory(history);
+        }
+    }
+
+    public updateHistoryItemTitle(id: string, title: string): void {
+        const history = this.getHistory();
+        const itemIndex = history.findIndex(item => item.id === id);
+        if (itemIndex > -1) {
+            history[itemIndex].title = title;
             this.saveHistory(history);
         }
     }

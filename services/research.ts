@@ -3,6 +3,7 @@ import { executeSingleSearch } from './search';
 import { synthesizeReport } from './synthesis';
 import { settingsService } from './settingsService';
 import { ResearchUpdate, Citation, FinalResearchData, ResearchMode, FileData } from '../types';
+import { generateOutline } from './outline';
 
 export const runIterativeDeepResearch = async (
   query: string,
@@ -106,8 +107,15 @@ export const runIterativeDeepResearch = async (
         break;
     }
   }
-
-  const finalReportData = await synthesizeReport(query, history, allCitations, mode, fileData);
+  
+  checkSignal();
+  const outlineUpdate = { id: idCounter.current++, type: 'outline' as const, content: 'Generating report outline...' };
+  history.push(outlineUpdate);
+  onUpdate(outlineUpdate);
+  const reportOutline = await generateOutline(query, history, mode, fileData);
+  
+  checkSignal();
+  const finalReportData = await synthesizeReport(query, history, allCitations, mode, fileData, reportOutline);
   const uniqueCitations = Array.from(new Map(allCitations.map(c => [c.url, c])).values());
 
   return { 

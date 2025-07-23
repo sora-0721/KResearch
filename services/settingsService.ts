@@ -5,6 +5,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   modelOverrides: {
     planner: null,
     searcher: null,
+    outline: null,
     synthesizer: null,
     clarification: null,
     visualizer: null,

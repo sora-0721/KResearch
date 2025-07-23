@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import GlassCard from '../GlassCard';
 import Spinner from '../Spinner';
-import { FileData } from '../../types';
-import LiquidSlider from '../LiquidSlider';
+import { FileData, TranslationStyle } from '../../types';
 
 // --- Tool Icons ---
 const EmojiIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M15.182 15.182a4.5 4.5 0 0 1-6.364 0M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM9 9.75h.008v.008H9V9.75Zm6 0h.008v.008H15V9.75Z" /></svg>;
@@ -10,56 +9,63 @@ const PolishIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" fill=
 const ReadingLevelIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" /></svg>;
 const LengthIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v18M8 7.5h8m-8 9h8" /></svg>;
 const CustomIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>;
+const TranslateIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor" className="w-6 h-6"><path d="m476-80 182-480h84L924-80h-84l-43-122H603L560-80h-84ZM160-200l-56-56 202-202q-35-35-63.5-80T190-640h84q20 39 40 68t48 58q33-33 68.5-92.5T484-720H40v-80h280v-80h80v80h280v80H564q-21 72-63 148t-83 116l96 98-30 82-122-125-202 201Zm468-72h144l-72-204-72 204Z"/></svg>;
+
 
 // --- Popover Panels ---
-const SliderPanel: React.FC<{ title: string; options: string[]; onSelect: (value: string) => void; isRewriting: boolean; instructionPrefix: string; defaultOption: string; }> = ({ title, options, onSelect, isRewriting, instructionPrefix, defaultOption }) => {
-    const defaultIndex = options.indexOf(defaultOption);
-    const initialValue = defaultIndex !== -1 ? defaultIndex : Math.floor(options.length / 2);
 
-    const [value, setValue] = useState(initialValue);
-    const displayOption = options[options.length - 1 - value];
-
-    const handleInteractionEnd = () => {
-        if (isRewriting) return;
-        const selectedOption = options[options.length - 1 - value];
-        onSelect(`${instructionPrefix}: ${selectedOption}`);
-    };
-
+const ButtonSelectionPanel: React.FC<{ 
+    title: string; 
+    options: string[]; 
+    onSelect: (value: string) => void; 
+    isRewriting: boolean; 
+    instructionPrefix: string;
+}> = ({ title, options, onSelect, isRewriting, instructionPrefix }) => {
     return (
-        <div className="flex flex-col items-center gap-2 text-center p-2">
-            <h4 className="font-semibold">{title}</h4>
-            <div className="flex items-center gap-4 h-48">
-                <div className="w-8 flex justify-center items-center">
-                    <LiquidSlider
-                        min={0}
-                        max={options.length - 1}
-                        value={value}
-                        onChange={setValue}
-                        onInteractionEnd={handleInteractionEnd}
-                        disabled={isRewriting}
-                        height={144}
-                    />
-                </div>
-                <div className="flex flex-col justify-between h-40 text-xs text-gray-500 dark:text-gray-400 w-24 text-left">
-                    <span>{options[options.length - 1]}</span>
-                    <span>{options[0]}</span>
-                </div>
+        <div className="p-2 space-y-2 w-48">
+            <h4 className="font-semibold text-center mb-1">{title}</h4>
+            <div className="flex flex-col gap-1">
+                {options.map(opt => (
+                    <button 
+                        key={opt} 
+                        onClick={() => onSelect(`${instructionPrefix}: ${opt}`)} 
+                        disabled={isRewriting} 
+                        className="p-2 rounded-2xl text-sm text-center hover:bg-black/10 dark:hover:bg-white/10 disabled:opacity-50"
+                    >
+                        {opt}
+                    </button>
+                ))}
             </div>
-            <p className="text-xs h-4 font-medium -mt-4">{displayOption}</p>
         </div>
     );
 };
 
-const EmojiPanel: React.FC<{ onSelect: (value: string) => void; isRewriting: boolean }> = ({ onSelect, isRewriting }) => (
-    <div className="p-2 space-y-3">
-        <h4 className="font-semibold text-center">Add Emojis</h4>
-        <div className="grid grid-cols-2 gap-2">
-            {['Words', 'Sections', 'Lists', 'Remove'].map(opt => (
-                <button key={opt} onClick={() => onSelect(`Add emojis to ${opt.toLowerCase()}`)} disabled={isRewriting} className="p-2 rounded-2xl text-sm text-center hover:bg-black/10 dark:hover:bg-white/10 disabled:opacity-50">{opt}</button>
-            ))}
+const EmojiPanel: React.FC<{ onSelect: (value: string) => void; isRewriting: boolean }> = ({ onSelect, isRewriting }) => {
+    const options = [
+        { label: 'To Words', instruction: 'Add appropriate emojis to key words and phrases throughout the report.' },
+        { label: 'To Sections', instruction: 'Add a relevant emoji to each section heading.' },
+        { label: 'To Lists', instruction: 'Add relevant emojis to the beginning of each list item.' },
+        { label: 'Remove All', instruction: 'Remove all emojis from the report.' }
+    ];
+
+    return (
+        <div className="p-2 space-y-2 w-44">
+            <h4 className="font-semibold text-center mb-1">Add Emojis</h4>
+            <div className="flex flex-col gap-1">
+                {options.map(opt => (
+                    <button 
+                        key={opt.label} 
+                        onClick={() => onSelect(opt.instruction)} 
+                        disabled={isRewriting} 
+                        className="p-2 rounded-2xl text-sm text-center hover:bg-black/10 dark:hover:bg-white/10 disabled:opacity-50"
+                    >
+                        {opt.label}
+                    </button>
+                ))}
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 const CustomPanel: React.FC<{ onSelect: (instruction: string, file: FileData | null) => void; isRewriting: boolean }> = ({ onSelect, isRewriting }) => {
     const [text, setText] = useState('');
@@ -88,9 +94,9 @@ const CustomPanel: React.FC<{ onSelect: (instruction: string, file: FileData | n
     };
 
     return (
-        <div className="p-3 space-y-3">
+        <div className="p-3 space-y-3 w-80">
             <h4 className="font-semibold text-center">Custom Edit</h4>
-            <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="e.g., Rewrite this in a more casual tone, using the attached file for context." disabled={isRewriting} className="w-full h-24 p-2 text-sm rounded-2xl resize-none bg-white/40 dark:bg-black/20 border-transparent focus:border-glow-light dark:focus:border-glow-dark focus:ring-1 focus:outline-none"/>
+            <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="e.g., Rewrite this in a more casual tone, using the attached file for context." disabled={isRewriting} className="w-full h-40 p-2 text-sm rounded-2xl resize-none bg-white/40 dark:bg-black/20 border-transparent focus:border-glow-light dark:focus:border-glow-dark focus:ring-1 focus:outline-none"/>
             <div className="flex items-center justify-between gap-2">
                 {!file ? (
                     <label htmlFor="edit-file-upload" className="flex items-center gap-2 px-3 py-1.5 text-xs rounded-2xl cursor-pointer bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors" title="Attach file"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>Attach</label>
@@ -104,19 +110,76 @@ const CustomPanel: React.FC<{ onSelect: (instruction: string, file: FileData | n
     );
 };
 
+const TranslationPanel: React.FC<{ onTranslate: (language: string, style: TranslationStyle) => void, isTranslating: boolean }> = ({ onTranslate, isTranslating }) => {
+    const [language, setLanguage] = useState('Chinese');
+    const [style, setStyle] = useState<TranslationStyle>('colloquial');
+
+    const handleSubmit = () => {
+        if (!language.trim()) return;
+        onTranslate(language.trim(), style);
+    };
+
+    return (
+        <div className="p-3 space-y-4 w-72">
+            <h4 className="font-semibold text-center">Translate Report</h4>
+            <div>
+                <label className="text-xs font-semibold">Language</label>
+                <input
+                    type="text"
+                    value={language}
+                    onChange={(e) => setLanguage(e.target.value)}
+                    placeholder="e.g., Chinese, Malay"
+                    disabled={isTranslating}
+                    list="languages"
+                    className="w-full mt-1 p-2 text-sm rounded-2xl bg-white/40 dark:bg-black/20 border-transparent focus:border-glow-light dark:focus:border-glow-dark focus:ring-1 focus:outline-none"
+                />
+                <datalist id="languages">
+                    <option value="English" />
+                    <option value="Chinese" />
+                    <option value="Malay" />
+                    <option value="Spanish" />
+                    <option value="French" />
+                    <option value="German" />
+                </datalist>
+            </div>
+            <div>
+                <label className="text-xs font-semibold">Style</label>
+                <div className="flex items-center gap-2 mt-1 bg-white/40 dark:bg-black/20 rounded-2xl p-1">
+                    <button onClick={() => setStyle('colloquial')} disabled={isTranslating} className={`flex-1 text-xs px-2 py-1 rounded-2xl transition-colors ${style === 'colloquial' ? 'bg-glow-dark/30' : ''}`}>Colloquial</button>
+                    <button onClick={() => setStyle('literal')} disabled={isTranslating} className={`flex-1 text-xs px-2 py-1 rounded-2xl transition-colors ${style === 'literal' ? 'bg-glow-dark/30' : ''}`}>Literal</button>
+                </div>
+            </div>
+            <button onClick={handleSubmit} disabled={isTranslating || !language.trim()} className="w-full px-4 py-2 text-sm rounded-2xl bg-glow-light/20 dark:bg-glow-dark/30 hover:bg-glow-light/30 dark:hover:bg-glow-dark/40 disabled:opacity-50 flex justify-center items-center gap-2">
+                {isTranslating ? <><Spinner />Translating...</> : "Translate"}
+            </button>
+        </div>
+    );
+};
+
 // --- Main Toolbox Component ---
 interface ReportToolboxProps {
     onRewrite: (instruction: string, file: FileData | null) => void;
     isRewriting: boolean;
+    onTranslate: (language: string, style: TranslationStyle) => void;
+    isTranslating: boolean;
+    isToolboxDisabled: boolean;
 }
 
-const ReportToolbox: React.FC<ReportToolboxProps> = ({ onRewrite, isRewriting }) => {
+const ReportToolbox: React.FC<ReportToolboxProps> = ({ onRewrite, isRewriting, onTranslate, isTranslating, isToolboxDisabled }) => {
     const [activeTool, setActiveTool] = useState<string | null>(null);
+    const [runningTool, setRunningTool] = useState<string | null>(null);
     const popoverRef = useRef<HTMLDivElement>(null);
 
+    useEffect(() => {
+        if (!isRewriting && !isTranslating) {
+            setRunningTool(null);
+        }
+    }, [isRewriting, isTranslating]);
+
     const handleToolClick = (toolId: string) => {
-        if (isRewriting) return;
+        if (isRewriting || isTranslating || isToolboxDisabled) return;
         if (toolId === 'polish') {
+            setRunningTool(toolId);
             onRewrite('Add a final polish: proofread for grammar and clarity, improve flow, but do not alter the core meaning or content.', null);
             setActiveTool(null);
             return;
@@ -125,7 +188,18 @@ const ReportToolbox: React.FC<ReportToolboxProps> = ({ onRewrite, isRewriting })
     };
 
     const handleInstructionSelect = (instruction: string, file: FileData | null = null) => {
+        if (activeTool) {
+            setRunningTool(activeTool);
+        }
         onRewrite(instruction, file);
+        setActiveTool(null);
+    };
+
+     const handleTranslateSelect = (language: string, style: TranslationStyle) => {
+        if (activeTool) {
+            setRunningTool(activeTool);
+        }
+        onTranslate(language, style);
         setActiveTool(null);
     };
 
@@ -144,31 +218,35 @@ const ReportToolbox: React.FC<ReportToolboxProps> = ({ onRewrite, isRewriting })
     }, []);
 
     const tools = [
+        { id: 'translate', icon: <TranslateIcon />, label: 'Translate' },
         { id: 'emoji', icon: <EmojiIcon />, label: 'Add Emojis' },
         { id: 'polish', icon: <PolishIcon />, label: 'Add Final Polish' },
         { id: 'readingLevel', icon: <ReadingLevelIcon />, label: 'Reading Level' },
         { id: 'length', icon: <LengthIcon />, label: 'Adjust Length' },
         { id: 'custom', icon: <CustomIcon />, label: 'Custom Edit' },
     ];
+    
+    const isAnyToolRunning = isRewriting || isTranslating;
 
     return (
         <GlassCard className="p-2 flex flex-col items-center gap-2">
             {tools.map(tool => (
                 <div key={tool.id} className="relative">
                     <div className="relative group">
-                         <button data-toolbox-button onClick={() => handleToolClick(tool.id)} disabled={isRewriting && activeTool !== tool.id} className={`p-3 rounded-2xl transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${activeTool === tool.id ? 'bg-glow-dark/30 dark:bg-glow-light/20' : 'hover:bg-black/10 dark:hover:bg-white/10'}`} aria-label={tool.label}>
-                            {isRewriting && activeTool === tool.id ? <Spinner/> : tool.icon}
+                         <button data-toolbox-button onClick={() => handleToolClick(tool.id)} disabled={isAnyToolRunning || isToolboxDisabled} className={`p-3 rounded-2xl transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${activeTool === tool.id ? 'bg-glow-dark/30 dark:bg-glow-light/20' : 'hover:bg-black/10 dark:hover:bg-white/10'}`} aria-label={tool.label}>
+                            {isAnyToolRunning && runningTool === tool.id ? <Spinner/> : tool.icon}
                         </button>
                         <div className="absolute right-full top-1/2 -translate-y-1/2 mr-3 px-2 py-1 bg-gray-900 text-white text-xs rounded-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">{tool.label}</div>
                     </div>
                     
                     {activeTool === tool.id && (
-                         <div ref={popoverRef} className="absolute right-full top-1/2 -translate-y-1/2 mr-3 w-64 z-20 animate-fade-in">
+                         <div ref={popoverRef} className="absolute right-full top-1/2 -translate-y-1/2 mr-3 z-50 animate-fade-in">
                             <GlassCard>
-                                {tool.id === 'length' && <SliderPanel title="Adjust Length" options={['Shortest', 'Shorter', 'Current Length', 'Longer', 'Longest']} defaultOption="Current Length" onSelect={handleInstructionSelect} isRewriting={isRewriting} instructionPrefix="Change the length of the report to" />}
-                                {tool.id === 'readingLevel' && <SliderPanel title="Reading Level" options={['Kindergarten', 'Middle School', 'High School', 'Current Level', 'College', 'Graduate School']} defaultOption="Current Level" onSelect={handleInstructionSelect} isRewriting={isRewriting} instructionPrefix="Change the reading level to" />}
+                                {tool.id === 'length' && <ButtonSelectionPanel title="Adjust Length" options={['Much Shorter', 'Shorter', 'Longer', 'Much Longer']} onSelect={handleInstructionSelect} isRewriting={isRewriting} instructionPrefix="Change the length of the report to be" />}
+                                {tool.id === 'readingLevel' && <ButtonSelectionPanel title="Reading Level" options={['Kindergarten', 'Middle School', 'High School', 'College', 'Graduate School']} onSelect={handleInstructionSelect} isRewriting={isRewriting} instructionPrefix="Change the reading level to" />}
                                 {tool.id === 'emoji' && <EmojiPanel onSelect={handleInstructionSelect} isRewriting={isRewriting} />}
                                 {tool.id === 'custom' && <CustomPanel onSelect={handleInstructionSelect} isRewriting={isRewriting} />}
+                                {tool.id === 'translate' && <TranslationPanel onTranslate={handleTranslateSelect} isTranslating={isTranslating} />}
                             </GlassCard>
                         </div>
                     )}

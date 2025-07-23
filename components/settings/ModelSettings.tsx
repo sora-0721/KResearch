@@ -10,7 +10,7 @@ interface ModelSettingsProps {
     currentMode: ResearchMode;
 }
 
-const AGENT_ROLES: AgentRole[] = ['planner', 'searcher', 'synthesizer', 'clarification', 'visualizer'];
+const AGENT_ROLES: AgentRole[] = ['planner', 'searcher', 'outline', 'synthesizer', 'clarification', 'visualizer'];
 
 const ModelSettings: React.FC<ModelSettingsProps> = ({ settings, setSettings, currentMode }) => {
     const [availableModels, setAvailableModels] = useState<string[]>([]);

@@ -29,12 +29,14 @@ const AppContent: React.FC = () => {
       clarificationHistory, clarificationLoading, startClarificationProcess, handleAnswerSubmit,
       handleStopResearch, handleFileChange, handleRemoveFile, handleReset, fileInputRef,
       isVisualizing, visualizedReportHtml, handleVisualizeReport, handleCloseVisualizer, handleSkipClarification,
-      isRegenerating, handleRegenerateReport, handleReportRewrite,
+      isRegenerating, isRewriting, handleRegenerateReport, handleReportRewrite,
       isSettingsOpen, setIsSettingsOpen,
       isVisualizerOpen, handleVisualizerFeedback,
       handleContinueResearch,
       handleGenerateReportFromPause,
-      history, loadFromHistory, deleteHistoryItem, clearHistory
+      history, loadFromHistory, deleteHistoryItem, clearHistory, handleUpdateHistoryTitle,
+      handleNavigateVersion,
+      handleTranslateReport, translationLoading
   } = useAppLogic();
 
   const [isLogVisible, setIsLogVisible] = useState<boolean>(true);
@@ -81,7 +83,8 @@ const AppContent: React.FC = () => {
   ];
 
   const handleVisualizationRequest = (reportMarkdown: string) => {
-    handleVisualizeReport(reportMarkdown, false);
+    const currentReport = finalData?.reports[finalData.activeReportIndex]?.content;
+    handleVisualizeReport(currentReport ?? '', false);
   }
 
   return (
@@ -175,14 +178,26 @@ const AppContent: React.FC = () => {
                       isVisualizing={isVisualizing}
                       onRegenerate={handleRegenerateReport}
                       isRegenerating={isRegenerating}
+                      isRewriting={isRewriting}
                       onRewrite={handleReportRewrite}
+                      onNavigateVersion={handleNavigateVersion}
+                      onTranslate={handleTranslateReport}
+                      isTranslating={translationLoading}
                    />
-                   <LiquidButton onClick={handleReset} className="w-full mt-4">Start New Research</LiquidButton>
               </div>
           )}
         </GlassCard>
       </div>
       
+       {appState === 'complete' && (
+         <div className="fixed bottom-8 right-8 z-50 animate-fade-in">
+             <LiquidButton onClick={handleReset} className="px-5 py-5 !rounded-full shadow-lg hover:shadow-2xl hover:-translate-y-2" title="Start New Research">
+                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                 <span className="sr-only">Start New Research</span>
+            </LiquidButton>
+         </div>
+      )}
+
       <HistoryPanel
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
@@ -190,6 +205,7 @@ const AppContent: React.FC = () => {
         onLoad={handleLoadFromHistory}
         onDelete={deleteHistoryItem}
         onClear={clearHistory}
+        onUpdateTitle={handleUpdateHistoryTitle}
       />
 
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} currentMode={mode} />
@@ -199,7 +215,7 @@ const AppContent: React.FC = () => {
         isLoading={isVisualizing} 
         htmlContent={visualizedReportHtml} 
         onClose={handleCloseVisualizer} 
-        onRegenerate={finalData?.report ? () => handleVisualizeReport(finalData.report, true) : undefined}
+        onRegenerate={finalData?.reports[finalData.activeReportIndex] ? () => handleVisualizeReport(finalData.reports[finalData.activeReportIndex].content, true) : undefined}
         onSubmitFeedback={handleVisualizerFeedback}
       />
       
