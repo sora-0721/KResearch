@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import GlassCard from './GlassCard';
 import Spinner from './Spinner';
 import { FileData } from '../types';
 import VisualizerHeader from './visualizer/VisualizerHeader';
 import VisualizerFeedback from './visualizer/VisualizerFeedback';
+import { useLanguage } from '../contextx/LanguageContext';
 
 interface ReportVisualizerProps {
     htmlContent: string | null;
@@ -15,6 +17,7 @@ interface ReportVisualizerProps {
 }
 
 const ReportVisualizer: React.FC<ReportVisualizerProps> = ({ htmlContent, onClose, isLoading, isOpen, onRegenerate, onSubmitFeedback }) => {
+  const { t } = useLanguage();
   const [isRendered, setIsRendered] = useState(false);
   const [isActive, setIsActive] = useState(false);
   
@@ -63,13 +66,13 @@ const ReportVisualizer: React.FC<ReportVisualizerProps> = ({ htmlContent, onClos
             {isLoading && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-glass-light dark:bg-glass-dark z-20">
                     <Spinner />
-                    <p className="text-lg animate-pulse">Agent is generating your visual report...</p>
+                    <p className="text-lg animate-pulse">{t('visualizingReport')}</p>
                 </div>
             )}
             {htmlContent ? (
                  <iframe srcDoc={htmlContent} title="Visual Report" className={`w-full h-full border-0 transition-opacity duration-500 ${isLoading ? 'opacity-30' : 'opacity-100'}`} sandbox="allow-scripts allow-same-origin"/>
             ) : !isLoading && (
-                 <div className="w-full h-full flex items-center justify-center"><p>No visual report generated yet.</p></div>
+                 <div className="w-full h-full flex items-center justify-center"><p>{t('noVisualReport')}</p></div>
             )}
         </div>
         

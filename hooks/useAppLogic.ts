@@ -1,8 +1,10 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { synthesizeReport, rewriteReport, clarifyQuery, runIterativeDeepResearch, generateVisualReport, regenerateVisualReportWithFeedback, generateOutline } from '../services';
 import { ResearchUpdate, FinalResearchData, ResearchMode, FileData, AppState, ClarificationTurn, Citation, HistoryItem, TranslationStyle, ReportVersion } from '../types';
 import { AllKeysFailedError, apiKeyService, historyService } from '../services';
 import { useNotification } from '../contextx/NotificationContext';
+import { useLanguage } from '../contextx/LanguageContext';
 import { executeSingleSearch } from '../services/search';
 import { translateText } from '../services/translation';
 
@@ -47,6 +49,7 @@ const extractTitleFromReport = (reportContent: string): string | null => {
 };
 
 export const useAppLogic = () => {
+    const { t } = useLanguage();
     const [query, setQuery] = useState<string>('');
     const [guidedQuery, setGuidedQuery] = useState<string>('');
     const [selectedFile, setSelectedFile] = useState<FileData | null>(null);
@@ -115,7 +118,7 @@ export const useAppLogic = () => {
 
         } catch (error: any) {
             if (error instanceof AllKeysFailedError) {
-                addNotification({ type: 'error', title: 'All API Keys Failed', message: 'You can retry the operation or check your keys in Settings.' });
+                addNotification({ type: 'error', title: t('allApiKeysFailedTitle'), message: t('allApiKeysFailedMessage') });
                 setAppState('paused');
                 return;
             }
@@ -128,18 +131,18 @@ export const useAppLogic = () => {
             };
 
             if (error.name === 'AbortError') {
-                addNotification({ type: 'info', title: 'Research Stopped', message: 'The research process was cancelled by the user.'});
+                addNotification({ type: 'info', title: t('researchStoppedTitle'), message: t('researchStoppedMessage')});
                 setFinalData(commonErrorData);
             } else {
                 console.error("Research failed:", error);
                 const message = getCleanErrorMessage(error);
-                addNotification({ type: 'error', title: 'Research Failed', message });
+                addNotification({ type: 'error', title: t('researchFailedTitle'), message });
                 const errorReportContent = { ...errorReport, content: "An error occurred during the research process."};
                 setFinalData({ ...commonErrorData, reports: [errorReportContent] });
             }
             setAppState('complete');
         }
-    }, [query, mode, selectedFile, addNotification, initialSearchResult, clarificationHistory]);
+    }, [query, mode, selectedFile, addNotification, initialSearchResult, clarificationHistory, t]);
 
     const handleClarificationResponse = useCallback(async (history: ClarificationTurn[], searchResult: { text: string; citations: Citation[] } | null) => {
       setClarificationLoading(true);
@@ -153,13 +156,13 @@ export const useAppLogic = () => {
           }
       } catch (error) {
             if (error instanceof AllKeysFailedError) {
-                addNotification({ type: 'error', title: 'API Keys Failed', message: 'All API keys failed. You can retry the operation.' });
+                addNotification({ type: 'error', title: t('apiKeysFailedTitle'), message: t('apiKeysFailedMessage') });
                 setAppState('paused');
             } else {
               console.error("Clarification step failed:", error);
               const message = getCleanErrorMessage(error);
-              addNotification({type: 'error', title: 'Clarification Failed', message});
-              setClarifiedContext('Clarification process failed. Proceeding with original query.');
+              addNotification({type: 'error', title: t('clarificationFailedTitle'), message});
+              setClarifiedContext(t('clarifiedContextFailed'));
               setAppState('researching');
             }
       } finally {
@@ -167,7 +170,7 @@ export const useAppLogic = () => {
             setClarificationLoading(false);
           }
       }
-    }, [mode, selectedFile, addNotification, appState]);
+    }, [mode, selectedFile, addNotification, appState, t]);
 
     useEffect(() => {
       if (appState === 'researching' && clarifiedContext && !researchExecutionRef.current) {
@@ -183,7 +186,7 @@ export const useAppLogic = () => {
         if (!query.trim() || appState !== 'idle') return;
 
         if (!apiKeyService.hasKey()) {
-            addNotification({type: 'warning', title: 'API Key Required', message: 'Please set your Gemini API key in the settings before starting research.'});
+            addNotification({type: 'warning', title: t('apiKeyRequiredTitle'), message: t('apiKeyRequiredMessage')});
             setIsSettingsOpen(true);
             return;
         }
@@ -197,7 +200,7 @@ export const useAppLogic = () => {
             const queriesToSearch = [query.trim(), ...guidedQueries].filter(Boolean);
 
             if (queriesToSearch.length === 0) {
-                addNotification({ type: 'warning', title: 'Empty Query', message: 'Cannot start research with an empty query.' });
+                addNotification({ type: 'warning', title: t('emptyQueryTitle'), message: t('emptyQueryMessage') });
                 setAppState('idle');
                 return;
             }
@@ -234,7 +237,7 @@ export const useAppLogic = () => {
         } catch (error) {
             console.error("Initial search failed:", error);
             const message = getCleanErrorMessage(error);
-            addNotification({type: 'error', title: 'Initial Search Failed', message});
+            addNotification({type: 'error', title: t('initialSearchFailedTitle'), message});
         }
 
         setAppState('clarifying');
@@ -242,7 +245,7 @@ export const useAppLogic = () => {
         const initialHistory: ClarificationTurn[] = [{ role: 'user', content: initialQuery }];
         setClarificationHistory(initialHistory);
         handleClarificationResponse(initialHistory, searchResultForClarification);
-    }, [query, appState, selectedFile, mode, addNotification, handleClarificationResponse]);
+    }, [query, appState, selectedFile, mode, addNotification, handleClarificationResponse, t]);
 
     const handleAnswerSubmit = useCallback((answer: string) => {
         const newHistory: ClarificationTurn[] = [...clarificationHistory, { role: 'user', content: answer }];
@@ -294,7 +297,7 @@ export const useAppLogic = () => {
         const startTime = Date.now();
         try {
             const citations = getCitationsFromHistory(researchUpdates);
-            addNotification({ type: 'info', title: 'Generating Outline', message: 'Creating a structure for the final report.' });
+            addNotification({ type: 'info', title: t('generatingOutlineTitle'), message: t('generatingOutlineMessage') });
             const reportOutline = await generateOutline(query, researchUpdates, mode, selectedFile);
             const result = await synthesizeReport(query, researchUpdates, citations, mode, selectedFile, reportOutline);
             
@@ -310,18 +313,18 @@ export const useAppLogic = () => {
             });
 
             setAppState('complete');
-            addNotification({ type: 'success', title: 'Report Generated', message: 'Report generated from the research completed so far.' });
+            addNotification({ type: 'success', title: t('reportGeneratedTitle'), message: t('reportGeneratedMessage') });
         } catch (error: any) {
             if (error instanceof AllKeysFailedError) {
-                 addNotification({ type: 'error', title: 'All API Keys Failed', message: 'Synthesis failed. Please check your keys in Settings.' });
+                 addNotification({ type: 'error', title: t('synthesisFailedTitle'), message: t('synthesisFailedMessage') });
             } else {
                 console.error("Synthesis from paused state failed:", error);
                 const message = getCleanErrorMessage(error);
-                addNotification({ type: 'error', title: 'Synthesis Failed', message });
+                addNotification({ type: 'error', title: t('synthesisFailedTitle'), message });
             }
             setAppState('paused');
         }
-    }, [appState, researchUpdates, query, mode, selectedFile, addNotification, initialSearchResult]);
+    }, [appState, researchUpdates, query, mode, selectedFile, addNotification, initialSearchResult, t]);
 
     const handleVisualizeReport = useCallback(async (reportMarkdown: string, forceRegenerate: boolean = false) => {
         if (isVisualizing) {
@@ -350,11 +353,11 @@ export const useAppLogic = () => {
             console.error("Failed to generate visual report:", error);
             const message = getCleanErrorMessage(error);
             setVisualizedReportHtml(null);
-            addNotification({type: 'error', title: 'Visualization Failed', message});
+            addNotification({type: 'error', title: t('visualizationFailedTitle'), message});
         } finally {
             setIsVisualizing(false);
         }
-    }, [mode, addNotification, visualizedReportHtml, isVisualizing]);
+    }, [mode, addNotification, visualizedReportHtml, isVisualizing, t]);
 
     const handleVisualizerFeedback = useCallback(async (feedback: string, file: FileData | null) => {
         if (!visualizedReportHtml || !finalData?.reports[finalData.activeReportIndex]) return;
@@ -376,7 +379,7 @@ export const useAppLogic = () => {
         if (!finalData) return;
         setIsRegenerating(true);
         try {
-            addNotification({ type: 'info', title: 'Generating New Outline', message: 'Re-structuring report before regeneration.' });
+            addNotification({ type: 'info', title: t('regeneratingOutlineTitle'), message: t('regeneratingOutlineMessage') });
             const reportOutline = await generateOutline(query, researchUpdates, mode, selectedFile);
             const regeneratedReportData = await synthesizeReport(query, researchUpdates, finalData.citations, mode, selectedFile, reportOutline);
             setFinalData(prev => {
@@ -385,15 +388,15 @@ export const useAppLogic = () => {
                 const updatedReports = [...prev.reports, newVersion];
                 return { ...prev, reports: updatedReports, activeReportIndex: updatedReports.length - 1 };
             });
-             addNotification({ type: 'success', title: 'Report Regenerated', message: 'A new version of the report has been generated.'});
+             addNotification({ type: 'success', title: t('reportRegeneratedTitle'), message: t('reportRegeneratedMessage')});
         } catch(error) {
             console.error("Failed to regenerate report:", error);
             const message = getCleanErrorMessage(error);
-            addNotification({ type: 'error', title: 'Regeneration Failed', message });
+            addNotification({ type: 'error', title: t('regenerationFailedTitle'), message });
         } finally {
             setIsRegenerating(false);
         }
-    }, [finalData, query, researchUpdates, mode, selectedFile, addNotification]);
+    }, [finalData, query, researchUpdates, mode, selectedFile, addNotification, t]);
 
     const handleReportRewrite = useCallback(async (instruction: string, file: FileData | null) => {
         if (!finalData?.reports[finalData.activeReportIndex] || isRegenerating || isRewriting) return;
@@ -407,15 +410,15 @@ export const useAppLogic = () => {
                 const updatedReports = [...prev.reports, newVersion];
                 return { ...prev, reports: updatedReports, activeReportIndex: updatedReports.length - 1 };
             });
-            addNotification({ type: 'success', title: 'Report Updated', message: 'The report has been successfully rewritten.' });
+            addNotification({ type: 'success', title: t('reportUpdatedTitle'), message: t('reportUpdatedMessage') });
         } catch (error) {
             console.error("Failed to rewrite report:", error);
             const message = getCleanErrorMessage(error);
-            addNotification({ type: 'error', title: 'Rewrite Failed', message });
+            addNotification({ type: 'error', title: t('rewriteFailedTitle'), message });
         } finally {
             setIsRewriting(false);
         }
-    }, [finalData, isRegenerating, isRewriting, mode, addNotification]);
+    }, [finalData, isRegenerating, isRewriting, mode, addNotification, t]);
 
     const handleCloseVisualizer = () => setIsVisualizerOpen(false);
     
@@ -486,13 +489,13 @@ export const useAppLogic = () => {
     const deleteHistoryItem = (id: string) => {
         historyService.removeHistoryItem(id);
         setHistory(historyService.getHistory());
-        addNotification({type: 'info', title: 'History item removed', message: 'The selected item has been deleted from your research history.'});
+        addNotification({type: 'info', title: t('historyItemRemovedTitle'), message: t('historyItemRemovedMessage')});
     };
 
     const clearHistory = () => {
         historyService.clearHistory();
         setHistory([]);
-        addNotification({type: 'info', title: 'History cleared', message: 'All items have been removed from your research history.'});
+        addNotification({type: 'info', title: t('historyClearedTitle'), message: t('historyClearedMessage')});
     };
     
     const handleUpdateHistoryTitle = (id: string, newTitle: string) => {
@@ -545,15 +548,15 @@ export const useAppLogic = () => {
                 const updatedReports = [...prev.reports, newVersion];
                 return { ...prev, reports: updatedReports, activeReportIndex: updatedReports.length - 1 };
             });
-            addNotification({ type: 'success', title: 'Translation Complete', message: `Report translated and saved as a new version.` });
+            addNotification({ type: 'success', title: t('translationCompleteTitle'), message: t('translationCompleteMessage') });
         } catch (error) {
             console.error("Failed to translate report:", error);
             const message = getCleanErrorMessage(error);
-            addNotification({ type: 'error', title: 'Translation Failed', message });
+            addNotification({ type: 'error', title: t('translationFailedTitle'), message });
         } finally {
             setTranslationLoading(false);
         }
-    }, [finalData, translationLoading, mode, addNotification]);
+    }, [finalData, translationLoading, mode, addNotification, t]);
 
     return {
         query, setQuery, guidedQuery, setGuidedQuery, selectedFile, researchUpdates, finalData, mode, setMode, appState,
