@@ -1,3 +1,4 @@
+
 import { ai } from './geminiClient';
 import { getModel } from './models';
 import { ResearchUpdate, Citation, FinalResearchData, ResearchMode, FileData, ReportVersion, Role } from '../types';
@@ -58,11 +59,36 @@ ${reportOutline}
 
 **3. Stylistic and Formatting Requirements:**
 *   **Evidence-Based Assertions:** This is non-negotiable. Every key assertion, claim, or data point MUST be grounded in the provided research data.
-*   **Data Visualization with Mermaid.js:** If the outline requires a Mermaid.js graph, create it following these strict rules:
-    *   1. Use \`graph TD\` (top-down) or \`graph LR\` (left-right).
-    *   2. Create a unique, simple English node ID for each identified entity (e.g., \`personA\`, \`orgB\`). The node text must display the full name or description of the entity.
-    *   3. All text content (node text, edge labels) **MUST be wrapped in double quotes**. Example: \`personA["Alice Smith"] --> |"is CEO of"| orgB["XYZ Company"]\`.
-    *   4. Embed the complete \`\`\`mermaid ... \`\`\` code block directly in the relevant sections of the report.
+*   **Data Visualization with Mermaid.js:** Mermaid.js syntax is extremely strict. Syntactic perfection is mandatory to prevent rendering errors. If the outline requires a Mermaid.js graph, you MUST create it following these rules:
+    *   **Rule 1: ALWAYS Quote Text.** All user-facing text (in nodes, on edges, for labels, etc.) MUST be enclosed in double quotes. This is the most common source of errors because it correctly handles special characters.
+        *   **Correct:** \`A["Node with (parentheses)"] -- "arrow text" --> B\`
+        *   **Incorrect:** \`A[Node with (parentheses)] -- arrow text --> B\`
+    *   **Rule 2: Use Safe Node IDs.** Node IDs MUST be a single word containing only letters and numbers (e.g., \`node1\`, \`stepA\`, \`db\`). Do NOT use quotes, spaces, hyphens, or other special characters in the IDs themselves.
+    *   **Rule 3: Follow Strict Syntax Examples.** Do not deviate from these proven patterns.
+        *   **Flowchart:**
+            \`\`\`mermaid
+            graph TD;
+                nodeA["Text for Node A"] --> nodeB{"Decision Point?"};
+                nodeB -- "Yes" --> nodeC["Outcome 1"];
+                nodeB -- "No" --> nodeD["Outcome 2"];
+            \`\`\`
+        *   **Sequence Diagram:**
+            \`\`\`mermaid
+            sequenceDiagram;
+                participant Alice;
+                participant Bob;
+                Alice->>Bob: "Hello Bob, how are you?";
+                Bob-->>Alice: "I am great, thanks!";
+            \`\`\`
+        *   **State Diagram:**
+             \`\`\`mermaid
+            stateDiagram-v2;
+                [*] --> State1;
+                State1 --> State2: "Event T1";
+                State2 --> [*];
+            \`\`\`
+    *   **Rule 4: Simplicity is Key.** Do not attempt complex styling or experimental features within the Mermaid code block. A simple, correct diagram is infinitely better than a complex, broken one.
+    *   **Rule 5: Embed Correctly.** Embed the complete and valid \`\`\`mermaid ... \`\`\` code block directly in the relevant sections of the report.
 *   **Tone & Formatting:** Maintain a formal, objective, and authoritative tone, unless your Role Directive specifies otherwise. Use Markdown extensively for clarity (headings, lists, bold text).
 *   **Exclusivity:** The report's content must be based **exclusively** on the information provided. Do NOT invent information or use any outside knowledge. Do NOT include inline citations.
 
