@@ -1,8 +1,9 @@
 
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { synthesizeReport, rewriteReport, clarifyQuery, runIterativeDeepResearch, generateVisualReport, regenerateVisualReportWithFeedback, generateOutline } from '../services';
-import { ResearchUpdate, FinalResearchData, ResearchMode, FileData, AppState, ClarificationTurn, Citation, HistoryItem, TranslationStyle, ReportVersion } from '../types';
-import { AllKeysFailedError, apiKeyService, historyService } from '../services';
+import { ResearchUpdate, FinalResearchData, ResearchMode, FileData, AppState, ClarificationTurn, Citation, HistoryItem, TranslationStyle, ReportVersion, Role } from '../types';
+import { AllKeysFailedError, apiKeyService, historyService, roleService } from '../services';
 import { useNotification } from '../contextx/NotificationContext';
 import { useLanguage } from '../contextx/LanguageContext';
 import { executeSingleSearch } from '../services/search';
@@ -70,6 +71,11 @@ export const useAppLogic = () => {
     const [history, setHistory] = useState<HistoryItem[]>(() => historyService.getHistory());
     const [currentHistoryId, setCurrentHistoryId] = useState<string | null>(null);
     const [translationLoading, setTranslationLoading] = useState<boolean>(false);
+    
+    // Role state
+    const [roles, setRoles] = useState<Role[]>(() => roleService.getRoles());
+    const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
+    const [isRoleManagerOpen, setIsRoleManagerOpen] = useState<boolean>(false);
 
     const abortControllerRef = useRef<AbortController | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -91,10 +97,12 @@ export const useAppLogic = () => {
         }
         setAppState('researching');
         const startTime = Date.now();
+        const selectedRole = roles.find(r => r.id === selectedRoleId);
+
         try {
             const result = await runIterativeDeepResearch(query, (update) => {
                 setResearchUpdates(prev => [...prev, update]);
-            }, abortControllerRef.current!.signal, mode, context, selectedFile, initialSearchResult, researchUpdates);
+            }, abortControllerRef.current!.signal, mode, context, selectedFile, selectedRole, initialSearchResult, researchUpdates);
             
             const resultData = { ...result, researchTimeMs: Date.now() - startTime };
             setFinalData(resultData);
@@ -107,6 +115,7 @@ export const useAppLogic = () => {
                 query,
                 title: reportTitle,
                 mode,
+                roleId: selectedRoleId,
                 selectedFile,
                 finalData: resultData,
                 clarificationHistory,
@@ -142,12 +151,13 @@ export const useAppLogic = () => {
             }
             setAppState('complete');
         }
-    }, [query, mode, selectedFile, addNotification, initialSearchResult, clarificationHistory, t]);
+    }, [query, mode, selectedFile, addNotification, initialSearchResult, clarificationHistory, t, roles, selectedRoleId]);
 
     const handleClarificationResponse = useCallback(async (history: ClarificationTurn[], searchResult: { text: string; citations: Citation[] } | null) => {
       setClarificationLoading(true);
+      const selectedRole = roles.find(r => r.id === selectedRoleId);
       try {
-          const response = await clarifyQuery(history, mode, selectedFile, searchResult);
+          const response = await clarifyQuery(history, mode, selectedFile, selectedRole, searchResult);
           if (response.type === 'question') {
               setClarificationHistory(prev => [...prev, { role: 'model', content: response.content }]);
           } else if (response.type === 'summary') {
@@ -170,7 +180,7 @@ export const useAppLogic = () => {
             setClarificationLoading(false);
           }
       }
-    }, [mode, selectedFile, addNotification, appState, t]);
+    }, [mode, selectedFile, addNotification, appState, t, roles, selectedRoleId]);
 
     useEffect(() => {
       if (appState === 'researching' && clarifiedContext && !researchExecutionRef.current) {
@@ -278,6 +288,8 @@ export const useAppLogic = () => {
 
     const handleGenerateReportFromPause = useCallback(async () => {
         if (appState !== 'paused') return;
+        
+        const selectedRole = roles.find(r => r.id === selectedRoleId);
     
         const getCitationsFromHistory = (history: ResearchUpdate[]): Citation[] => {
             const citationsMap = new Map<string, Citation>();
@@ -298,8 +310,8 @@ export const useAppLogic = () => {
         try {
             const citations = getCitationsFromHistory(researchUpdates);
             addNotification({ type: 'info', title: t('generatingOutlineTitle'), message: t('generatingOutlineMessage') });
-            const reportOutline = await generateOutline(query, researchUpdates, mode, selectedFile);
-            const result = await synthesizeReport(query, researchUpdates, citations, mode, selectedFile, reportOutline);
+            const reportOutline = await generateOutline(query, researchUpdates, mode, selectedFile, selectedRole);
+            const result = await synthesizeReport(query, researchUpdates, citations, mode, selectedFile, selectedRole, reportOutline);
             
             const searchUpdatesCount = researchUpdates.filter(u => u.type === 'search').length;
             const searchCycles = initialSearchResult ? Math.max(0, searchUpdatesCount - 1) : searchUpdatesCount;
@@ -324,7 +336,7 @@ export const useAppLogic = () => {
             }
             setAppState('paused');
         }
-    }, [appState, researchUpdates, query, mode, selectedFile, addNotification, initialSearchResult, t]);
+    }, [appState, researchUpdates, query, mode, selectedFile, addNotification, initialSearchResult, t, roles, selectedRoleId]);
 
     const handleVisualizeReport = useCallback(async (reportMarkdown: string, forceRegenerate: boolean = false) => {
         if (isVisualizing) {
@@ -378,10 +390,11 @@ export const useAppLogic = () => {
     const handleRegenerateReport = useCallback(async () => {
         if (!finalData) return;
         setIsRegenerating(true);
+        const selectedRole = roles.find(r => r.id === selectedRoleId);
         try {
             addNotification({ type: 'info', title: t('regeneratingOutlineTitle'), message: t('regeneratingOutlineMessage') });
-            const reportOutline = await generateOutline(query, researchUpdates, mode, selectedFile);
-            const regeneratedReportData = await synthesizeReport(query, researchUpdates, finalData.citations, mode, selectedFile, reportOutline);
+            const reportOutline = await generateOutline(query, researchUpdates, mode, selectedFile, selectedRole);
+            const regeneratedReportData = await synthesizeReport(query, researchUpdates, finalData.citations, mode, selectedFile, selectedRole, reportOutline);
             setFinalData(prev => {
                 if (!prev) return null;
                 const newVersion: ReportVersion = { content: regeneratedReportData.reports[0].content, version: prev.reports.length + 1 };
@@ -396,14 +409,15 @@ export const useAppLogic = () => {
         } finally {
             setIsRegenerating(false);
         }
-    }, [finalData, query, researchUpdates, mode, selectedFile, addNotification, t]);
+    }, [finalData, query, researchUpdates, mode, selectedFile, addNotification, t, roles, selectedRoleId]);
 
     const handleReportRewrite = useCallback(async (instruction: string, file: FileData | null) => {
         if (!finalData?.reports[finalData.activeReportIndex] || isRegenerating || isRewriting) return;
         setIsRewriting(true);
+        const selectedRole = roles.find(r => r.id === selectedRoleId);
         try {
             const currentReport = finalData.reports[finalData.activeReportIndex].content;
-            const rewrittenReport = await rewriteReport(currentReport, instruction, mode, file);
+            const rewrittenReport = await rewriteReport(currentReport, instruction, mode, file, selectedRole);
             setFinalData(prev => {
                 if (!prev) return null;
                 const newVersion: ReportVersion = { content: rewrittenReport, version: prev.reports.length + 1 };
@@ -418,7 +432,7 @@ export const useAppLogic = () => {
         } finally {
             setIsRewriting(false);
         }
-    }, [finalData, isRegenerating, isRewriting, mode, addNotification, t]);
+    }, [finalData, isRegenerating, isRewriting, mode, addNotification, t, roles, selectedRoleId]);
 
     const handleCloseVisualizer = () => setIsVisualizerOpen(false);
     
@@ -465,6 +479,7 @@ export const useAppLogic = () => {
         setIsSettingsOpen(false);
         setCurrentHistoryId(null);
         setTranslationLoading(false);
+        setSelectedRoleId(null);
     }
     
     const loadFromHistory = (id: string) => {
@@ -481,6 +496,7 @@ export const useAppLogic = () => {
                 setInitialSearchResult(item.initialSearchResult);
                 setClarifiedContext(item.clarifiedContext);
                 setCurrentHistoryId(item.id);
+                setSelectedRoleId(item.roleId || null);
                 setAppState('complete');
             }, 50)
         }
@@ -558,6 +574,19 @@ export const useAppLogic = () => {
         }
     }, [finalData, translationLoading, mode, addNotification, t]);
 
+    // Role Management Handlers
+    const saveRole = (role: Role) => {
+        roleService.saveRole(role);
+        setRoles(roleService.getRoles());
+    };
+    const deleteRole = (id: string) => {
+        roleService.deleteRole(id);
+        setRoles(roleService.getRoles());
+        if (selectedRoleId === id) {
+            setSelectedRoleId(null);
+        }
+    };
+
     return {
         query, setQuery, guidedQuery, setGuidedQuery, selectedFile, researchUpdates, finalData, mode, setMode, appState,
         clarificationHistory, clarificationLoading, fileInputRef, startClarificationProcess, 
@@ -570,6 +599,7 @@ export const useAppLogic = () => {
         handleGenerateReportFromPause,
         history, loadFromHistory, deleteHistoryItem, clearHistory, handleUpdateHistoryTitle,
         handleNavigateVersion,
-        handleTranslateReport, translationLoading
+        handleTranslateReport, translationLoading,
+        roles, selectedRoleId, setSelectedRoleId, saveRole, deleteRole, isRoleManagerOpen, setIsRoleManagerOpen
     };
 };

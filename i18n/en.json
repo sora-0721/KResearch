@@ -1,5 +1,6 @@
 
 {
+  "langCode": "en",
   "history": "History",
   "settings": "Settings",
   "github": "View on GitHub",
@@ -177,5 +178,24 @@
   "translationCompleteMessage": "Report translated and saved as a new version.",
   "translationFailedTitle": "Translation Failed",
   "defaultsLoadedTitle": "Defaults Loaded",
-  "defaultsLoadedMessage": "Settings have been reset to default and saved."
+  "defaultsLoadedMessage": "Settings have been reset to default and saved.",
+  "roles": "Roles",
+  "selectRole": "Select Role",
+  "defaultRole": "Default",
+  "defaultRoleDesc": "Standard research agent.",
+  "builtIn": "Built-in",
+  "custom": "Custom",
+  "manageRoles": "Manage Roles",
+  "editRole": "Edit Role",
+  "createNewRole": "Create New Role",
+  "edit": "Edit",
+  "roleNamePlaceholder": "Role Name...",
+  "rolePromptPlaceholder": "Describe the persona and instructions for this role. e.g., 'Act as a skeptical financial analyst. Focus on risks and financial viability...'",
+  "generateNameEmoji": "Generate",
+  "refinePrompt": "Refine",
+  "creativePrompt": "Creative",
+  "attachContextFile": "Attach Context File",
+  "saveRole": "Save Role",
+  "confirmDeleteRole": "Are you sure you want to delete this role?",
+  "roleAI": "Role AI"
 }

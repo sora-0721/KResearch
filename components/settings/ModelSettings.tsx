@@ -12,7 +12,7 @@ interface ModelSettingsProps {
     currentMode: ResearchMode;
 }
 
-const AGENT_ROLES: AgentRole[] = ['planner', 'searcher', 'outline', 'synthesizer', 'clarification', 'visualizer'];
+const AGENT_ROLES: AgentRole[] = ['planner', 'searcher', 'outline', 'synthesizer', 'clarification', 'visualizer', 'roleAI'];
 
 const ModelSettings: React.FC<ModelSettingsProps> = ({ settings, setSettings, currentMode }) => {
     const { t } = useLanguage();
@@ -44,6 +44,11 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ settings, setSettings, cu
             modelOverrides: { ...prev.modelOverrides, [role]: value === 'default' ? null : value }
         }));
     };
+    
+    const getRoleLabel = (role: AgentRole) => {
+        if (role === 'roleAI') return t('roleAI');
+        return t(role);
+    }
 
     return (
         <div className="space-y-4 animate-fade-in">
@@ -65,7 +70,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ settings, setSettings, cu
                     const defaultModelName = getDefaultModelForRole(role, currentMode);
                     return (
                         <div key={role} className="space-y-1">
-                            <label htmlFor={`model-${role}`} className="font-semibold text-gray-700 dark:text-gray-300 capitalize text-sm">{t(role)}</label>
+                            <label htmlFor={`model-${role}`} className="font-semibold text-gray-700 dark:text-gray-300 capitalize text-sm">{getRoleLabel(role)}</label>
                             <select id={`model-${role}`} value={settings.modelOverrides[role] || 'default'} onChange={e => handleModelOverrideChange(role, e.target.value)} disabled={isLoadingModels || availableModels.length === 0} className="w-full p-2 rounded-2xl bg-white/60 dark:bg-black/20 border border-transparent focus:border-glow-light dark:focus:border-glow-dark focus:ring-1 focus:ring-glow-light/50 dark:focus:ring-glow-dark/50 focus:outline-none transition-all text-sm disabled:opacity-50">
                                 <option value="default">{t('defaultModel')} ({defaultModelName})</option>
                                 {availableModels.map(modelName => <option key={modelName} value={modelName}>{modelName}</option>)}

@@ -1,5 +1,6 @@
 
 {
+  "langCode": "zh",
   "history": "历史记录",
   "settings": "设置",
   "github": "在 GitHub 上查看",
@@ -177,5 +178,24 @@
   "translationCompleteMessage": "报告已翻译并另存为新版本。",
   "translationFailedTitle": "翻译失败",
   "defaultsLoadedTitle": "已加载默认值",
-  "defaultsLoadedMessage": "设置已重置为默认值并保存。"
+  "defaultsLoadedMessage": "设置已重置为默认值并保存。",
+  "roles": "角色",
+  "selectRole": "选择角色",
+  "defaultRole": "默认",
+  "defaultRoleDesc": "标准研究智能体。",
+  "builtIn": "内置",
+  "custom": "自定义",
+  "manageRoles": "管理角色",
+  "editRole": "编辑角色",
+  "createNewRole": "创建新角色",
+  "edit": "编辑",
+  "roleNamePlaceholder": "角色名称...",
+  "rolePromptPlaceholder": "描述此角色的身份和指令。例如，'扮演一个持怀疑态度的财务分析师。关注风险和财务可行性...'",
+  "generateNameEmoji": "生成",
+  "refinePrompt": "优化",
+  "creativePrompt": "创意",
+  "attachContextFile": "附加背景文件",
+  "saveRole": "保存角色",
+  "confirmDeleteRole": "您确定要删除此角色吗？",
+  "roleAI": "角色AI"
 }

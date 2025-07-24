@@ -1,3 +1,5 @@
+import { Role } from "../types";
+
 export const plannerTurnSchema = {
     type: 'object',
     properties: {
@@ -14,6 +16,7 @@ interface PlannerPromptParams {
     query: string;
     clarifiedContext: string;
     fileDataName: string | null;
+    role: Role | null;
     searchCycles: number;
     searchHistoryText: string;
     readHistoryText: string;
@@ -28,6 +31,7 @@ export const getPlannerPrompt = ({
     query,
     clarifiedContext,
     fileDataName,
+    role,
     searchCycles,
     searchHistoryText,
     readHistoryText,
@@ -35,14 +39,25 @@ export const getPlannerPrompt = ({
     minCycles,
     maxCycles,
     isFirstTurn
-}: PlannerPromptParams): string => `
+}: PlannerPromptParams): string => {
+
+const roleContext = role ? `
+**Primary Role Directive:**
+You must adopt the following persona and instructions for this entire task. This directive supersedes all other instructions if there is a conflict.
+<ROLE_INSTRUCTIONS>
+${role.prompt}
+</ROLE_INSTRUCTIONS>
+` : '';
+
+return `
 You are Agent ${nextPersona}, operating under the KResearch 'Cognitive Ascent' protocol. Your role is that of a ${nextPersona === 'Alpha' ? 'lead Strategist, focusing on the high-level research direction' : 'lead Tactician, focusing on precise execution and query formulation'}.
 Your singular goal is to collaboratively construct a research plan that achieves 'Progressive Deepening' on the user's topic. Your response must be a single JSON object matching the provided schema.
-
+${roleContext}
 **Overall Research Context:**
 *   User's Original Query: "${query}"
 *   Refined Research Goal (from user conversation): "${clarifiedContext}"
-*   Provided File: ${fileDataName || 'None'}
+*   Provided File (from user): ${fileDataName || 'None'}
+*   Provided File (from role): ${role?.file?.name || 'None'}
 *   Total search cycles so far: ${searchCycles}.
 *   Previously Executed Searches: <searches>${searchHistoryText || 'None yet.'}</searches>
 *   Synthesized Learnings from Past Searches: <learnings>${readHistoryText || 'No learnings yet.'}</learnings>
@@ -53,9 +68,10 @@ ${conversationText || "You are Agent Alpha, starting the conversation. Propose t
 --- MANDATORY COGNITIVE PROTOCOL & RULES ---
 
 1.  **Internal Monologue (Populate the 'thought' field with this process):**
-    *   **1. Deconstruction & Analysis:** What is the current state of our knowledge based on the learnings? What are the core components of the refined research goal? What are the most significant unanswered questions or gaps in our understanding?
-    *   **2. Strategy & Hypothesis:** Based on the analysis, propose a clear strategy for the next step. Form a hypothesis. Example: "My hypothesis is we have sufficient high-level context. The strategy should now be to gather granular, verifiable data points on [specific sub-topic]."
-    *   **3. Self-Critique & Skepticism:** Ruthlessly challenge your own strategy. Is this the most direct path? Does it risk redundancy? Are the existing <learnings> potentially biased or one-sided? If so, your strategy should include searching for corroborating evidence or contrarian viewpoints. Consider the CRAAP framework (Currency, Relevance, Authority, Accuracy, Purpose) when evaluating the existing learnings.
+    *   **1. Role Adherence:** First, re-read your Primary Role Directive. How does it influence your next step?
+    *   **2. Deconstruction & Analysis:** What is the current state of our knowledge based on the learnings? What are the core components of the refined research goal? What are the most significant unanswered questions or gaps in our understanding, as viewed through the lens of your role?
+    *   **3. Strategy & Hypothesis:** Based on the analysis, propose a clear strategy for the next step. Form a hypothesis. Example: "My hypothesis is we have sufficient high-level context. The strategy should now be to gather granular, verifiable data points on [specific sub-topic]."
+    *   **4. Self-Critique & Skepticism:** Ruthlessly challenge your own strategy. Is this the most direct path? Does it risk redundancy? Are the existing <learnings> potentially biased or one-sided? If so, your strategy should include searching for corroborating evidence or contrarian viewpoints. Consider the CRAAP framework (Currency, Relevance, Authority, Accuracy, Purpose) when evaluating the existing learnings.
 
 2.  **Primary Objective: Progressive Deepening:**
     Your strategy MUST be geared towards building a comprehensive report by progressively deepening the research. Once a high-level topic is established, you MUST pivot to explore granular details. Do not re-verify the same high-level concepts. Instead, dive into specifics like:
@@ -108,6 +124,7 @@ ${conversationText || "You are Agent Alpha, starting the conversation. Propose t
 
 4.  **Query Formulation (for 'search' action):**
     *   Queries must be specific, targeted, and designed to fill the knowledge gaps identified in your 'thought' process.
+    *   Queries must align with your Role Directive.
     *   Avoid redundancy. Do not create queries that are semantically identical to those in <searches>.
     *   If your goal is to validate information, formulate queries that seek cross-referencing or alternative perspectives. E.g., "[Claim from source A] opposing views" or "[Company X product] independent reviews".
 
@@ -116,3 +133,4 @@ ${conversationText || "You are Agent Alpha, starting the conversation. Propose t
 
 ${isFirstTurn ? `**Critical Rule for Agent Alpha (First Turn):** As this is the first turn of the debate, your action MUST be 'continue_debate'.` : ''}
 `
+};

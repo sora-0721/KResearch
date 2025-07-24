@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { HistoryItem } from '../types';
+import { HistoryItem, Role } from '../types';
 import GlassCard from './GlassCard';
 import LiquidButton from './LiquidButton';
 import { useLanguage } from '../contextx/LanguageContext';
@@ -9,13 +9,14 @@ interface HistoryPanelProps {
   isOpen: boolean;
   onClose: () => void;
   history: HistoryItem[];
+  roles: Role[];
   onLoad: (id: string) => void;
   onDelete: (id:string) => void;
   onClear: () => void;
   onUpdateTitle: (id: string, newTitle: string) => void;
 }
 
-const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, history, onLoad, onDelete, onClear, onUpdateTitle }) => {
+const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, history, roles, onLoad, onDelete, onClear, onUpdateTitle }) => {
   const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -54,6 +55,12 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, history, o
   const filteredHistory = history.filter(item =>
     (item.title || item.query).toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const getRoleEmoji = (roleId?: string | null) => {
+    if (!roleId) return null;
+    const role = roles.find(r => r.id === roleId);
+    return role ? <span className="text-lg" title={role.name}>{role.emoji}</span> : null;
+  }
 
   return (
     <div className={`fixed inset-0 z-50 transition-all duration-500 ease-in-out ${isOpen ? 'visible' : 'invisible'}`}>
@@ -106,7 +113,10 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, history, o
                         className="w-full font-semibold text-gray-800 dark:text-gray-200 bg-transparent focus:outline-none border-b border-glow-light dark:border-glow-dark"
                       />
                    ) : (
+                    <div className="flex items-center gap-2 flex-grow min-w-0">
+                      {getRoleEmoji(item.roleId)}
                       <p className="font-semibold truncate text-gray-800 dark:text-gray-200 flex-grow" title={item.title || item.query}>{item.title || item.query}</p>
+                    </div>
                    )}
                    <div className="flex items-center gap-1 flex-shrink-0">
                       <span className="text-xs font-mono text-gray-500 dark:text-gray-400 select-none">

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { NotificationProvider } from './contextx/NotificationContext';
 import { LanguageProvider, useLanguage } from './contextx/LanguageContext';
@@ -12,6 +13,8 @@ import ClarificationChat from './components/ClarificationChat';
 import ReportVisualizer from './components/ReportVisualizer';
 import SettingsModal from './components/SettingsModal';
 import HistoryPanel from './components/HistoryPanel';
+import RoleManagerPanel from './components/RoleManagerPanel';
+import RoleSelector from './components/RoleSelector';
 import { useAppLogic } from './hooks/useAppLogic';
 import { ResearchMode } from './types';
 
@@ -42,7 +45,8 @@ const AppContent: React.FC = () => {
       handleGenerateReportFromPause,
       history, loadFromHistory, deleteHistoryItem, clearHistory, handleUpdateHistoryTitle,
       handleNavigateVersion,
-      handleTranslateReport, translationLoading
+      handleTranslateReport, translationLoading,
+      roles, selectedRoleId, setSelectedRoleId, saveRole, deleteRole, isRoleManagerOpen, setIsRoleManagerOpen
   } = useAppLogic();
 
   const [isLogVisible, setIsLogVisible] = useState<boolean>(true);
@@ -102,6 +106,10 @@ const AppContent: React.FC = () => {
         {/* Toolbar: No longer absolute, part of the layout flow */}
         <div className="flex justify-end items-center gap-2 sm:gap-4">
           <LanguageSwitcher />
+           <button onClick={() => setIsRoleManagerOpen(true)} className="p-2 rounded-full cursor-pointer hover:bg-black/10 dark:hover:bg-white/10 transition-colors" title={t('roles')}>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600 dark:text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
+              <span className="sr-only">{t('roles')}</span>
+          </button>
           <button onClick={() => setIsHistoryOpen(true)} className="p-2 rounded-full cursor-pointer hover:bg-black/10 dark:hover:bg-white/10 transition-colors" title={t('history')}>
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               <span className="sr-only">{t('history')}</span>
@@ -132,13 +140,24 @@ const AppContent: React.FC = () => {
                   <button key={m.id} onClick={() => setMode(m.id)} className={`p-3 rounded-2xl text-sm font-semibold transition-all duration-300 text-center border ${mode === m.id ? 'bg-glow-light/20 dark:bg-glow-dark/30 text-gray-900 dark:text-white shadow-md border-glow-light dark:border-glow-dark' : 'bg-glass-light/50 dark:bg-glass-dark/50 text-gray-600 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/10 border-border-light dark:border-border-dark'}`} title={m.description}>{m.name}</button>
                 ))}
               </div>
-              <div className="relative">
-                <textarea value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={handleKeyDown} placeholder={t('mainQueryPlaceholder')} className="w-full h-32 p-4 pr-12 rounded-2xl resize-none bg-white/40 dark:bg-black/20 border border-transparent focus:border-glow-light dark:focus:border-glow-dark focus:ring-2 focus:ring-glow-light/50 dark:focus:ring-glow-dark/50 focus:outline-none transition-all duration-300" disabled={appState !== 'idle'}/>
-                <div className="absolute inset-y-0 right-0 flex items-end p-3">
-                    <input type="file" id="file-upload" ref={fileInputRef} className="hidden" onChange={handleFileChange} disabled={appState !== 'idle'} />
-                    <label htmlFor="file-upload" className="p-2 rounded-full cursor-pointer hover:bg-black/10 dark:hover:bg-white/10 transition-colors" title={t('attachFile')}><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg><span className="sr-only">{t('attachFile')}</span></label>
+               <div className="relative flex-grow">
+                    <textarea 
+                        value={query} 
+                        onChange={(e) => setQuery(e.target.value)} 
+                        onKeyDown={handleKeyDown} 
+                        placeholder={t('mainQueryPlaceholder')} 
+                        className="w-full h-32 p-4 pr-24 rounded-2xl resize-none bg-white/40 dark:bg-black/20 border border-transparent focus:border-glow-light dark:focus:border-glow-dark focus:ring-2 focus:ring-glow-light/50 dark:focus:ring-glow-dark/50 focus:outline-none transition-all duration-300" 
+                        disabled={appState !== 'idle'}
+                    />
+                    <div className="absolute inset-y-0 right-0 flex items-end p-4 gap-2">
+                        <input type="file" id="file-upload" ref={fileInputRef} className="hidden" onChange={handleFileChange} disabled={appState !== 'idle'} />
+                        <label htmlFor="file-upload" className="p-2 rounded-full cursor-pointer hover:bg-black/10 dark:hover:bg-white/10 transition-colors" title={t('attachFile')}>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                            <span className="sr-only">{t('attachFile')}</span>
+                        </label>
+                        <RoleSelector roles={roles} selectedRoleId={selectedRoleId} onSelectRole={setSelectedRoleId} disabled={appState !== 'idle'} />
+                    </div>
                 </div>
-              </div>
               <div className="rounded-2xl bg-white/40 dark:bg-black/20 border border-transparent focus-within:border-glow-light dark:focus-within:border-glow-dark focus-within:ring-2 focus-within:ring-glow-light/50 dark:focus-within:ring-glow-dark/50 transition-all duration-300">
                   <button onClick={() => setIsGuidedSearchOpen(prev => !prev)} className={`flex items-center justify-between w-full text-left p-4 text-sm text-gray-600 dark:text-gray-400 font-medium ${isGuidedSearchOpen ? 'pb-2' : ''}`} aria-expanded={isGuidedSearchOpen} aria-controls="guided-search-panel">
                       <span>{t('advancedSearch')}</span>
@@ -207,10 +226,19 @@ const AppContent: React.FC = () => {
          </div>
       )}
 
+      <RoleManagerPanel 
+        isOpen={isRoleManagerOpen}
+        onClose={() => setIsRoleManagerOpen(false)}
+        roles={roles}
+        onSaveRole={saveRole}
+        onDeleteRole={deleteRole}
+      />
+
       <HistoryPanel
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
         history={history}
+        roles={roles}
         onLoad={handleLoadFromHistory}
         onDelete={deleteHistoryItem}
         onClear={clearHistory}
