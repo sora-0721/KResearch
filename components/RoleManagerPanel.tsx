@@ -14,6 +14,8 @@ interface RoleEditorProps {
     isSaving: boolean;
 }
 
+const GenerateIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846-.813a4.5 4.5 0 0 0-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456zM16.898 20.572L16.5 21.75l-.398-1.178a3.375 3.375 0 0 0-2.3-2.3L12.75 18l1.178-.398a3.375 3.375 0 0 0 2.3-2.3L16.5 14.25l.398 1.178a3.375 3.375 0 0 0 2.3 2.3l1.178.398-1.178.398a3.375 3.375 0 0 0-2.3 2.3z" /></svg>;
+
 const RoleEditor: React.FC<RoleEditorProps> = ({ role: initialRole, onSave, onCancel, isSaving }) => {
     const { t } = useLanguage();
     const [role, setRole] = useState(initialRole);
@@ -34,10 +36,10 @@ const RoleEditor: React.FC<RoleEditorProps> = ({ role: initialRole, onSave, onCa
     };
 
     const handleOptimizePrompt = async (mode: 'creative' | 'refine') => {
-        if (!role.prompt) return;
+        if ((!role.prompt && !role.name) || (mode === 'refine' && role.prompt.length < 100)) return;
         setAiStatus('optimizing');
         try {
-            const optimizedPrompt = await roleAIService.optimizePrompt(role.prompt, mode);
+            const optimizedPrompt = await roleAIService.optimizePrompt(role.prompt, mode, role.name);
             setRole(prev => ({ ...prev, prompt: optimizedPrompt }));
         } catch (e) {
             console.error("Failed to optimize prompt:", e);
@@ -62,20 +64,31 @@ const RoleEditor: React.FC<RoleEditorProps> = ({ role: initialRole, onSave, onCa
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
+    const isRefineDisabled = !role.prompt.trim() || role.prompt.trim().length < 100 || aiStatus !== 'idle';
+    const isCreativeDisabled = (!role.prompt.trim() && !role.name.trim()) || aiStatus !== 'idle';
+
     return (
         <div className="p-6 bg-slate-100/90 dark:bg-black/20 rounded-2xl animate-fade-in flex flex-col gap-4">
             <div className="flex gap-4 items-center">
                 <input type="text" value={role.emoji} onChange={e => setRole({ ...role, emoji: e.target.value })} maxLength={2} className="text-4xl w-16 h-16 text-center bg-white/40 dark:bg-black/20 rounded-2xl" />
-                <input type="text" value={role.name} onChange={e => setRole({ ...role, name: e.target.value })} placeholder={t('roleNamePlaceholder')} className="w-full text-2xl font-bold bg-transparent focus:outline-none" />
+                <div className="relative w-full">
+                     <input type="text" value={role.name} onChange={e => setRole({ ...role, name: e.target.value })} placeholder={t('roleNamePlaceholder')} className="w-full text-2xl font-bold bg-transparent focus:outline-none pr-10" />
+                     <button onClick={handleGenerateNameEmoji} disabled={!role.prompt || aiStatus === 'generating'} className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-800 dark:hover:text-white disabled:opacity-50" title={t('generateNameEmoji')}>
+                         {aiStatus === 'generating' ? <Spinner/> : <GenerateIcon />}
+                     </button>
+                </div>
             </div>
             
             <textarea value={role.prompt} onChange={e => setRole({ ...role, prompt: e.target.value })} placeholder={t('rolePromptPlaceholder')} className="w-full h-48 p-3 rounded-2xl resize-none bg-white/40 dark:bg-black/20 border border-transparent focus:border-glow-light dark:focus:border-glow-dark focus:ring-1 focus:outline-none transition-all text-sm" />
             
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">AI Assist:</span>
-                <LiquidButton onClick={handleGenerateNameEmoji} disabled={!role.prompt || aiStatus !== 'idle'} className="px-3 py-1.5 text-xs flex items-center gap-2 bg-blue-500/10 dark:bg-blue-400/10 border-blue-500/20">{aiStatus === 'generating' ? <Spinner/> : '🤖'} {t('generateNameEmoji')}</LiquidButton>
-                <button onClick={() => handleOptimizePrompt('refine')} disabled={!role.prompt || aiStatus !== 'idle'} className="px-3 py-1.5 text-xs rounded-2xl flex items-center gap-2 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors disabled:opacity-50">{aiStatus === 'optimizing' ? <Spinner/> : '✨'} {t('refinePrompt')}</button>
-                <button onClick={() => handleOptimizePrompt('creative')} disabled={!role.prompt || aiStatus !== 'idle'} className="px-3 py-1.5 text-xs rounded-2xl flex items-center gap-2 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors disabled:opacity-50">{aiStatus === 'optimizing' ? <Spinner/> : '🎨'} {t('creativePrompt')}</button>
+                <button onClick={() => handleOptimizePrompt('refine')} disabled={isRefineDisabled} className="px-3 py-1.5 text-xs rounded-2xl flex items-center gap-2 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors disabled:opacity-50" title={isRefineDisabled && role.prompt.trim().length < 100 ? "Prompt must be at least 100 characters to refine." : t('refinePrompt')}>
+                    {aiStatus === 'optimizing' ? <Spinner/> : '✨'} {t('refinePrompt')}
+                </button>
+                <button onClick={() => handleOptimizePrompt('creative')} disabled={isCreativeDisabled} className="px-3 py-1.5 text-xs rounded-2xl flex items-center gap-2 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors disabled:opacity-50">
+                    {aiStatus === 'optimizing' ? <Spinner/> : '🎨'} {t('creativePrompt')}
+                </button>
             </div>
             
             <div className="pt-4 border-t border-border-light dark:border-border-dark">
