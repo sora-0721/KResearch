@@ -1,3 +1,4 @@
+
 import { ai } from './geminiClient';
 import { getModel } from './models';
 import { settingsService } from './settingsService';
@@ -29,9 +30,25 @@ export const runDynamicConversationalPlanner = async (
     const searchHistoryText = researchHistory.filter(h => h.type === 'search').map(h => (Array.isArray(h.content) ? h.content : [h.content]).join(', ')).join('; ');
     const readHistoryText = researchHistory.filter(h => h.type === 'read').map(h => h.content).join('\n---\n');
     
-    let currentConversation: { persona: AgentPersona; thought: string }[] = [];
-    let nextPersona: AgentPersona = 'Alpha';
-    let debateTurns = 0;
+    const currentConversation: { persona: AgentPersona; thought: string }[] = [];
+    let lastPersona: AgentPersona | undefined;
+
+    // Reconstruct conversation from the tail of the history log
+    for (let i = researchHistory.length - 1; i >= 0; i--) {
+        const update = researchHistory[i];
+        if (update.type === 'thought' && update.persona) {
+            currentConversation.unshift({ persona: update.persona, thought: String(update.content) });
+            if (!lastPersona) {
+                lastPersona = update.persona;
+            }
+        } else {
+            // Stop when we hit a non-thought update (e.g., 'read', 'search')
+            break;
+        }
+    }
+    
+    let nextPersona: AgentPersona = lastPersona === 'Alpha' ? 'Beta' : 'Alpha';
+    let debateTurns = currentConversation.length;
     let consecutiveFinishAttempts = 0;
 
     while (debateTurns < maxDebateRounds) {

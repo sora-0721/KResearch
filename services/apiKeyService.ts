@@ -78,6 +78,10 @@ class ApiKeyService {
         return keys[this.currentKeyIndex];
     }
 
+    public reset(): void {
+        this.currentKeyIndex = -1;
+    }
+
     public setApiKeys(keysString: string): void {
         if (!this.isEnvKey()) {
             this.userApiKeys = this.parseKeys(keysString);

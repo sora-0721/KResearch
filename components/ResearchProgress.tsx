@@ -1,4 +1,5 @@
 
+
 import React, { useRef, useEffect } from 'react';
 import Spinner from './Spinner';
 import { ResearchUpdate, AgentPersona } from '../types';
@@ -117,8 +118,8 @@ const ResearchProgress: React.FC<ResearchProgressProps> = ({ updates, isResearch
                     </div>
                  ) : update.type === 'outline' ? (
                     <div>
-                        <span className="font-semibold capitalize text-yellow-500 dark:text-yellow-400">{t('outline')}:</span>
-                        <span className="ml-1 italic">{String(update.content)}</span>
+                        <span className="font-semibold capitalize text-yellow-500 dark:text-yellow-400">{t('outline')}</span>
+                        <span className="ml-1 italic">{t('generatingOutlineMessage')}</span>
                     </div>
                 ) : (
                     <div>

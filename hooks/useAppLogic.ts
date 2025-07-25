@@ -95,7 +95,6 @@ export const useAppLogic = () => {
         if (!abortControllerRef.current || abortControllerRef.current.signal.aborted) {
             abortControllerRef.current = new AbortController();
         }
-        setAppState('researching');
         const startTime = Date.now();
         const selectedRole = roles.find(r => r.id === selectedRoleId);
 
@@ -128,6 +127,7 @@ export const useAppLogic = () => {
         } catch (error: any) {
             if (error instanceof AllKeysFailedError) {
                 addNotification({ type: 'error', title: t('allApiKeysFailedTitle'), message: t('allApiKeysFailedMessage') });
+                apiKeyService.reset();
                 setAppState('paused');
                 return;
             }
@@ -151,7 +151,7 @@ export const useAppLogic = () => {
             }
             setAppState('complete');
         }
-    }, [query, mode, selectedFile, addNotification, initialSearchResult, clarificationHistory, t, roles, selectedRoleId]);
+    }, [query, mode, selectedFile, addNotification, initialSearchResult, clarificationHistory, t, roles, selectedRoleId, researchUpdates]);
 
     const handleClarificationResponse = useCallback(async (history: ClarificationTurn[], searchResult: { text: string; citations: Citation[] } | null) => {
       setClarificationLoading(true);
@@ -167,20 +167,17 @@ export const useAppLogic = () => {
       } catch (error) {
             if (error instanceof AllKeysFailedError) {
                 addNotification({ type: 'error', title: t('apiKeysFailedTitle'), message: t('apiKeysFailedMessage') });
-                setAppState('paused');
+                apiKeyService.reset();
             } else {
               console.error("Clarification step failed:", error);
               const message = getCleanErrorMessage(error);
               addNotification({type: 'error', title: t('clarificationFailedTitle'), message});
-              setClarifiedContext(t('clarifiedContextFailed'));
-              setAppState('researching');
             }
+            setAppState('paused'); // Pause on ANY error during clarification
       } finally {
-          if(appState !== 'paused') {
-            setClarificationLoading(false);
-          }
+          setClarificationLoading(false); // Always turn off loading state
       }
-    }, [mode, selectedFile, addNotification, appState, t, roles, selectedRoleId]);
+    }, [mode, selectedFile, addNotification, t, roles, selectedRoleId]);
 
     useEffect(() => {
       if (appState === 'researching' && clarifiedContext && !researchExecutionRef.current) {
@@ -193,7 +190,7 @@ export const useAppLogic = () => {
     }, [appState, clarifiedContext, startResearch]);
 
     const startClarificationProcess = useCallback(async (guidedSearchQuery?: string) => {
-        if (!query.trim() || appState !== 'idle') return;
+        if (!query.trim() || (appState !== 'idle' && appState !== 'paused')) return;
 
         if (!apiKeyService.hasKey()) {
             addNotification({type: 'warning', title: t('apiKeyRequiredTitle'), message: t('apiKeyRequiredMessage')});
@@ -203,8 +200,7 @@ export const useAppLogic = () => {
 
         setAppState('researching');
         setResearchUpdates([]); // Clear previous logs for a new run
-
-        let searchResultForClarification: { text: string; citations: Citation[] } | null = null;
+        
         try {
             const guidedQueries = guidedSearchQuery?.split(/[\n,]+/).map(q => q.trim()).filter(Boolean) || [];
             const queriesToSearch = [query.trim(), ...guidedQueries].filter(Boolean);
@@ -237,24 +233,31 @@ export const useAppLogic = () => {
             };
             setResearchUpdates([initialSearchUpdate, initialReadUpdate]);
             
-            searchResultForClarification = {
+            const searchResultForClarification = {
                 text: allSummaries.join('\n\n'),
                 citations: Array.from(new Map(allCitations.map(c => [c.url, c])).values()),
             };
             
             setInitialSearchResult(searchResultForClarification);
+
+            setAppState('clarifying');
+            const initialQuery = selectedFile ? `${query}\n\n[File attached: ${selectedFile.name}]` : query;
+            const initialHistory: ClarificationTurn[] = [{ role: 'user', content: initialQuery }];
+            setClarificationHistory(initialHistory);
+            handleClarificationResponse(initialHistory, searchResultForClarification);
             
         } catch (error) {
             console.error("Initial search failed:", error);
-            const message = getCleanErrorMessage(error);
-            addNotification({type: 'error', title: t('initialSearchFailedTitle'), message});
+            if (error instanceof AllKeysFailedError) {
+                apiKeyService.reset();
+                addNotification({type: 'error', title: t('allApiKeysFailedTitle'), message: t('apiKeysFailedMessage')});
+            } else {
+                 const message = getCleanErrorMessage(error);
+                 addNotification({type: 'error', title: t('initialSearchFailedTitle'), message});
+            }
+            setAppState('paused'); // Pause the app on failure
+            return; // Stop execution
         }
-
-        setAppState('clarifying');
-        const initialQuery = selectedFile ? `${query}\n\n[File attached: ${selectedFile.name}]` : query;
-        const initialHistory: ClarificationTurn[] = [{ role: 'user', content: initialQuery }];
-        setClarificationHistory(initialHistory);
-        handleClarificationResponse(initialHistory, searchResultForClarification);
     }, [query, appState, selectedFile, mode, addNotification, handleClarificationResponse, t]);
 
     const handleAnswerSubmit = useCallback((answer: string) => {
@@ -283,8 +286,23 @@ export const useAppLogic = () => {
 
     const handleContinueResearch = () => {
         if (appState !== 'paused') return;
+        
+        // Case 1: Paused during the very first step (initial search failed)
+        if (!initialSearchResult && clarificationHistory.length === 0) {
+            startClarificationProcess(guidedQuery);
+            return;
+        }
+    
+        // Case 2: Paused during the AI clarification chat
+        if (clarificationHistory.length > 0 && !clarifiedContext) {
+            setAppState('clarifying');
+            handleClarificationResponse(clarificationHistory, initialSearchResult);
+            return;
+        }
+    
+        // Case 3: Paused during the main research loop
         setAppState('researching');
-    }
+    };
 
     const handleGenerateReportFromPause = useCallback(async () => {
         if (appState !== 'paused') return;
@@ -329,6 +347,7 @@ export const useAppLogic = () => {
         } catch (error: any) {
             if (error instanceof AllKeysFailedError) {
                  addNotification({ type: 'error', title: t('synthesisFailedTitle'), message: t('synthesisFailedMessage') });
+                 apiKeyService.reset();
             } else {
                 console.error("Synthesis from paused state failed:", error);
                 const message = getCleanErrorMessage(error);
