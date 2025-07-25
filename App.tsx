@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { NotificationProvider } from './contextx/NotificationContext';
 import { LanguageProvider, useLanguage } from './contextx/LanguageContext';
@@ -17,6 +18,7 @@ import RoleManagerPanel from './components/RoleManagerPanel';
 import RoleSelector from './components/RoleSelector';
 import { useAppLogic } from './hooks/useAppLogic';
 import { ResearchMode } from './types';
+import Spinner from './components/Spinner';
 
 const App: React.FC = () => {
     return (
@@ -182,6 +184,13 @@ const AppContent: React.FC = () => {
           
           {appState === 'researching' && (<LiquidButton onClick={handleStopResearch} className="w-full bg-red-500/30 hover:bg-red-500/40 border-red-500/50">{t('stopResearch')}</LiquidButton>)}
           
+          {appState === 'synthesizing' && (
+            <div className="flex flex-col items-center justify-center gap-3 animate-fade-in p-8">
+                <Spinner />
+                <span className="text-lg font-semibold">{t('generatingReport')}</span>
+            </div>
+          )}
+
           {appState === 'paused' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 animate-fade-in">
                 <LiquidButton onClick={handleContinueResearch} className="w-full">{t('continueResearch')}</LiquidButton>

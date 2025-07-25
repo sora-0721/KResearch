@@ -323,7 +323,7 @@ export const useAppLogic = () => {
             return Array.from(citationsMap.values());
         };
 
-        setAppState('researching');
+        setAppState('synthesizing');
         const startTime = Date.now();
         try {
             const citations = getCitationsFromHistory(researchUpdates);

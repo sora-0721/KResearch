@@ -1,6 +1,7 @@
 
 
 
+
 import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback } from 'react';
 
 // Embed JSON content directly to avoid module resolution issues
@@ -27,6 +28,7 @@ const en = {
   "stopResearch": "Stop Research",
   "continueResearch": "Continue Research",
   "generateReport": "Generate Report",
+  "generatingReport": "Generating Report...",
   "toggleResearchLog": "{{action}} Research Log",
   "show": "Show",
   "hide": "Hide",
@@ -227,6 +229,7 @@ const zh = {
   "stopResearch": "停止研究",
   "continueResearch": "继续研究",
   "generateReport": "生成报告",
+  "generatingReport": "正在生成报告...",
   "toggleResearchLog": "{{action}}研究日志",
   "show": "显示",
   "hide": "隐藏",

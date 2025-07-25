@@ -78,10 +78,6 @@ class ApiKeyService {
         return keys[this.currentKeyIndex];
     }
 
-    public reset(): void {
-        this.currentKeyIndex = -1;
-    }
-
     public setApiKeys(keysString: string): void {
         if (!this.isEnvKey()) {
             this.userApiKeys = this.parseKeys(keysString);
@@ -106,6 +102,10 @@ class ApiKeyService {
         } catch (e) {
             console.warn("Could not access localStorage. API base URL will not be persisted.");
         }
+    }
+
+    public reset(): void {
+        this.currentKeyIndex = -1;
     }
 }
 
