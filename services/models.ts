@@ -37,6 +37,12 @@ const defaultModels: Record<AgentRole, Record<ResearchMode, string>> = {
         DeepDive: 'gemini-2.5-pro',
         Fast: 'gemini-2.5-flash',
         UltraFast: 'gemini-2.5-flash-lite',
+    },
+    roleAI: {
+        Balanced: 'gemini-2.5-flash',
+        DeepDive: 'gemini-2.5-flash',
+        Fast: 'gemini-2.5-flash',
+        UltraFast: 'gemini-2.5-flash',
     }
 };
 

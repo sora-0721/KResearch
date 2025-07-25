@@ -2,7 +2,7 @@ import { runDynamicConversationalPlanner } from './planner';
 import { executeSingleSearch } from './search';
 import { synthesizeReport } from './synthesis';
 import { settingsService } from './settingsService';
-import { ResearchUpdate, Citation, FinalResearchData, ResearchMode, FileData } from '../types';
+import { ResearchUpdate, Citation, FinalResearchData, ResearchMode, FileData, Role } from '../types';
 import { generateOutline } from './outline';
 
 export const runIterativeDeepResearch = async (
@@ -12,6 +12,7 @@ export const runIterativeDeepResearch = async (
   mode: ResearchMode,
   clarifiedContext: string,
   fileData: FileData | null,
+  role: Role | null,
   initialSearchResult: { text: string, citations: Citation[] } | null,
   existingHistory: ResearchUpdate[]
 ): Promise<Omit<FinalResearchData, 'researchTimeMs'>> => {
@@ -63,7 +64,7 @@ export const runIterativeDeepResearch = async (
     checkSignal();
     
     // The planner needs the *total* number of searches to make decisions about minCycles.
-    const plan = await runDynamicConversationalPlanner(query, history, onPlannerUpdate, checkSignal, idCounter, mode, clarifiedContext, fileData, totalSearchUpdates);
+    const plan = await runDynamicConversationalPlanner(query, history, onPlannerUpdate, checkSignal, idCounter, mode, clarifiedContext, fileData, role, totalSearchUpdates);
     
     checkSignal();
 
@@ -112,10 +113,10 @@ export const runIterativeDeepResearch = async (
   const outlineUpdate = { id: idCounter.current++, type: 'outline' as const, content: 'Generating report outline...' };
   history.push(outlineUpdate);
   onUpdate(outlineUpdate);
-  const reportOutline = await generateOutline(query, history, mode, fileData);
+  const reportOutline = await generateOutline(query, history, mode, fileData, role);
   
   checkSignal();
-  const finalReportData = await synthesizeReport(query, history, allCitations, mode, fileData, reportOutline);
+  const finalReportData = await synthesizeReport(query, history, allCitations, mode, fileData, role, reportOutline);
   const uniqueCitations = Array.from(new Map(allCitations.map(c => [c.url, c])).values());
 
   return { 

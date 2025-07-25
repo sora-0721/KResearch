@@ -7,3 +7,5 @@ export { AllKeysFailedError, apiKeyService } from './apiKeyService';
 export { historyService } from './historyService';
 export { generateOutline } from './outline';
 export { translateText } from './translation';
+export { roleService } from './roleService';
+export * as roleAIService from './roleAIService';

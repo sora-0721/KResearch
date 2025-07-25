@@ -1,5 +1,7 @@
+
 import React, { useState } from 'react';
 import { AppSettings, ResearchParams } from '../../types';
+import { useLanguage } from '../../contextx/LanguageContext';
 
 interface ParamSettingsProps {
     settings: AppSettings;
@@ -26,6 +28,7 @@ const UNCAPPED_VALUES: ResearchParams = {
 };
 
 const ParamSettings: React.FC<ParamSettingsProps> = ({ settings, setSettings }) => {
+    const { t } = useLanguage();
     // This state tracks the user's manually entered values, preserving them when "uncapped" is toggled.
     const [userParamValues, setUserParamValues] = useState<ResearchParams>(() => {
         const initialParams = settings.researchParams;
@@ -92,11 +95,11 @@ const ParamSettings: React.FC<ParamSettingsProps> = ({ settings, setSettings }) 
 
     return (
         <div className="space-y-6 animate-fade-in">
-            <h3 className="text-lg font-semibold">Research Parameters</h3>
+            <h3 className="text-lg font-semibold">{t('researchParams')}</h3>
             {[
-                { key: 'minCycles', label: 'Min Research Cycles', help: 'Minimum cycles before finishing.' },
-                { key: 'maxCycles', label: 'Max Research Cycles', help: 'Hard limit for research iterations.' },
-                { key: 'maxDebateRounds', label: 'Max Debate Rounds', help: 'Agent planning conversation length.' },
+                { key: 'minCycles', label: t('minCycles'), help: t('minCyclesHelp') },
+                { key: 'maxCycles', label: t('maxCycles'), help: t('maxCyclesHelp') },
+                { key: 'maxDebateRounds', label: t('maxDebateRounds'), help: t('maxDebateRoundsHelp') },
             ].map(({ key, label, help }) => (
                 <div key={key} className="space-y-2">
                     <label htmlFor={key} className="font-semibold text-gray-700 dark:text-gray-300 text-sm">{label}</label>
@@ -129,7 +132,7 @@ const ParamSettings: React.FC<ParamSettingsProps> = ({ settings, setSettings }) 
                                     peer-checked:translate-x-5
                                 "></div>
                             </div>
-                            <span>Uncapped</span>
+                            <span>{t('uncapped')}</span>
                         </label>
                     </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400">{help}</p>

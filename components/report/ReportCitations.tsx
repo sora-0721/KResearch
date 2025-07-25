@@ -1,16 +1,19 @@
+
 import React from 'react';
 import { Citation } from '../../types';
+import { useLanguage } from '../../contextx/LanguageContext';
 
 interface ReportCitationsProps {
   citations: Citation[];
 }
 
 const ReportCitations: React.FC<ReportCitationsProps> = ({ citations }) => {
+  const { t } = useLanguage();
   if (citations.length === 0) return null;
 
   return (
     <div className="mt-8 border-t border-border-light dark:border-border-dark pt-6">
-      <h3 className="text-2xl font-bold mb-4">Citations</h3>
+      <h3 className="text-2xl font-bold mb-4">{t('citations')}</h3>
       <ul className="list-none p-0 space-y-2">
         {citations.map((citation, index) => {
            const displayTitle = citation.title || (() => {
@@ -18,7 +21,7 @@ const ReportCitations: React.FC<ReportCitationsProps> = ({ citations }) => {
                   // Use hostname as a fallback title, which is more readable than the full URL.
                   return new URL(citation.url).hostname.replace(/^www\./, '');
               } catch {
-                  return 'Untitled Source';
+                  return t('untitledSource');
               }
           })();
 

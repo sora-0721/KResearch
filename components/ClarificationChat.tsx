@@ -1,7 +1,9 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import LiquidButton from './LiquidButton';
 import Spinner from './Spinner';
 import { ClarificationTurn } from '../types';
+import { useLanguage } from '../contextx/LanguageContext';
 
 
 interface ClarificationChatProps {
@@ -14,6 +16,7 @@ interface ClarificationChatProps {
 const ClarificationChat: React.FC<ClarificationChatProps> = ({ history, onAnswerSubmit, isLoading, onSkip }) => {
     const [userAnswer, setUserAnswer] = useState('');
     const chatContainerRef = useRef<HTMLDivElement>(null);
+    const { t } = useLanguage();
 
     useEffect(() => {
         if (chatContainerRef.current) {
@@ -49,12 +52,12 @@ const ClarificationChat: React.FC<ClarificationChatProps> = ({ history, onAnswer
     }
 
     // Determine the placeholder text based on the history
-    const placeholderText = getVisibleHistory().length > 0 ? "Your answer..." : "Please provide the research topic you would like to refine.";
+    const placeholderText = getVisibleHistory().length > 0 ? t('clarificationPlaceholder') : t('clarificationPlaceholderInitial');
 
     return (
         <div className="w-full animate-fade-in space-y-4">
-            <h2 className="text-xl font-bold text-center text-gray-800 dark:text-gray-200">Refining Your Request</h2>
-            <p className="text-sm text-center text-gray-600 dark:text-gray-400">To get the best results, the AI may ask a few clarifying questions.</p>
+            <h2 className="text-xl font-bold text-center text-gray-800 dark:text-gray-200">{t('refiningRequest')}</h2>
+            <p className="text-sm text-center text-gray-600 dark:text-gray-400">{t('refiningRequestDesc')}</p>
             
             <div ref={chatContainerRef} className="max-h-80 overflow-y-auto space-y-4 p-4 rounded-2xl bg-white/10 dark:bg-black/5 scroll-smooth">
                 {getVisibleHistory().map((turn, index) => (
@@ -72,7 +75,7 @@ const ClarificationChat: React.FC<ClarificationChatProps> = ({ history, onAnswer
                     <div className="flex justify-start animate-fade-in">
                          <div className="max-w-md p-3 rounded-2xl bg-glass-light dark:bg-glass-dark flex items-center gap-2">
                             <Spinner />
-                            <span className="text-sm">Thinking...</span>
+                            <span className="text-sm">{t('thinking')}</span>
                          </div>
                     </div>
                 )}
@@ -97,10 +100,10 @@ const ClarificationChat: React.FC<ClarificationChatProps> = ({ history, onAnswer
                 />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                      <LiquidButton type="submit" disabled={isLoading || !userAnswer.trim()} className="w-full">
-                        {isLoading ? 'Waiting...' : 'Send Answer'}
+                        {isLoading ? t('waiting') : t('sendAnswer')}
                     </LiquidButton>
                      <LiquidButton type="button" onClick={onSkip} disabled={isLoading} className="w-full bg-transparent hover:bg-black/5 dark:hover:bg-white/5 text-gray-600 dark:text-gray-400 hover:shadow-none hover:-translate-y-0 active:translate-y-px">
-                        Skip & Start Research
+                        {t('skipAndStart')}
                     </LiquidButton>
                 </div>
             </form>

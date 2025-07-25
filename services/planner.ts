@@ -2,7 +2,7 @@ import { ai } from './geminiClient';
 import { getModel } from './models';
 import { settingsService } from './settingsService';
 import { parseJsonFromMarkdown } from './utils';
-import { ResearchUpdate, AgentPersona, ResearchMode, FileData } from '../types';
+import { ResearchUpdate, AgentPersona, ResearchMode, FileData, Role } from '../types';
 import { getPlannerPrompt, plannerTurnSchema } from './plannerPrompt';
 
 interface PlannerTurn {
@@ -21,6 +21,7 @@ export const runDynamicConversationalPlanner = async (
     mode: ResearchMode,
     clarifiedContext: string,
     fileData: FileData | null,
+    role: Role | null,
     searchCycles: number
 ): Promise<{ search_queries: string[], should_finish: boolean, finish_reason?: string }> => {
     const { minCycles, maxDebateRounds, maxCycles } = settingsService.getSettings().researchParams;
@@ -44,6 +45,7 @@ export const runDynamicConversationalPlanner = async (
             query,
             clarifiedContext,
             fileDataName: fileData ? fileData.name : null,
+            role,
             searchCycles,
             searchHistoryText,
             readHistoryText,
@@ -56,6 +58,9 @@ export const runDynamicConversationalPlanner = async (
         const parts: ({ text: string } | { inlineData: { mimeType: string; data: string; } })[] = [{ text: prompt }];
         if (fileData) {
             parts.push({ inlineData: { mimeType: fileData.mimeType, data: fileData.data } });
+        }
+        if (role?.file) {
+            parts.push({ inlineData: { mimeType: role.file.mimeType, data: role.file.data } });
         }
 
         const response = await ai.models.generateContent({

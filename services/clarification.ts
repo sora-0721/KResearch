@@ -1,17 +1,29 @@
 import { ai } from './geminiClient';
 import { getModel } from './models';
 import { parseJsonFromMarkdown } from './utils';
-import { ResearchMode, FileData, ClarificationTurn, Citation } from '../types';
+import { ResearchMode, FileData, ClarificationTurn, Citation, Role } from '../types';
 
 export interface ClarificationResponse {
     type: 'question' | 'summary';
     content: string;
 }
 
+const getRoleContext = (role: Role | null): string => {
+    if (!role) return '';
+    return `
+**Primary Role Directive:**
+You must adopt the following persona and instructions for this entire task. This directive is your primary guide.
+<ROLE_INSTRUCTIONS>
+${role.prompt}
+</ROLE_INSTRUCTIONS>
+`;
+};
+
 export const clarifyQuery = async (
     history: ClarificationTurn[],
     mode: ResearchMode,
     fileData: FileData | null,
+    role: Role | null,
     initialSearchResult: { text: string, citations: Citation[] } | null
 ): Promise<ClarificationResponse> => {
     // --- STEP 1: Generate the clarification text ---
@@ -24,8 +36,11 @@ ${initialSearchResult.text}
 </SEARCH_SUMMARY>
 Use this context to ask a more specific question. DO NOT ask about things already covered in this summary.`
         : '';
+    
+    const roleContext = getRoleContext(role);
 
     const generationPrompt = `You are a Research Analyst AI. Your primary goal is to help a user refine a broad research topic into a specific, actionable research angle by asking clarifying questions. Your responses must be in English.
+${roleContext}
 ${searchContext}
 **Workflow:**
 1.  You will receive a user's research query and the conversation history.
@@ -48,8 +63,13 @@ The user wants to research the impact of recent advancements in large language m
     
     const contents = history.map((turn, index) => {
         const parts: ({ text: string } | { inlineData: { mimeType: string; data: string } })[] = [{ text: turn.content }];
+        // Add research file
         if (turn.role === 'user' && index === 0 && fileData) {
             parts.push({ inlineData: { mimeType: fileData.mimeType, data: fileData.data } });
+        }
+        // Add role file
+        if (turn.role === 'user' && index === 0 && role?.file) {
+            parts.push({ inlineData: { mimeType: role.file.mimeType, data: role.file.data } });
         }
         return { role: turn.role, parts: parts };
     });
@@ -89,8 +109,8 @@ Text to analyze: "${generatedText}"
     };
 
     const formattingResponse = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-lite',
-        contents: [{ role: 'user', parts: [{ text: formattingPrompt }] }],
+        model: 'gemini-2.5-flash',
+        contents: formattingPrompt,
         config: {
             responseMimeType: "application/json",
             responseSchema: clarificationResponseSchema,

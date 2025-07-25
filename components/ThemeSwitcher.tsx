@@ -1,4 +1,6 @@
+
 import React from 'react';
+import { useLanguage } from '../contextx/LanguageContext';
 
 interface ThemeSwitcherProps {
   isDarkMode: boolean;
@@ -6,6 +8,8 @@ interface ThemeSwitcherProps {
 }
 
 const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({ isDarkMode, onToggle }) => {
+  const { t } = useLanguage();
+
   return (
     <label className="relative inline-flex items-center cursor-pointer">
       <input type="checkbox" checked={isDarkMode} onChange={onToggle} className="sr-only peer" />
@@ -27,7 +31,7 @@ const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({ isDarkMode, onToggle }) =
         peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-glow-light/50 dark:peer-focus:ring-glow-dark/50
       "></div>
       <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300">
-        {isDarkMode ? 'Dark' : 'Light'}
+        {isDarkMode ? t('dark') : t('light')}
       </span>
     </label>
   );
