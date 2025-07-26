@@ -1,7 +1,8 @@
+
 export type ResearchUpdateType = 'thought' | 'search' | 'read' | 'outline';
 export type AgentPersona = 'Alpha' | 'Beta';
 export type ResearchMode = 'Balanced' | 'DeepDive' | 'Fast' | 'UltraFast';
-export type AppState = 'idle' | 'clarifying' | 'researching' | 'paused' | 'complete';
+export type AppState = 'idle' | 'clarifying' | 'researching' | 'paused' | 'complete' | 'synthesizing';
 export type AgentRole = 'planner' | 'searcher' | 'synthesizer' | 'clarification' | 'visualizer' | 'outline' | 'roleAI';
 export type NotificationType = 'success' | 'error' | 'info' | 'warning';
 export type TranslationStyle = 'literal' | 'colloquial';

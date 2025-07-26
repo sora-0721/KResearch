@@ -103,6 +103,10 @@ class ApiKeyService {
             console.warn("Could not access localStorage. API base URL will not be persisted.");
         }
     }
+
+    public reset(): void {
+        this.currentKeyIndex = -1;
+    }
 }
 
 export const apiKeyService = new ApiKeyService();

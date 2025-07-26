@@ -22,6 +22,7 @@
   "stopResearch": "Stop Research",
   "continueResearch": "Continue Research",
   "generateReport": "Generate Report",
+  "generatingReport": "Generating Report...",
   "toggleResearchLog": "{{action}} Research Log",
   "show": "Show",
   "hide": "Hide",
