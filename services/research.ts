@@ -1,12 +1,12 @@
 
 
 
+
 import { runDynamicConversationalPlanner } from './planner';
 import { executeSingleSearch } from './search';
 import { synthesizeReport } from './synthesis';
 import { settingsService } from './settingsService';
 import { ResearchUpdate, Citation, FinalResearchData, ResearchMode, FileData, Role } from '../types';
-import { generateOutline } from './outline';
 
 /**
  * Executes a set of search queries and synthesizes the results.
@@ -71,107 +71,87 @@ export const runIterativeDeepResearch = async (
   const checkSignal = () => {
     if (signal.aborted) throw new DOMException('Research aborted by user.', 'AbortError');
   }
+  
+  // Recovery logic for a failed search/read step
+  const lastUpdate = history.length > 0 ? history[history.length - 1] : null;
+  if (lastUpdate && lastUpdate.type === 'search') {
+    const searchQueries = Array.isArray(lastUpdate.content) ? lastUpdate.content : [String(lastUpdate.content)];
+    console.log('Recovering from a previous state. Retrying last search action.', searchQueries);
 
-  let reportOutline: string | null = (existingHistory.find(u => u.type === 'outline')?.content as string) || null;
+    const { readUpdateContent, newCitations } = await performSearchAndRead(searchQueries, mode, checkSignal);
+    allCitations.push(...newCitations);
 
-  if (!reportOutline) {
-    const lastUpdate = history.length > 0 ? history[history.length - 1] : null;
-    if (lastUpdate && lastUpdate.type === 'search') {
-      const searchQueries = Array.isArray(lastUpdate.content) ? lastUpdate.content : [String(lastUpdate.content)];
-      console.log('Recovering from a previous state. Retrying last search action.', searchQueries);
+    const readUpdate = {
+        id: idCounter.current++,
+        ...readUpdateContent
+    };
+    history.push(readUpdate);
+    onUpdate(readUpdate);
+  }
+  
+  while (true) {
+    checkSignal();
+    const totalSearchUpdates = history.filter(h => h.type === 'search').length;
+    const internalSearchCycles = initialSearchResult ? Math.max(0, totalSearchUpdates - 1) : totalSearchUpdates;
 
-      const { readUpdateContent, newCitations } = await performSearchAndRead(searchQueries, mode, checkSignal);
-      allCitations.push(...newCitations);
-
-      const readUpdate = {
-          id: idCounter.current++,
-          ...readUpdateContent
-      };
-      history.push(readUpdate);
-      onUpdate(readUpdate);
+    if (internalSearchCycles >= maxCycles) {
+        const finishUpdate = { id: idCounter.current++, type: 'thought' as const, content: `Maximum research cycles (${maxCycles}) reached. Forcing conclusion to synthesize report.` };
+        history.push(finishUpdate);
+        onUpdate(finishUpdate);
+        break;
     }
     
-    while (true) {
-      checkSignal();
-      const totalSearchUpdates = history.filter(h => h.type === 'search').length;
-      const internalSearchCycles = initialSearchResult ? Math.max(0, totalSearchUpdates - 1) : totalSearchUpdates;
-
-      if (internalSearchCycles >= maxCycles) {
-          const finishUpdate = { id: idCounter.current++, type: 'thought' as const, content: `Maximum research cycles (${maxCycles}) reached. Forcing conclusion to synthesize report.` };
-          history.push(finishUpdate);
-          onUpdate(finishUpdate);
-          break;
-      }
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      checkSignal();
-      
-      const plan = await runDynamicConversationalPlanner(query, history, (update) => {
-          history.push(update);
-          onUpdate(update);
-      }, checkSignal, idCounter, mode, clarifiedContext, fileData, role, totalSearchUpdates);
-      
-      checkSignal();
-
-      if (plan.should_finish) {
-          const finishReason = plan.finish_reason || 'Research concluded.';
-          const finishUpdate = { id: idCounter.current++, type: 'thought' as const, content: `Finished research: ${finishReason}` };
-          history.push(finishUpdate);
-          onUpdate(finishUpdate);
-          break;
-      }
-
-      const searchQueries = plan.search_queries;
-
-      if (searchQueries && searchQueries.length > 0) {
-        const searchUpdate = { id: idCounter.current++, type: 'search' as const, content: searchQueries, source: searchQueries.map(q => `https://www.google.com/search?q=${encodeURIComponent(q)}`) };
-        history.push(searchUpdate);
-        onUpdate(searchUpdate);
-        
-        const { readUpdateContent, newCitations } = await performSearchAndRead(searchQueries, mode, checkSignal);
-        allCitations.push(...newCitations);
-        
-        const readUpdate = { 
-          id: idCounter.current++, 
-          ...readUpdateContent
-        };
-        history.push(readUpdate);
-        onUpdate(readUpdate);
-      } else if (!plan.should_finish) {
-          const safetyBreakUpdate = { id: idCounter.current++, type: 'thought' as const, content: 'Planner did not provide a search action. Concluding research to synthesize report.' };
-          history.push(safetyBreakUpdate);
-          onUpdate(safetyBreakUpdate);
-          break;
-      }
-    }
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    checkSignal();
+    
+    const plan = await runDynamicConversationalPlanner(query, history, (update) => {
+        history.push(update);
+        onUpdate(update);
+    }, checkSignal, idCounter, mode, clarifiedContext, fileData, role, totalSearchUpdates);
     
     checkSignal();
 
-    const lastLogUpdate = history.length > 0 ? history[history.length - 1] : null;
-    const isRetryingOutline = lastLogUpdate?.type === 'thought' && lastLogUpdate.content === 'Generating report outline...';
-    
-    if (!isRetryingOutline) {
-      const outlineGenerationMessage = { id: idCounter.current++, type: 'thought' as const, content: 'Generating report outline...' };
-      history.push(outlineGenerationMessage);
-      onUpdate(outlineGenerationMessage);
+    if (plan.should_finish) {
+        const finishReason = plan.finish_reason || 'Research concluded.';
+        const finishUpdate = { id: idCounter.current++, type: 'thought' as const, content: `Finished research: ${finishReason}` };
+        history.push(finishUpdate);
+        onUpdate(finishUpdate);
+        break;
     }
-    
-    reportOutline = await generateOutline(query, history, mode, fileData, role);
-    
-    // Store the full outline in the log for recovery, but the UI will show a simpler message.
-    const outlineUpdate = { id: idCounter.current++, type: 'outline' as const, content: reportOutline };
-    history.push(outlineUpdate);
-    onUpdate(outlineUpdate);
 
-  } else {
-    console.log('Recovering from a previous state. Found existing outline. Skipping planning and outline generation.');
-    const recoveryUpdate = { id: idCounter.current++, type: 'thought' as const, content: 'Found existing outline. Resuming report synthesis.' };
-    history.push(recoveryUpdate);
-    onUpdate(recoveryUpdate);
+    const searchQueries = plan.search_queries;
+
+    if (searchQueries && searchQueries.length > 0) {
+      const searchUpdate = { id: idCounter.current++, type: 'search' as const, content: searchQueries, source: searchQueries.map(q => `https://www.google.com/search?q=${encodeURIComponent(q)}`) };
+      history.push(searchUpdate);
+      onUpdate(searchUpdate);
+      
+      const { readUpdateContent, newCitations } = await performSearchAndRead(searchQueries, mode, checkSignal);
+      allCitations.push(...newCitations);
+      
+      const readUpdate = { 
+        id: idCounter.current++, 
+        ...readUpdateContent
+      };
+      history.push(readUpdate);
+      onUpdate(readUpdate);
+    } else if (!plan.should_finish) {
+        const safetyBreakUpdate = { id: idCounter.current++, type: 'thought' as const, content: 'Planner did not provide a search action. Concluding research to synthesize report.' };
+        history.push(safetyBreakUpdate);
+        onUpdate(safetyBreakUpdate);
+        break;
+    }
   }
   
   checkSignal();
-  const finalReportData = await synthesizeReport(query, history, allCitations, mode, fileData, role, reportOutline);
+  const synthesisMessage = { id: idCounter.current++, type: 'thought' as const, content: 'Synthesizing final report...' };
+  history.push(synthesisMessage);
+  onUpdate(synthesisMessage);
+
+  // Directly call synthesizeReport, passing an empty string for the outline.
+  // The synthesis prompt will handle the lack of an outline.
+  const finalReportData = await synthesizeReport(query, history, allCitations, mode, fileData, role, "");
+
   const uniqueCitations = Array.from(new Map(allCitations.map(c => [c.url, c])).values());
   const totalSearchUpdates = history.filter(h => h.type === 'search').length;
   const internalSearchCycles = initialSearchResult ? Math.max(0, totalSearchUpdates - 1) : totalSearchUpdates;
