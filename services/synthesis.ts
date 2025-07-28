@@ -27,18 +27,13 @@ export const synthesizeReport = async (
     const historyText = history.map(h => `${h.persona ? h.persona + ' ' : ''}${h.type}: ${Array.isArray(h.content) ? h.content.join(' | ') : h.content}`).join('\n');
     const roleContext = getRoleContext(role);
 
-    const finalReportPrompt = `You are an elite Senior Research Analyst. Your mission is to write a comprehensive, insightful, and substantial research report based on a pre-defined outline and a collection of research materials.
+    const corePrompt = `You are an elite Senior Research Analyst. Your mission is to write a comprehensive, insightful, and substantial research report based on a collection of research materials.
 ${roleContext}
 **Your Task:**
-Write a polished and extensive final report by strictly following the provided report outline. You must flesh out each section of the outline using the provided evidence base.
+Write a polished and extensive final report.
 
 **Core User Requirement:**
 <REQUIREMENT>${query}</REQUIREMENT>
-
-**Mandatory Report Outline (Your primary guide for structure and content):**
-<OUTLINE>
-${reportOutline}
-</OUTLINE>
 
 **Evidence Base (Your Sole Source of Truth for content):**
 *   **Attached File:** ${fileData ? `A file named '${fileData.name}' was provided and its content is a primary source.` : "No file was provided."}
@@ -46,20 +41,34 @@ ${reportOutline}
 *   **Synthesized Research Learnings:** <LEARNINGS>${learnings || "No specific content was read during research."}</LEARNINGS>
 *   **Full Research History (For Context and Nuance):** <HISTORY>${historyText}</HISTORY>
 
-**--- CRITICAL REPORTING INSTRUCTIONS ---**
+**--- CRITICAL REPORTING INSTRUCTIONS ---**`;
 
+    const instructions = reportOutline
+    ? `
 **1. Adherence to Outline & Role:**
-*   You **MUST** follow the structure provided in the \`<OUTLINE>\`. This includes all specified headings, subheadings, and content points.
+*   You **MUST** follow the structure provided in the \`<OUTLINE>\` below. This includes all specified headings, subheadings, and content points.
 *   Your output and tone must be consistent with your assigned Role Directive.
 *   The very first line of your response **MUST BE** the H1 title as specified in the outline.
 
+**Mandatory Report Outline (Your primary guide for structure and content):**
+<OUTLINE>
+${reportOutline}
+</OUTLINE>
+`
+    : `
+**1. Structure and Content Generation:**
+*   You must create a logical and comprehensive structure for the report yourself. A good report generally includes an Executive Summary, a Detailed Analysis with multiple sub-sections for key themes identified from the research, and a Conclusion.
+*   Your output and tone must be consistent with your assigned Role Directive.
+*   The very first line of your response **MUST BE** an H1 markdown title for the report (e.g., \`# An In-Depth Analysis of X\`).`;
+
+const commonInstructions = `
 **2. Content Generation:**
-*   Flesh out each section of the outline with detailed analysis, synthesizing information from the \`<LEARNINGS>\` block, the attached files, and the broader research history.
+*   Flesh out each section with detailed analysis, synthesizing information from the \`<LEARNINGS>\` block, the attached files, and the broader research history.
 *   Provide in-depth analysis. Do not just list facts; interpret them, connect disparate points, and discuss the implications, all through the lens of your role.
 
 **3. Stylistic and Formatting Requirements:**
 *   **Evidence-Based Assertions:** This is non-negotiable. Every key assertion, claim, or data point MUST be grounded in the provided research data.
-*   **Data Visualization with Mermaid.js:** Mermaid.js syntax is extremely strict. Syntactic perfection is mandatory to prevent rendering errors. If the outline requires a Mermaid.js graph, you MUST create it following these rules:
+*   **Data Visualization with Mermaid.js:** Mermaid.js syntax is extremely strict. Syntactic perfection is mandatory to prevent rendering errors. If you determine a diagram is necessary to explain a complex relationship or process, you MUST create it following these rules:
     *   **Rule 1: ALWAYS Quote Text.** All user-facing text (in nodes, on edges, for labels, etc.) MUST be enclosed in double quotes. This is the most common source of errors because it correctly handles special characters.
         *   **Correct:** \`A["Node with (parentheses)"] -- "arrow text" --> B\`
         *   **Incorrect:** \`A[Node with (parentheses)] -- arrow text --> B\`
@@ -93,8 +102,10 @@ ${reportOutline}
 *   **Exclusivity:** The report's content must be based **exclusively** on the information provided. Do NOT invent information or use any outside knowledge. Do NOT include inline citations.
 
 **Final Output:**
-Respond ONLY with the raw markdown content of the final report, starting with the H1 title from the outline. Do not add any conversational text or explanation.
+Respond ONLY with the raw markdown content of the final report, starting with the H1 title. Do not add any conversational text or explanation.
 `;
+
+    const finalReportPrompt = `${corePrompt}\n${instructions}\n${commonInstructions}`;
 
     const parts: ({ text: string } | { inlineData: { mimeType: string; data: string; } })[] = [{ text: finalReportPrompt }];
     if (fileData) {

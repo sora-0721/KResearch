@@ -1,7 +1,7 @@
 
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { synthesizeReport, rewriteReport, clarifyQuery, runIterativeDeepResearch, generateVisualReport, regenerateVisualReportWithFeedback, generateOutline } from '../services';
+import { synthesizeReport, rewriteReport, clarifyQuery, runIterativeDeepResearch, generateVisualReport, regenerateVisualReportWithFeedback } from '../services';
 import { ResearchUpdate, FinalResearchData, ResearchMode, FileData, AppState, ClarificationTurn, Citation, HistoryItem, TranslationStyle, ReportVersion, Role } from '../types';
 import { AllKeysFailedError, apiKeyService, historyService, roleService } from '../services';
 import { useNotification } from '../contextx/NotificationContext';
@@ -327,9 +327,8 @@ export const useAppLogic = () => {
         const startTime = Date.now();
         try {
             const citations = getCitationsFromHistory(researchUpdates);
-            addNotification({ type: 'info', title: t('generatingOutlineTitle'), message: t('generatingOutlineMessage') });
-            const reportOutline = await generateOutline(query, researchUpdates, mode, selectedFile, selectedRole);
-            const result = await synthesizeReport(query, researchUpdates, citations, mode, selectedFile, selectedRole, reportOutline);
+            addNotification({ type: 'info', title: t('reportGeneratedTitle'), message: t('generatingReport') });
+            const result = await synthesizeReport(query, researchUpdates, citations, mode, selectedFile, selectedRole, "");
             
             const searchUpdatesCount = researchUpdates.filter(u => u.type === 'search').length;
             const searchCycles = initialSearchResult ? Math.max(0, searchUpdatesCount - 1) : searchUpdatesCount;
@@ -411,9 +410,8 @@ export const useAppLogic = () => {
         setIsRegenerating(true);
         const selectedRole = roles.find(r => r.id === selectedRoleId);
         try {
-            addNotification({ type: 'info', title: t('regeneratingOutlineTitle'), message: t('regeneratingOutlineMessage') });
-            const reportOutline = await generateOutline(query, researchUpdates, mode, selectedFile, selectedRole);
-            const regeneratedReportData = await synthesizeReport(query, researchUpdates, finalData.citations, mode, selectedFile, selectedRole, reportOutline);
+            addNotification({ type: 'info', title: t('reportRegeneratedTitle'), message: t('regenerating') });
+            const regeneratedReportData = await synthesizeReport(query, researchUpdates, finalData.citations, mode, selectedFile, selectedRole, "");
             setFinalData(prev => {
                 if (!prev) return null;
                 const newVersion: ReportVersion = { content: regeneratedReportData.reports[0].content, version: prev.reports.length + 1 };

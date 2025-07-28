@@ -1,3 +1,4 @@
+
 import { apiKeyService, AllKeysFailedError } from "./apiKeyService";
 
 // Helper to get a clean error message from various error types
@@ -83,7 +84,8 @@ async function executeWithRetry(operationName: string, params: any): Promise<any
         throw new Error("No API keys provided. Please add at least one key in the application settings.");
     }
 
-    const maxAttempts = keys.length;
+    const maxRetriesPerKeyCycle = 3;
+    const maxAttempts = keys.length * maxRetriesPerKeyCycle;
     let lastError: any = null;
     const baseUrl = apiKeyService.getApiBaseUrl();
     const modelName = params.model;
@@ -111,19 +113,24 @@ async function executeWithRetry(operationName: string, params: any): Promise<any
             });
 
             const responseText = await response.text();
+
             if (!response.ok) {
+                let errorData;
                 try {
-                    const errorData = JSON.parse(responseText);
-                    throw new Error(errorData?.error?.message || `API Error: ${response.status}`);
+                    errorData = JSON.parse(responseText);
                 } catch {
-                     throw new Error(`API Error: ${response.status} - ${responseText}`);
+                    const err = new Error(`API Error: ${response.status} - ${responseText}`);
+                    (err as any).status = response.status;
+                    throw err;
                 }
+                const err = new Error(errorData?.error?.message || `API Error: ${response.status}`);
+                (err as any).status = response.status;
+                (err as any).data = errorData;
+                throw err;
             }
             
             const result = JSON.parse(responseText);
 
-            // Re-shape the REST response to mimic the SDK's GenerateContentResponse object
-            // This ensures compatibility with existing code that uses `.text` or `.candidates`
             const sdkLikeResponse = {
                 ...result,
                 text: result?.candidates?.[0]?.content?.parts?.[0]?.text ?? '',
@@ -131,12 +138,37 @@ async function executeWithRetry(operationName: string, params: any): Promise<any
 
             console.log(`[API Success] Operation: ${operationName}`);
             console.log(`[API Response]:`, sanitizeForLogging(sdkLikeResponse));
+            apiKeyService.reset(); // Reset key rotation for next independent operation
             return sdkLikeResponse;
 
-        } catch (error) {
+        } catch (error: any) {
             const errorMessage = getCleanErrorMessage(error);
             console.warn(`[API Call Failed: Attempt ${attempt}/${maxAttempts}] Operation: '${operationName}' with key ...${key.slice(-4)}. Error: ${errorMessage}`);
             lastError = error;
+            
+            if (error.status === 429) {
+                // Rate limit error, let's wait and retry
+                const currentCycle = Math.floor((attempt - 1) / keys.length) + 1;
+                let delayMs = 2000 * currentCycle; // Exponential backoff based on how many times we've cycled through all keys
+
+                const retryInfo = error.data?.error?.details?.find(
+                    (d: any) => d['@type'] === 'type.googleapis.com/google.rpc.RetryInfo'
+                );
+
+                if (retryInfo?.retryDelay) {
+                    const secondsMatch = retryInfo.retryDelay.match(/(\d+)/);
+                    if (secondsMatch && secondsMatch[1]) {
+                        const delaySeconds = parseInt(secondsMatch[1], 10);
+                        delayMs = delaySeconds * 1000 + 500; // Add 500ms buffer
+                        console.log(`[API Retry] Rate limit hit. Respecting 'retryDelay' of ${delaySeconds}s. Waiting...`);
+                    }
+                } else {
+                    console.log(`[API Retry] Rate limit hit. Applying exponential backoff of ${delayMs}ms. Waiting...`);
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+                // Continue to the next attempt after the delay
+            }
         }
     }
 
