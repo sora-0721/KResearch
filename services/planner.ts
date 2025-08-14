@@ -1,10 +1,12 @@
 
+
 import { ai } from './geminiClient';
 import { getModel } from './models';
 import { settingsService } from './settingsService';
-import { parseJsonFromMarkdown } from './utils';
+import { parseJsonFromMarkdown, getCleanErrorMessage } from './utils';
 import { ResearchUpdate, AgentPersona, ResearchMode, FileData, Role } from '../types';
 import { getPlannerPrompt, plannerTurnSchema } from './plannerPrompt';
+import { forceFormatPlannerResponse } from './formatter';
 
 interface PlannerTurn {
     thought: string;
@@ -80,22 +82,74 @@ export const runDynamicConversationalPlanner = async (
             parts.push({ inlineData: { mimeType: role.file.mimeType, data: role.file.data } });
         }
 
-        const response = await ai.models.generateContent({
-            model: getModel('planner', mode),
-            contents: { parts },
-            config: { 
-                responseMimeType: "application/json", 
-                temperature: 0.7,
-                responseSchema: plannerTurnSchema
-            }
-        });
-        checkSignal();
-        const parsedResponse = parseJsonFromMarkdown(response.text) as PlannerTurn;
+        let parsedResponse: PlannerTurn | null = null;
+        let lastError: any = null;
 
-        if (!parsedResponse || !parsedResponse.thought || !parsedResponse.action) {
-            onUpdate({ id: idCounter.current++, type: 'thought', content: `Agent ${nextPersona} failed to respond with valid JSON. Finishing research.` });
+        // Helper function to attempt a planning turn with a specific model
+        const attemptPlanningWithModel = async (modelName: string) => {
+            let retryCount = 0;
+            const maxJsonRetries = 2;
+            let lastRawResponseText = '';
+
+            while (retryCount <= maxJsonRetries) {
+                checkSignal();
+                if (retryCount > 0) {
+                    onUpdate({ id: idCounter.current++, type: 'thought', content: `Agent ${nextPersona} failed to respond with valid JSON using ${modelName}. Retrying... (Attempt ${retryCount}/${maxJsonRetries})` });
+                    await new Promise(res => setTimeout(res, 1000 * retryCount));
+                }
+
+                try {
+                    const response = await ai.models.generateContent({
+                        model: modelName,
+                        contents: { parts },
+                        config: { 
+                            responseMimeType: "application/json", 
+                            temperature: Math.min(0.9, 0.7 + retryCount * 0.1),
+                            responseSchema: plannerTurnSchema
+                        }
+                    });
+                    
+                    lastRawResponseText = response.text;
+                    const tempParsed = parseJsonFromMarkdown(response.text) as PlannerTurn;
+                    
+                    if (tempParsed && tempParsed.thought && tempParsed.action) {
+                        return tempParsed; // Success
+                    } else {
+                        console.warn(`[Planner] Invalid JSON from ${modelName} on attempt ${retryCount}:`, response.text);
+                        retryCount++;
+                    }
+                } catch (error) {
+                    console.error(`[Planner] API error with ${modelName}.`, error);
+                    lastError = error;
+                    return null; // Fatal API error for this model, break the inner loop
+                }
+            }
+            
+            // If all JSON retries fail, try to salvage
+            if (lastRawResponseText) {
+                onUpdate({ id: idCounter.current++, type: 'thought', content: `Agent ${nextPersona} failed all JSON retries with ${modelName}. Attempting to salvage...` });
+                return await forceFormatPlannerResponse(lastRawResponseText);
+            }
+
+            return null; // Failed to get anything
+        };
+
+        // --- Main execution logic ---
+        const primaryModel = getModel('planner', mode);
+        onUpdate({ id: idCounter.current++, type: 'thought', content: `Agent ${nextPersona} planning with primary model (${primaryModel})...` });
+        parsedResponse = await attemptPlanningWithModel(primaryModel);
+
+        if (!parsedResponse) {
+            const fallbackModel = 'gemini-2.5-flash'; // Hardcode a reliable fallback
+            onUpdate({ id: idCounter.current++, type: 'thought', content: `Primary planner model failed. Switching to fallback (${fallbackModel}). Last error: ${getCleanErrorMessage(lastError)}` });
+            parsedResponse = await attemptPlanningWithModel(fallbackModel);
+        }
+
+        if (!parsedResponse) {
+            onUpdate({ id: idCounter.current++, type: 'thought', content: `Agent ${nextPersona} and fallback model failed. Finishing research.` });
             return { should_finish: true, search_queries: [], finish_reason: `Agent ${nextPersona} failed to generate a valid action.` };
         }
+        
         onUpdate({ id: idCounter.current++, type: 'thought' as const, persona: nextPersona, content: parsedResponse.thought });
         currentConversation.push({ persona: nextPersona, thought: parsedResponse.thought });
         await new Promise(res => setTimeout(res, 400));
@@ -113,7 +167,6 @@ export const runDynamicConversationalPlanner = async (
              if (consecutiveFinishAttempts >= 2) {
                 const thought = `Agent consensus to finish has been detected. Overriding the minimum cycle rule to conclude research.`;
                 onUpdate({ id: idCounter.current++, type: 'thought' as const, content: thought });
-                // Let the action proceed as 'finish' by not changing it
              } else {
                 const thought = `Rule violation: Cannot finish before ${minCycles} search cycles. Forcing debate to continue.`;
                 onUpdate({ id: idCounter.current++, type: 'thought' as const, persona: nextPersona, content: thought });
@@ -129,11 +182,9 @@ export const runDynamicConversationalPlanner = async (
             return { should_finish: false, search_queries: parsedResponse.queries };
         }
         
-        // if we reach here, action is 'continue_debate'
         nextPersona = (nextPersona === 'Alpha') ? 'Beta' : 'Alpha';
     }
 
-    // If the while loop exits, it means maxDebateRounds was reached.
     onUpdate({ id: idCounter.current++, type: 'thought', content: 'Debate reached maximum turns without a decision. Forcing research to conclude.' });
     return { should_finish: true, search_queries: [], finish_reason: 'Planning debate timed out.' };
 };
