@@ -1,4 +1,5 @@
 
+
 import { apiKeyService, AllKeysFailedError } from "./apiKeyService";
 
 // Helper to get a clean error message from various error types
@@ -130,10 +131,34 @@ async function executeWithRetry(operationName: string, params: any): Promise<any
             }
             
             const result = JSON.parse(responseText);
+            
+            // NEW, more robust check for any kind of blocking or empty response.
+            // A valid text response must have a candidate with content parts containing text.
+            const textContent = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+            if (result.promptFeedback?.blockReason || !textContent) {
+                let message = "API call failed or returned empty content.";
+                if (result.promptFeedback?.blockReason) {
+                    const { blockReason, blockReasonMessage } = result.promptFeedback;
+                    message = `Prompt was blocked. Reason: ${blockReason}. ${blockReasonMessage || ''}`;
+                } else if (result.candidates?.[0]?.finishReason === 'SAFETY') {
+                    message = "Response was blocked due to safety settings.";
+                } else if (!result.candidates || result.candidates.length === 0) {
+                    message = "API returned an OK response but no candidates, likely due to safety filters.";
+                } else {
+                    message = "API returned a candidate with no valid text content, likely due to safety filters on the response.";
+                }
+                
+                console.warn(`[API Blocked/Empty] ${message}`);
+                const err = new Error(message);
+                (err as any).status = 400; // Treat as a client-side error to force retry with a different key
+                (err as any).data = result;
+                throw err;
+            }
 
             const sdkLikeResponse = {
                 ...result,
-                text: result?.candidates?.[0]?.content?.parts?.[0]?.text ?? '',
+                text: textContent,
             };
 
             console.log(`[API Success] Operation: ${operationName}`);
