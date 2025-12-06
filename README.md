@@ -1,128 +1,93 @@
 # KResearch
+> Autonomous Deep-Dive Research Agent
 
-> An advanced AI-powered deep research application that synthesizes information from numerous sources to generate comprehensive, well-documented reports on complex topics.
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Next.js](https://img.shields.io/badge/Next.js-15.0-black)
+![Gemini](https://img.shields.io/badge/Powered%20by-Gemini-4E88D4)
 
-<!-- Badges -->
-![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)
-![React](https://img.shields.io/badge/React-19-blue?style=flat-square&logo=react)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?style=flat-square&logo=typescript)
-![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-3.x-38B2AC?style=flat-square&logo=tailwind-css)
+**KResearch** is an advanced AI-powered research assistant designed to go beyond simple search queries. Utilizing a unique "Spiral" workflow, it orchestrates a team of specialized AI agents—Manager, Worker, and Verifier—to iteratively explore, gather, and validate information, delivering deep, comprehensive, and accurate research reports.
 
 ## Table of Contents
-
 - [About The Project](#about-the-project)
-  - [Built With](#built-with)
+- [Key Features](#key-features)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
 - [Usage](#usage)
-- [Docker](#docker)
-- [Configuration](#configuration)
 - [Contributing](#contributing)
 - [License](#license)
 - [Contact](#contact)
-- [Acknowledgements](#acknowledgements)
 
 ## About The Project
 
-KResearch is a sophisticated research assistant designed to tackle complex topics by leveraging a multi-agent AI system. It automates the process of in-depth research by planning, executing, and synthesizing information from the web. The final output is a comprehensive, well-structured report complete with source citations and a visual knowledge graph, making it an invaluable tool for students, analysts, and anyone needing to quickly develop a deep understanding of a subject.
+Traditional AI search often yields shallow results. KResearch solves this by implementing a "Spiral" architecture where the system loops around a topic, continuously assessing its own knowledge gaps and dispatching agents to fill them until a sufficiency threshold is met.
 
-This project's key features include:
-*   **Conversational AI Agents**: Utilizes 'Alpha' (Strategist) and 'Beta' (Tactician) agents who collaborate to create an optimal research plan.
-*   **Iterative Research Cycles**: Performs multiple cycles of planning, searching, and reading to gather comprehensive insights.
-*   **Real-time Progress Tracking**: Visualizes the AI's entire thought process in a detailed, step-by-step timeline.
-*   **Configurable Research Modes**: Offers 'Balanced', 'Deep Dive', 'Fast', and 'Ultra Fast' modes to tailor the research process to your needs.
-*   **Comprehensive Final Report**: Generates a well-structured final report in Markdown, synthesizing all findings.
-*   **Knowledge Graph Visualization**: Automatically creates a Mermaid.js graph to visualize key entities and their relationships.
-*   **Sourced Citations**: Grounds all research using Google Search and provides a complete list of sources.
-*   **Modern & Responsive UI**: A sleek, glassmorphism design built with React and Tailwind CSS, featuring light and dark modes.
+The interface is built with the **"Liquid Glass"** design system, offering a visually stunning, modern experience that feels alive and responsive.
 
 ### Built With
+*   **Next.js 15**
+*   **React**
+*   **Tailwind CSS** (Custom "Liquid Glass" System)
+*   **Google Gemini API**
 
-*   [React](https://react.dev/)
-*   [TypeScript](https://www.typescriptlang.org/)
-*   [Tailwind CSS](https://tailwindcss.com/)
-*   [Google Gemini API (`@google/genai`)](https://github.com/google/generative-ai-js)
-*   [Mermaid.js](https://mermaid.js.org/)
+## Key Features
+
+*   **🌀 Spiral Workflow:** An iterative execution loop that dives deeper into topics based on sufficiency scores.
+*   **🤖 Multi-Agent System:**
+    *   **Manager:** Plans the research and assesses progress.
+    *   **Worker:** Executes specific search tasks and gathers facts.
+    *   **Verifier:** Deduplicates findings and resolves conflicts.
+    *   **Writer:** Synthesizes the final comprehensive report.
+*   **✨ Liquid Glass UI:** A premium, glassmorphic interface with fluid animations and dynamic interactions.
+*   **🧠 Gemini Powered:** Leverages the latest Google Gemini models (Flash, Pro) for high-speed reasoning and context handling.
 
 ## Getting Started
 
-This section will guide you through setting up and running the KResearch application locally.
+Follow these steps to set up KResearch locally.
 
 ### Prerequisites
 
-You must have a Google Gemini API key to use this application.
-*   **Google Gemini API Key**: Obtain from [Google AI Studio](https://aistudio.google.com/app/apikey).
-*   **Node.js**: It's recommended to use a recent LTS version.
-*   A package manager like **npm** or **yarn**.
+*   Node.js (v18 or higher)
+*   npm
+*   A Google Gemini API Key
 
 ### Installation
 
-1.  Clone the repo
+1.  Clone the repository:
     ```sh
-    git clone https://github.com/KuekHaoYang/KResearch.git
-    cd KResearch
+    git clone https://github.com/yourusername/kresearch.git
     ```
-2.  Install NPM packages
+2.  Navigate to the project directory:
+    ```sh
+    cd kresearch
+    ```
+3.  Install dependencies:
     ```sh
     npm install
     ```
-3.  Set up your environment variables as described in the [Configuration](#configuration) section.
+4.  Start the development server:
+    ```sh
+    npm run dev
+    ```
 
 ## Usage
 
-Start the development server:
-```sh
-npm run dev
-```
-Then navigate to the local address provided in your terminal (e.g., `http://localhost:5173`) in your browser.
-
-1.  **Configure API Key**: If you haven't set up a `.env` file, enter your Google Gemini API key in the **Settings** modal.
-2.  **Select a Research Mode**: Choose from 'Balanced', 'Deep Dive', 'Fast', or 'Ultra Fast'.
-3.  **Enter Your Query**: Type your research topic or question into the main text area.
-4.  **Start Research**: Click the "Start Research" button or press `Enter`.
-5.  **Monitor Progress**: Observe the research log as the AI agents work. You can stop the process at any time.
-6.  **Review Results**: Once complete, the final report, knowledge graph, and citations will be displayed.
-
-## Docker
-
-The quickest way to run KResearch is by using the pre-built Docker image from [Docker Hub](https://hub.docker.com/r/kuekhaoyang/kresearch).
-
-1.  **Pull and run the container:**
-    Execute this command in your terminal to download and start the application.
-
-    ```sh
-    docker run -p 8080:80 --name kresearch kuekhaoyang/kresearch:latest
-    ```
-    *   `-p 8080:80` maps your local port `8080` to the container's port `80`.
-    *   `--name kresearch` assigns the name `kresearch` to your container for easy management.
-
-2.  **Access the application:**
-    Open your web browser and navigate to `http://localhost:8080`.
-
-3.  **Configure API Key:**
-    Once the application loads, click on the **Settings** icon and enter your Google Gemini API key. The key will be saved in your browser's local storage for future sessions.
-
-## Configuration
-
-The application requires a Google Gemini API key to function. You have two options for providing it:
-
-### Option 1: In-app Settings (Recommended for Docker)
-Enter the API key directly in the application's **Settings** modal. The key is stored securely in your browser's local storage, so you only need to enter it once per browser. This is the required method when using the `docker run` command above.
-
-### Option 2: Environment File (For Local Development)
-For local development (`npm run dev`) or `docker-compose`, you can create a `.env` file in the root of the project. The application will automatically load the key from this file.
-
-1.  Create a file named `.env` in the project root.
-2.  Add your API key to the file:
-    ```dotenv
-    # .env
-    API_KEY="YOUR_GEMINI_API_KEY"
-    ```
+1.  Open your browser and navigate to `http://localhost:3000`.
+2.  **Enter API Key**: Input your Google Gemini API Key in the configuration panel.
+3.  **Select Models**: Choose your preferred models for the Manager and Worker agents (e.g., `gemini-2.0-flash-exp`).
+4.  **Start Research**: Enter a complex query (e.g., "Why did the Rabbit R1 fail?") and click "Start".
+5.  **Watch the Spiral**: Observe the agents in real-time as they plan, search, and verify information.
+6.  **Read Report**: Once the research is complete, read the generated comprehensive report.
 
 ## Contributing
 
-Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**. Please refer to the project's issue tracker for ways to contribute. If you have suggestions, please open an issue to discuss it first.
+Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+
+1.  Fork the Project
+2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4.  Push to the Branch (`git push origin feature/AmazingFeature`)
+5.  Open a Pull Request
 
 ## License
 
@@ -130,13 +95,4 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ## Contact
 
-Kuek Hao Yang - [@KuekHaoYang](https://github.com/KuekHaoYang)
-
-Project Link: [https://github.com/KuekHaoYang/KResearch](https://github.com/KuekHaoYang/KResearch)
-
-For issues, questions, or feature requests, please use the [GitHub Issues](https://github.com/KuekHaoYang/KResearch/issues) page.
-
-## Acknowledgements
-
-*   Powered by the Google Gemini API.
-*   UI inspired by modern glassmorphism design trends.
+Project Link: [https://github.com/yourusername/kresearch](https://github.com/yourusername/kresearch)
