@@ -1,9 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --font-family-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Arial", "Noto Sans", "Liberation Sans", sans-serif;
-
-  /* Light Mode Palette */
+  --font-family-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Arial", sans-serif;
   --bg-color-light: #f0f2f5;
   --bg-image-light: linear-gradient(120deg, #fdfbfb 0%, #ebedee 100%);
   --text-color-light: #1d1d1f;
@@ -12,8 +10,6 @@
   --glass-bg-light: rgba(242, 242, 247, 0.8);
   --glass-border-light: rgba(255, 255, 255, 0.5);
   --shadow-color-light: rgba(0, 0, 0, 0.1);
-
-  /* Dark Mode Palette */
   --bg-color-dark: #121212;
   --bg-image-dark: linear-gradient(120deg, #272B30 0%, #121212 100%);
   --text-color-dark: #f5f5f7;
@@ -22,8 +18,6 @@
   --glass-bg-dark: rgba(28, 28, 30, 0.75);
   --glass-border-dark: rgba(60, 60, 60, 0.7);
   --shadow-color-dark: rgba(0, 0, 0, 0.3);
-
-  /* Universal Variables */
   --radius-2xl: 1.5rem;
   --radius-full: 9999px;
   --shadow-sm: 0 2px 4px var(--shadow-color);
@@ -31,14 +25,12 @@
   --transition-fluid: 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-/* Reset */
 *,
 *::before,
 *::after {
   box-sizing: border-box;
 }
 
-/* Default Light Mode */
 body {
   --bg-color: var(--bg-color-light);
   --bg-image: var(--bg-image-light);
@@ -48,7 +40,6 @@ body {
   --glass-bg: var(--glass-bg-light);
   --glass-border: var(--glass-border-light);
   --shadow-color: var(--shadow-color-light);
-
   background-color: var(--bg-color);
   background-image: var(--bg-image);
   background-attachment: fixed;
@@ -60,7 +51,6 @@ body {
   transition: background 0.3s ease;
 }
 
-/* Dark Mode (manual toggle) */
 body.dark-mode {
   --bg-color: var(--bg-color-dark);
   --bg-image: var(--bg-image-dark);
@@ -72,7 +62,6 @@ body.dark-mode {
   --shadow-color: var(--shadow-color-dark);
 }
 
-/* Light Mode (manual toggle) */
 body.light-mode {
   --bg-color: var(--bg-color-light);
   --bg-image: var(--bg-image-light);
@@ -84,7 +73,6 @@ body.light-mode {
   --shadow-color: var(--shadow-color-light);
 }
 
-/* System preference (when no manual class) */
 @media (prefers-color-scheme: dark) {
   body:not(.light-mode):not(.dark-mode) {
     --bg-color: var(--bg-color-dark);
@@ -97,8 +85,6 @@ body.light-mode {
     --shadow-color: var(--shadow-color-dark);
   }
 }
-
-/* === LIQUID GLASS COMPONENTS === */
 
 /* Card */
 .card {
@@ -127,7 +113,6 @@ body.light-mode {
   padding: 0.75rem 1.25rem;
   font-size: 1rem;
   font-weight: 600;
-  text-decoration: none;
   background-color: var(--accent-color);
   color: white;
   border: none;
@@ -186,6 +171,11 @@ body.light-mode {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color) 30%, transparent);
 }
 
+textarea.input-glass {
+  min-height: 120px;
+  resize: vertical;
+}
+
 /* Badge */
 .badge {
   display: inline-flex;
@@ -205,40 +195,64 @@ body.light-mode {
   color: var(--text-color);
 }
 
-/* Theme Switcher */
-.theme-switcher {
-  display: inline-flex;
-  background: var(--glass-bg);
-  border-radius: var(--radius-full);
-  padding: 0.25rem;
-  border: 1px solid var(--glass-border);
+/* Modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background-color: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease-out;
 }
 
-.theme-switcher button {
+.modal-backdrop.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 9999;
+  width: 90%;
+  max-width: 500px;
+  transform: translate(-50%, -50%) scale(0.95);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s ease-out;
+}
+
+.modal-dialog.visible {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Select */
+.select-custom {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: none;
-  border: none;
-  border-radius: var(--radius-full);
+  justify-content: space-between;
   cursor: pointer;
-  color: var(--text-color-secondary);
-  transition: all 0.2s ease;
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-2xl);
+  padding: 0.75rem 1rem;
+  color: var(--text-color);
+  transition: all var(--transition-fluid);
 }
 
-.theme-switcher button:not(.active):hover {
-  background-color: color-mix(in srgb, var(--text-color) 10%, transparent);
+.select-custom:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color) 30%, transparent);
 }
 
-.theme-switcher button.active {
-  background-color: var(--accent-color);
-  color: white;
-  transform: scale(1.05);
-}
-
-/* Number Input Container */
+/* Number Input */
 .number-input-container {
   display: flex;
   align-items: center;
@@ -288,62 +302,37 @@ body.light-mode {
   -moz-appearance: textfield;
 }
 
-/* Modal Backdrop */
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 9998;
-  background-color: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(8px);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease-out;
+/* Theme Switcher */
+.theme-switcher {
+  display: inline-flex;
+  background: var(--glass-bg);
+  border-radius: var(--radius-full);
+  padding: 0.25rem;
+  border: 1px solid var(--glass-border);
 }
 
-.modal-backdrop.visible {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/* Modal Dialog */
-.modal-dialog {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  z-index: 9999;
-  width: 90%;
-  max-width: 500px;
-  transform: translate(-50%, -50%) scale(0.95);
-  opacity: 0;
-  pointer-events: none;
-  transition: all 0.3s ease-out;
-}
-
-.modal-dialog.visible {
-  transform: translate(-50%, -50%) scale(1);
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/* Select */
-.select-custom {
+.theme-switcher button {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-full);
   cursor: pointer;
-  background: var(--glass-bg);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-2xl);
-  padding: 0.75rem 1rem;
-  color: var(--text-color);
-  transition: all var(--transition-fluid);
+  color: var(--text-color-secondary);
+  transition: all 0.2s ease;
 }
 
-.select-custom:focus {
-  outline: none;
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color) 30%, transparent);
+.theme-switcher button:not(.active):hover {
+  background-color: color-mix(in srgb, var(--text-color) 10%, transparent);
+}
+
+.theme-switcher button.active {
+  background-color: var(--accent-color);
+  color: white;
+  transform: scale(1.05);
 }
 
 /* Spinner */
@@ -378,7 +367,7 @@ body.light-mode {
   animation: fade-in 0.5s ease-out;
 }
 
-/* Divider */
+/* Utilities */
 .divider {
   height: 1px;
   width: 100%;
@@ -386,7 +375,6 @@ body.light-mode {
   margin: 1.5rem 0;
 }
 
-/* Form Group */
 .form-group {
   margin-bottom: 1.5rem;
 }
@@ -396,10 +384,4 @@ body.light-mode {
   font-weight: 500;
   margin-bottom: 0.5rem;
   color: var(--text-color);
-}
-
-/* Textarea */
-textarea.input-glass {
-  min-height: 120px;
-  resize: vertical;
 }
