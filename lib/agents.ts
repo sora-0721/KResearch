@@ -43,7 +43,39 @@ export interface WorkerFinding {
     context: string;
 }
 
+export interface ClarifierOutput {
+    is_clear: boolean;
+    questions: string[];
+    reasoning: string;
+}
+
 // --- Prompts ---
+
+const CLARIFIER_PROMPT = `You are a Research Query Clarifier. Your job is to evaluate if a user's research query is clear and specific enough to begin research.
+
+YOUR RESPONSIBILITIES:
+1. CLARITY CHECK: Is the query specific enough to know what to research?
+2. AMBIGUITY DETECTION: Identify any vague terms, unclear scope, or missing context.
+3. QUESTION GENERATION: If unclear, generate 1-3 focused questions to clarify the intent.
+
+WHAT MAKES A QUERY CLEAR:
+- Has a specific topic or subject
+- Has a clear scope (not too broad)
+- Contains enough context to understand the intent
+
+WHAT MAKES A QUERY UNCLEAR:
+- Uses pronouns without referents ("tell me about it", "research this")
+- Is too broad ("tell me about technology")
+- Missing key context ("compare the two companies" - which companies?)
+- Ambiguous terms that could mean multiple things
+
+OUTPUT FORMAT (JSON ONLY):
+CRITICAL: Respond with ONLY valid JSON. No preamble, no explanation. Start with { and end with }.
+{
+  "is_clear": <boolean>,
+  "questions": ["Question 1", "Question 2"], // Empty array if is_clear is true
+  "reasoning": "Brief explanation of why clarification is or isn't needed"
+}`;
 
 const MANAGER_PROMPT = `You are the Lead Researcher. You govern the state of a deep-dive investigation.
 Your Goal: Answer the User's Query exhaustively by dispatching Worker Agents to find missing information.
@@ -257,5 +289,26 @@ ${response}`;
     Global Context: ${JSON.stringify(context)}
     `;
         return await this.client.generateText(this.managerModel, prompt, WRITER_PROMPT, false);
+    }
+
+    async runClarifier(query: string, conversationContext?: string): Promise<ClarifierOutput> {
+        let prompt = `User Query: ${query}`;
+
+        if (conversationContext) {
+            prompt += `\n\nPrevious clarification conversation:\n${conversationContext}`;
+        }
+
+        const response = await this.client.generateText(this.workerModel, prompt, CLARIFIER_PROMPT, true);
+
+        try {
+            return JSON.parse(response);
+        } catch (error) {
+            console.log("Clarifier returned invalid JSON, attempting repair...");
+            const repairPrompt = `The following text should be valid JSON but has syntax errors. Fix it and return ONLY the valid JSON:
+
+${response}`;
+            const fixedResponse = await this.client.generateText(this.workerModel, repairPrompt, "You are a JSON validator. Return ONLY valid JSON with no explanation.", true);
+            return JSON.parse(fixedResponse);
+        }
     }
 }

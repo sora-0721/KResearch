@@ -27,3 +27,8 @@ export async function getAvailableModels(apiKey: string) {
     const client = new GeminiClient(apiKey);
     return await client.listModels();
 }
+
+export async function runClarifierAction(apiKey: string, query: string, model: string, conversationContext?: string) {
+    const agent = new ResearchAgent(apiKey, undefined, model);
+    return await agent.runClarifier(query, conversationContext);
+}

@@ -4,6 +4,8 @@ import React from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { NumberInput } from "@/components/ui/NumberInput";
+import { Select } from "@/components/ui/Select";
 
 interface ModelOption {
     name: string;
@@ -21,10 +23,16 @@ interface SettingsModalProps {
     setWorkerModel: (model: string) => void;
     verifierModel: string;
     setVerifierModel: (model: string) => void;
+    clarifierModel: string;
+    setClarifierModel: (model: string) => void;
     availableModels: ModelOption[];
     isLoadingModels: boolean;
-    researchMode: "standard" | "deep";
-    setResearchMode: (mode: "standard" | "deep") => void;
+    researchMode: "standard" | "deeper";
+    setResearchMode: (mode: "standard" | "deeper") => void;
+    minIterations: number;
+    setMinIterations: (value: number) => void;
+    maxIterations: number;
+    setMaxIterations: (value: number) => void;
 }
 
 export function SettingsModal({
@@ -38,163 +46,214 @@ export function SettingsModal({
     setWorkerModel,
     verifierModel,
     setVerifierModel,
+    clarifierModel,
+    setClarifierModel,
     availableModels,
     isLoadingModels,
     researchMode,
     setResearchMode,
+    minIterations,
+    setMinIterations,
+    maxIterations,
+    setMaxIterations,
 }: SettingsModalProps) {
     if (!isOpen) return null;
 
+    // Transform models for Select component
+    const modelOptions = availableModels.map(m => ({
+        value: m.name,
+        label: m.displayName
+    }));
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <>
             {/* Backdrop */}
             <div
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                className={`modal-backdrop ${isOpen ? 'visible' : ''}`}
                 onClick={onClose}
             />
 
             {/* Modal */}
-            <Card className="relative z-10 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold text-[var(--text-color)]">Settings</h2>
-                    <Button
-                        variant="secondary"
-                        className="rounded-full p-2 h-8 w-8 flex items-center justify-center"
-                        onClick={onClose}
-                    >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </Button>
-                </div>
-
-                <div className="space-y-6">
-                    {/* API Key */}
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-[var(--text-color)]">
-                            Gemini API Key
-                        </label>
-                        <Input
-                            type="password"
-                            placeholder="Enter your API key..."
-                            value={apiKey}
-                            onChange={(e) => setApiKey(e.target.value)}
-                        />
-                        <p className="text-xs text-[var(--text-color-secondary)]">
-                            Get your API key from{" "}
-                            <a
-                                href="https://aistudio.google.com/app/apikey"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[var(--accent-color)] hover:underline"
-                            >
-                                Google AI Studio
-                            </a>
-                        </p>
+            <div className={`modal-dialog ${isOpen ? 'visible' : ''}`}>
+                <Card noHover className="max-h-[90vh] overflow-y-auto">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-xl font-bold" style={{ color: 'var(--text-color)' }}>Settings</h2>
+                        <Button
+                            variant="secondary"
+                            className="!rounded-full !p-2 !w-8 !h-8 flex items-center justify-center"
+                            onClick={onClose}
+                        >
+                            ✕
+                        </Button>
                     </div>
 
-                    {/* Research Mode */}
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-[var(--text-color)]">
-                            Research Mode
-                        </label>
-                        <div className="flex gap-2">
-                            <Button
-                                variant={researchMode === "standard" ? "primary" : "secondary"}
-                                onClick={() => setResearchMode("standard")}
-                                className="flex-1"
-                            >
-                                Standard
-                            </Button>
-                            <Button
-                                variant={researchMode === "deep" ? "primary" : "secondary"}
-                                onClick={() => setResearchMode("deep")}
-                                className="flex-1"
-                            >
-                                Deep
-                            </Button>
+                    <div className="space-y-6">
+                        {/* API Key */}
+                        <div className="form-group">
+                            <label>Gemini API Key</label>
+                            <Input
+                                type="password"
+                                placeholder="Enter your API key..."
+                                value={apiKey}
+                                onChange={(e) => setApiKey(e.target.value)}
+                            />
+                            <p className="text-xs mt-2" style={{ color: 'var(--text-color-secondary)' }}>
+                                Get your API key from{" "}
+                                <a
+                                    href="https://aistudio.google.com/app/apikey"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ color: 'var(--accent-color)' }}
+                                    className="hover:underline"
+                                >
+                                    Google AI Studio
+                                </a>
+                            </p>
                         </div>
-                        <p className="text-xs text-[var(--text-color-secondary)]">
-                            {researchMode === "deep"
-                                ? "Deep mode: Minimum 15 iterations for exhaustive research"
-                                : "Standard mode: Stops when sufficiency score reaches 95%"}
-                        </p>
+
+                        <div className="divider" />
+
+                        {/* Research Mode */}
+                        <div className="form-group">
+                            <label>Research Mode</label>
+                            <div className="flex gap-2">
+                                <Button
+                                    variant={researchMode === "standard" ? "primary" : "secondary"}
+                                    onClick={() => setResearchMode("standard")}
+                                    className="flex-1"
+                                >
+                                    Standard
+                                </Button>
+                                <Button
+                                    variant={researchMode === "deeper" ? "primary" : "secondary"}
+                                    onClick={() => setResearchMode("deeper")}
+                                    className="flex-1"
+                                >
+                                    Deeper
+                                </Button>
+                            </div>
+                            <p className="text-xs mt-2" style={{ color: 'var(--text-color-secondary)' }}>
+                                {researchMode === "deeper"
+                                    ? "Deeper mode: Enforces minimum iterations for exhaustive research"
+                                    : "Standard mode: Stops when sufficiency score reaches 95%"}
+                            </p>
+                        </div>
+
+                        {/* Min/Max Iterations (only shown in Deeper mode) */}
+                        {researchMode === "deeper" && (
+                            <div
+                                className="p-4"
+                                style={{
+                                    background: 'color-mix(in srgb, var(--glass-bg) 50%, transparent)',
+                                    borderRadius: 'var(--radius-2xl)',
+                                    border: '1px solid var(--glass-border)'
+                                }}
+                            >
+                                <h4 className="text-sm font-medium mb-4" style={{ color: 'var(--text-color)' }}>
+                                    Deeper Mode Settings
+                                </h4>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <NumberInput
+                                        label="Minimum Iterations"
+                                        value={minIterations}
+                                        onChange={(value) => {
+                                            setMinIterations(value);
+                                            if (maxIterations < value && maxIterations !== 999) {
+                                                setMaxIterations(value);
+                                            }
+                                        }}
+                                        min={1}
+                                        max={50}
+                                    />
+                                    <NumberInput
+                                        label="Maximum Iterations"
+                                        value={maxIterations}
+                                        onChange={setMaxIterations}
+                                        min={minIterations}
+                                        max={999}
+                                    />
+                                </div>
+                                <p className="text-xs mt-3" style={{ color: 'var(--text-color-secondary)' }}>
+                                    999 = Unlimited (no maximum limit)
+                                </p>
+                            </div>
+                        )}
+
+                        <div className="divider" />
+
+                        {/* Model Selection */}
+                        <div className="form-group">
+                            <div className="flex items-center gap-2 mb-4">
+                                <label className="!mb-0">Model Configuration</label>
+                                {isLoadingModels && (
+                                    <span className="text-xs" style={{ color: 'var(--text-color-secondary)' }}>
+                                        Loading models...
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Clarifier Model */}
+                            <div className="mb-4">
+                                <label className="block text-xs font-medium mb-2" style={{ color: 'var(--text-color-secondary)' }}>
+                                    Clarifier Agent (Pre-Research)
+                                </label>
+                                <Select
+                                    value={clarifierModel}
+                                    onChange={setClarifierModel}
+                                    options={modelOptions}
+                                    placeholder="Select model..."
+                                />
+                            </div>
+
+                            {/* Manager Model */}
+                            <div className="mb-4">
+                                <label className="block text-xs font-medium mb-2" style={{ color: 'var(--text-color-secondary)' }}>
+                                    Manager Agent
+                                </label>
+                                <Select
+                                    value={managerModel}
+                                    onChange={setManagerModel}
+                                    options={modelOptions}
+                                    placeholder="Select model..."
+                                />
+                            </div>
+
+                            {/* Worker Model */}
+                            <div className="mb-4">
+                                <label className="block text-xs font-medium mb-2" style={{ color: 'var(--text-color-secondary)' }}>
+                                    Worker Agent
+                                </label>
+                                <Select
+                                    value={workerModel}
+                                    onChange={setWorkerModel}
+                                    options={modelOptions}
+                                    placeholder="Select model..."
+                                />
+                            </div>
+
+                            {/* Verifier Model */}
+                            <div>
+                                <label className="block text-xs font-medium mb-2" style={{ color: 'var(--text-color-secondary)' }}>
+                                    Verifier Agent
+                                </label>
+                                <Select
+                                    value={verifierModel}
+                                    onChange={setVerifierModel}
+                                    options={modelOptions}
+                                    placeholder="Select model..."
+                                />
+                            </div>
+                        </div>
                     </div>
 
-                    {/* Model Selection */}
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-2">
-                            <label className="block text-sm font-medium text-[var(--text-color)]">
-                                Model Configuration
-                            </label>
-                            {isLoadingModels && (
-                                <span className="text-xs text-[var(--text-color-secondary)]">Loading models...</span>
-                            )}
-                        </div>
-
-                        {/* Manager Model */}
-                        <div className="space-y-1">
-                            <label className="block text-xs font-medium text-[var(--text-color-secondary)]">
-                                Manager Agent
-                            </label>
-                            <select
-                                value={managerModel}
-                                onChange={(e) => setManagerModel(e.target.value)}
-                                className="w-full h-10 px-3 rounded-[var(--radius-lg)] bg-[var(--surface-elevated)] border border-[var(--border-color)] text-[var(--text-color)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]"
-                            >
-                                {availableModels.map((model) => (
-                                    <option key={model.name} value={model.name}>
-                                        {model.displayName}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {/* Worker Model */}
-                        <div className="space-y-1">
-                            <label className="block text-xs font-medium text-[var(--text-color-secondary)]">
-                                Worker Agent
-                            </label>
-                            <select
-                                value={workerModel}
-                                onChange={(e) => setWorkerModel(e.target.value)}
-                                className="w-full h-10 px-3 rounded-[var(--radius-lg)] bg-[var(--surface-elevated)] border border-[var(--border-color)] text-[var(--text-color)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]"
-                            >
-                                {availableModels.map((model) => (
-                                    <option key={model.name} value={model.name}>
-                                        {model.displayName}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {/* Verifier Model */}
-                        <div className="space-y-1">
-                            <label className="block text-xs font-medium text-[var(--text-color-secondary)]">
-                                Verifier Agent
-                            </label>
-                            <select
-                                value={verifierModel}
-                                onChange={(e) => setVerifierModel(e.target.value)}
-                                className="w-full h-10 px-3 rounded-[var(--radius-lg)] bg-[var(--surface-elevated)] border border-[var(--border-color)] text-[var(--text-color)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]"
-                            >
-                                {availableModels.map((model) => (
-                                    <option key={model.name} value={model.name}>
-                                        {model.displayName}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                    {/* Done Button */}
+                    <div className="mt-8 flex justify-end">
+                        <Button onClick={onClose} className="px-6">
+                            Done
+                        </Button>
                     </div>
-                </div>
-
-                {/* Close Button */}
-                <div className="mt-8 flex justify-end">
-                    <Button onClick={onClose} className="px-6">
-                        Done
-                    </Button>
-                </div>
-            </Card>
-        </div>
+                </Card>
+            </div>
+        </>
     );
 }
