@@ -26,9 +26,10 @@ export class ResearchAgent {
     constructor(
         apiKey: string,
         managerModel: string = "gemini-flash-latest",
-        workerModel: string = "gemini-flash-latest"
+        workerModel: string = "gemini-flash-latest",
+        baseUrl?: string
     ) {
-        this.client = new GeminiClient(apiKey);
+        this.client = new GeminiClient(apiKey, baseUrl);
         this.managerModel = managerModel;
         this.workerModel = workerModel;
     }

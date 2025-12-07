@@ -31,6 +31,19 @@
   box-sizing: border-box;
 }
 
+/* Hide all scrollbars but keep scrolling functional */
+* {
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+}
+
+*::-webkit-scrollbar {
+  display: none;
+  /* Chrome, Safari, Opera */
+}
+
 body {
   --bg-color: var(--bg-color-light);
   --bg-image: var(--bg-image-light);
@@ -219,6 +232,8 @@ textarea.input-glass {
   z-index: 9999;
   width: 90%;
   max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
   transform: translate(-50%, -50%) scale(0.95);
   opacity: 0;
   pointer-events: none;
@@ -300,6 +315,7 @@ textarea.input-glass {
 
 .number-input-container input[type=number] {
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 /* Theme Switcher */

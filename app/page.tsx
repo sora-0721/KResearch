@@ -23,7 +23,11 @@ export default function Home() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
   const research = useResearch({
-    apiKey: settings.apiKey, managerModel: settings.managerModel, workerModel: settings.workerModel,
+    apiKey: settings.apiKey,
+    getNextApiKey: settings.getNextApiKey,
+    resetApiKeyRotation: settings.resetApiKeyRotation,
+    geminiBaseUrl: settings.geminiBaseUrl,
+    managerModel: settings.managerModel, workerModel: settings.workerModel,
     verifierModel: settings.verifierModel, clarifierModel: settings.clarifierModel,
     researchMode: settings.researchMode, minIterations: settings.minIterations, maxIterations: settings.maxIterations
   });
@@ -70,7 +74,8 @@ export default function Home() {
   };
 
   const handleStart = () => {
-    if (!settings.apiKey || !query) { alert("Please provide an API Key and a Query."); setIsSettingsOpen(true); return; }
+    const activeKey = settings.getActiveApiKey();
+    if (!activeKey || !query) { alert("Please provide an API Key and a Query."); setIsSettingsOpen(true); return; }
     if (research.isResearching) { research.stopResearch(); return; }
     clarification.run(query);
   };

@@ -36,8 +36,17 @@ export interface HistoryItem {
     elapsedTime?: number; // Time in milliseconds
 }
 
+export interface ApiKeyEntry {
+    id: string;
+    key: string;
+}
+
 export interface ResearchSettings {
-    apiKey: string;
+    apiKey: string; // Deprecated: kept for backward compatibility
+    geminiApiKeys: ApiKeyEntry[];
+    geminiBaseUrl: string;
+    openaiApiKey: string;
+    openaiApiHost: string;
     managerModel: string;
     workerModel: string;
     verifierModel: string;

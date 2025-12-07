@@ -6,13 +6,28 @@ import { Button } from "@/components/ui/Button";
 import { ApiKeySection } from "@/components/settings/ApiKeySection";
 import { ResearchModeSection } from "@/components/settings/ResearchModeSection";
 import { ModelConfigSection } from "@/components/settings/ModelConfigSection";
-import { ModelOption } from "@/types/research";
+import { ModelOption, ApiKeyEntry } from "@/types/research";
 
 interface SettingsModalProps {
     isOpen: boolean;
     onClose: () => void;
+    // Legacy API key
     apiKey: string;
     setApiKey: (val: string) => void;
+    // Multi-API key support
+    geminiApiKeys: ApiKeyEntry[];
+    addGeminiApiKey: () => void;
+    removeGeminiApiKey: (id: string) => void;
+    updateGeminiApiKey: (id: string, key: string) => void;
+    // Gemini base URL
+    geminiBaseUrl: string;
+    setGeminiBaseUrl: (val: string) => void;
+    // OpenAI settings
+    openaiApiKey: string;
+    setOpenaiApiKey: (val: string) => void;
+    openaiApiHost: string;
+    setOpenaiApiHost: (val: string) => void;
+    // Model settings
     managerModel: string;
     setManagerModel: (val: string) => void;
     workerModel: string;
@@ -23,6 +38,7 @@ interface SettingsModalProps {
     setClarifierModel: (val: string) => void;
     availableModels: ModelOption[];
     isLoadingModels: boolean;
+    // Research settings
     researchMode: "standard" | "deeper";
     setResearchMode: (mode: "standard" | "deeper") => void;
     minIterations: number;
@@ -32,7 +48,11 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({
-    isOpen, onClose, apiKey, setApiKey,
+    isOpen, onClose,
+    apiKey, setApiKey,
+    geminiApiKeys, addGeminiApiKey, removeGeminiApiKey, updateGeminiApiKey,
+    geminiBaseUrl, setGeminiBaseUrl,
+    openaiApiKey, setOpenaiApiKey, openaiApiHost, setOpenaiApiHost,
     managerModel, setManagerModel, workerModel, setWorkerModel,
     verifierModel, setVerifierModel, clarifierModel, setClarifierModel,
     availableModels, isLoadingModels,
@@ -59,7 +79,19 @@ export function SettingsModal({
                         </Button>
                     </div>
 
-                    <ApiKeySection apiKey={apiKey} setApiKey={setApiKey} />
+                    <ApiKeySection
+                        apiKey={apiKey} setApiKey={setApiKey}
+                        geminiApiKeys={geminiApiKeys}
+                        addGeminiApiKey={addGeminiApiKey}
+                        removeGeminiApiKey={removeGeminiApiKey}
+                        updateGeminiApiKey={updateGeminiApiKey}
+                        geminiBaseUrl={geminiBaseUrl}
+                        setGeminiBaseUrl={setGeminiBaseUrl}
+                        openaiApiKey={openaiApiKey}
+                        setOpenaiApiKey={setOpenaiApiKey}
+                        openaiApiHost={openaiApiHost}
+                        setOpenaiApiHost={setOpenaiApiHost}
+                    />
                     <div className="divider" />
                     <ResearchModeSection researchMode={researchMode} setResearchMode={setResearchMode}
                         minIterations={minIterations} setMinIterations={setMinIterations}
@@ -75,3 +107,4 @@ export function SettingsModal({
         </>
     );
 }
+
