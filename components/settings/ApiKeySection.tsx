@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { ApiKeyEntry } from "@/types/research";
+import { useLanguage } from "@/components/ui/LanguageContext";
 
 interface ApiKeySectionProps {
     // Legacy single API key (backward compatibility)
@@ -31,6 +32,7 @@ export function ApiKeySection({
     openaiApiKey, setOpenaiApiKey,
     openaiApiHost, setOpenaiApiHost
 }: ApiKeySectionProps) {
+    const { t } = useLanguage();
     const [activeProvider, setActiveProvider] = useState<"gemini" | "openai">("gemini");
     const hasMultipleKeys = geminiApiKeys.length > 0;
 
@@ -38,21 +40,21 @@ export function ApiKeySection({
         <div className="space-y-4">
             {/* Provider Toggle Buttons */}
             <div className="form-group">
-                <label>API Provider</label>
+                <label>{t('apiProvider')}</label>
                 <div className="flex gap-2 mt-2">
                     <Button
                         variant={activeProvider === "gemini" ? "primary" : "secondary"}
                         onClick={() => setActiveProvider("gemini")}
                         className="flex-1"
                     >
-                        Gemini
+                        {t('gemini')}
                     </Button>
                     <Button
                         variant={activeProvider === "openai" ? "primary" : "secondary"}
                         onClick={() => setActiveProvider("openai")}
                         className="flex-1"
                     >
-                        OpenAI
+                        {t('openai')}
                     </Button>
                 </div>
             </div>
@@ -62,7 +64,7 @@ export function ApiKeySection({
                 <>
                     <div className="form-group">
                         <div className="flex justify-between items-center mb-2">
-                            <label>Gemini API Keys</label>
+                            <label>{t('geminiApiKeys')}</label>
                             <Button
                                 variant="secondary"
                                 onClick={addGeminiApiKey}
@@ -71,7 +73,7 @@ export function ApiKeySection({
                                 <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                                 </svg>
-                                Add Key
+                                {t('addKey')}
                             </Button>
                         </div>
 
@@ -85,7 +87,7 @@ export function ApiKeySection({
                                     onChange={(e) => setApiKey(e.target.value)}
                                 />
                                 <p className="text-xs mt-1" style={{ color: 'var(--text-color-secondary)' }}>
-                                    Get your key from{" "}
+                                    {t('getKeyFrom')}{" "}
                                     <a
                                         href="https://aistudio.google.com/app/apikey"
                                         target="_blank"
@@ -93,7 +95,7 @@ export function ApiKeySection({
                                         className="underline"
                                         style={{ color: 'var(--accent-color)' }}
                                     >
-                                        Google AI Studio
+                                        {t('googleAiStudio')}
                                     </a>
                                 </p>
                             </div>
@@ -124,14 +126,14 @@ export function ApiKeySection({
 
                         {hasMultipleKeys && (
                             <p className="text-xs mt-1" style={{ color: 'var(--text-color-secondary)' }}>
-                                API keys will rotate automatically (1→2→3→1→2→3...) for each call.
+                                {t('apiKeysRotate')}
                             </p>
                         )}
                     </div>
 
                     {/* Gemini Base URL */}
                     <div className="form-group">
-                        <label>Base URL (Optional)</label>
+                        <label>{t('baseUrlOptional')}</label>
                         <Input
                             type="text"
                             placeholder="https://generativelanguage.googleapis.com"
@@ -139,7 +141,7 @@ export function ApiKeySection({
                             onChange={(e) => setGeminiBaseUrl(e.target.value)}
                         />
                         <p className="text-xs mt-1" style={{ color: 'var(--text-color-secondary)' }}>
-                            Leave empty to use the default Google API endpoint.
+                            {t('baseUrlHint')}
                         </p>
                     </div>
                 </>
@@ -149,7 +151,7 @@ export function ApiKeySection({
             {activeProvider === "openai" && (
                 <>
                     <div className="form-group">
-                        <label>OpenAI API Key</label>
+                        <label>{t('openaiApiKey')}</label>
                         <Input
                             type="password"
                             placeholder="sk-..."
@@ -159,7 +161,7 @@ export function ApiKeySection({
                     </div>
 
                     <div className="form-group">
-                        <label>API Host (Optional)</label>
+                        <label>{t('apiHostOptional')}</label>
                         <Input
                             type="text"
                             placeholder="https://api.openai.com/v1"
@@ -167,7 +169,7 @@ export function ApiKeySection({
                             onChange={(e) => setOpenaiApiHost(e.target.value)}
                         />
                         <p className="text-xs mt-1" style={{ color: 'var(--text-color-secondary)' }}>
-                            When OpenAI is configured, search will use DuckDuckGo instead of Google grounding.
+                            {t('openaiHint')}
                         </p>
                     </div>
                 </>
@@ -175,4 +177,5 @@ export function ApiKeySection({
         </div>
     );
 }
+
 

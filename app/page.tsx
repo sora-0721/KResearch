@@ -13,8 +13,10 @@ import { useResearchSettings } from "@/hooks/useResearchSettings";
 import { useResearch } from "@/hooks/useResearch";
 import { useClarification } from "@/hooks/useClarification";
 import { HistoryItem } from "@/types/research";
+import { useLanguage } from "@/components/ui/LanguageContext";
 
 export default function Home() {
+  const { t } = useLanguage();
   const settings = useResearchSettings();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -75,7 +77,7 @@ export default function Home() {
 
   const handleStart = () => {
     const activeKey = settings.getActiveApiKey();
-    if (!activeKey || !query) { alert("Please provide an API Key and a Query."); setIsSettingsOpen(true); return; }
+    if (!activeKey || !query) { alert(t('alertApiKeyQuery')); setIsSettingsOpen(true); return; }
     if (research.isResearching) { research.stopResearch(); return; }
     clarification.run(query);
   };

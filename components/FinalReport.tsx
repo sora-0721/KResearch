@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
+import { useLanguage } from "@/components/ui/LanguageContext";
 
 interface FinalReportProps {
     report: string;
@@ -14,6 +15,7 @@ interface FinalReportProps {
 }
 
 export function FinalReport({ report, onRegenerate, isRegenerating }: FinalReportProps) {
+    const { t } = useLanguage();
     const [copied, setCopied] = useState(false);
 
     const copyToClipboard = () => {
@@ -26,7 +28,7 @@ export function FinalReport({ report, onRegenerate, isRegenerating }: FinalRepor
         <Card noHover className="animate-fade-in relative mb-20">
             <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold" style={{ color: 'var(--text-color)' }}>
-                    Final Research Report
+                    {t('finalReport')}
                 </h2>
                 <div className="flex gap-2">
                     {onRegenerate && (
@@ -36,11 +38,11 @@ export function FinalReport({ report, onRegenerate, isRegenerating }: FinalRepor
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                 </svg>
                             )}
-                            {isRegenerating ? "Regenerating..." : "Regenerate"}
+                            {isRegenerating ? t('regenerating') : t('regenerate')}
                         </Button>
                     )}
                     <Button onClick={copyToClipboard} variant="secondary" className="text-xs !px-3 !py-1">
-                        {copied ? "✓ Copied!" : "Copy Report"}
+                        {copied ? t('copied') : t('copyReport')}
                     </Button>
                 </div>
             </div>
@@ -88,3 +90,4 @@ export function FinalReport({ report, onRegenerate, isRegenerating }: FinalRepor
         </Card>
     );
 }
+

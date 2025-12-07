@@ -7,6 +7,7 @@ import { ApiKeySection } from "@/components/settings/ApiKeySection";
 import { ResearchModeSection } from "@/components/settings/ResearchModeSection";
 import { ModelConfigSection } from "@/components/settings/ModelConfigSection";
 import { ModelOption, ApiKeyEntry } from "@/types/research";
+import { useLanguage } from "@/components/ui/LanguageContext";
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -58,6 +59,7 @@ export function SettingsModal({
     availableModels, isLoadingModels,
     researchMode, setResearchMode, minIterations, setMinIterations, maxIterations, setMaxIterations
 }: SettingsModalProps) {
+    const { t } = useLanguage();
 
     useEffect(() => {
         const handleEsc = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -71,7 +73,7 @@ export function SettingsModal({
             <div className={`modal-dialog ${isOpen ? "visible" : ""}`} style={{ maxWidth: '600px' }}>
                 <Card noHover>
                     <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-xl font-bold" style={{ color: 'var(--text-color)' }}>Settings</h2>
+                        <h2 className="text-xl font-bold" style={{ color: 'var(--text-color)' }}>{t('settings')}</h2>
                         <Button variant="secondary" onClick={onClose} className="!rounded-full !p-2 !w-8 !h-8">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -107,4 +109,5 @@ export function SettingsModal({
         </>
     );
 }
+
 

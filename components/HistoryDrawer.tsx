@@ -3,6 +3,7 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
+import { useLanguage } from "@/components/ui/LanguageContext";
 
 interface HistoryItem {
     id: string;
@@ -21,6 +22,14 @@ interface HistoryDrawerProps {
 }
 
 export function HistoryDrawer({ isOpen, onClose, history, onSelect, onClear }: HistoryDrawerProps) {
+    const { t } = useLanguage();
+
+    const getStatusLabel = (status: string) => {
+        if (status === 'in_progress') return t('running');
+        if (status === 'complete') return t('complete');
+        return t('failed');
+    };
+
     return (
         <>
             {/* Backdrop */}
@@ -36,12 +45,12 @@ export function HistoryDrawer({ isOpen, onClose, history, onSelect, onClear }: H
             <div
                 className={cn(
                     "fixed top-0 right-0 h-full w-full sm:max-w-sm bg-[var(--glass-bg)] backdrop-blur-2xl border-l border-[var(--glass-border)] shadow-2xl z-50 transition-transform duration-300 ease-out transform p-6 flex flex-col",
-                    "sm:rounded-l-[2.5rem]", // Liquid Glass: deeply rounded corners on the visible side for larger screens
+                    "sm:rounded-l-[2.5rem]",
                     isOpen ? "translate-x-0" : "translate-x-full"
                 )}
             >
                 <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold text-[var(--text-color)]">History</h2>
+                    <h2 className="text-xl font-bold text-[var(--text-color)]">{t('history')}</h2>
                     <Button variant="secondary" className="p-2 h-auto rounded-full bg-transparent border-none shadow-none hover:bg-[var(--glass-bg)]" onClick={onClose}>
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                     </Button>
@@ -49,10 +58,10 @@ export function HistoryDrawer({ isOpen, onClose, history, onSelect, onClear }: H
 
                 {history.length === 0 ? (
                     <div className="flex-1 flex items-center justify-center text-[var(--text-color-secondary)]">
-                        <p>No history yet.</p>
+                        <p>{t('noHistory')}</p>
                     </div>
                 ) : (
-                    <div className="flex-1 overflow-y-auto space-y-4 pr-1 -mr-2"> {/* Tiny negative margin for scrollbar aesthetics */}
+                    <div className="flex-1 overflow-y-auto space-y-4 pr-1 -mr-2">
                         {history.map((item) => (
                             <div
                                 key={item.id}
@@ -66,13 +75,13 @@ export function HistoryDrawer({ isOpen, onClose, history, onSelect, onClear }: H
                                             item.status === 'failed' ? "bg-red-500/10 text-red-500 border-red-500/20" :
                                                 "bg-blue-500/10 text-blue-500 border-blue-500/20"
                                     )}>
-                                        {item.status === 'in_progress' ? 'Running' : item.status}
+                                        {getStatusLabel(item.status)}
                                     </span>
                                     <span className="text-xs text-[var(--text-color-secondary)]">{new Date(item.timestamp).toLocaleDateString()}</span>
                                 </div>
                                 <h3 className="font-medium text-[var(--text-color)] line-clamp-2 mb-1">{item.query}</h3>
                                 <div className="flex items-center gap-2 text-xs text-[var(--text-color-secondary)]">
-                                    <span>Score: {item.sufficiencyScore}%</span>
+                                    <span>{t('score')}: {item.sufficiencyScore}%</span>
                                 </div>
                             </div>
                         ))}
@@ -82,7 +91,7 @@ export function HistoryDrawer({ isOpen, onClose, history, onSelect, onClear }: H
                 {history.length > 0 && (
                     <div className="mt-4 pt-4 border-t border-[var(--glass-border)]">
                         <Button variant="secondary" className="w-full text-red-400 hover:text-red-500 hover:border-red-500/50 bg-transparent border-[var(--glass-border)]" onClick={onClear}>
-                            Clear History
+                            {t('clearHistory')}
                         </Button>
                     </div>
                 )}
@@ -90,3 +99,4 @@ export function HistoryDrawer({ isOpen, onClose, history, onSelect, onClear }: H
         </>
     );
 }
+
