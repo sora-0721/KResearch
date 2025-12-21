@@ -6,12 +6,15 @@ import { Button } from "@/components/ui/Button";
 import { ApiKeySection } from "@/components/settings/ApiKeySection";
 import { ResearchModeSection } from "@/components/settings/ResearchModeSection";
 import { ModelConfigSection } from "@/components/settings/ModelConfigSection";
-import { ModelOption, ApiKeyEntry } from "@/types/research";
+import { ModelOption, ApiKeyEntry, ProviderType } from "@/types/research";
 import { useLanguage } from "@/components/ui/LanguageContext";
 
 interface SettingsModalProps {
     isOpen: boolean;
     onClose: () => void;
+    // Active provider
+    activeProvider: ProviderType;
+    setActiveProvider: (provider: ProviderType) => void;
     // Legacy API key
     apiKey: string;
     setApiKey: (val: string) => void;
@@ -50,6 +53,7 @@ interface SettingsModalProps {
 
 export function SettingsModal({
     isOpen, onClose,
+    activeProvider, setActiveProvider,
     apiKey, setApiKey,
     geminiApiKeys, addGeminiApiKey, removeGeminiApiKey, updateGeminiApiKey,
     geminiBaseUrl, setGeminiBaseUrl,
@@ -82,6 +86,8 @@ export function SettingsModal({
                     </div>
 
                     <ApiKeySection
+                        activeProvider={activeProvider}
+                        setActiveProvider={setActiveProvider}
                         apiKey={apiKey} setApiKey={setApiKey}
                         geminiApiKeys={geminiApiKeys}
                         addGeminiApiKey={addGeminiApiKey}
@@ -99,7 +105,9 @@ export function SettingsModal({
                         minIterations={minIterations} setMinIterations={setMinIterations}
                         maxIterations={maxIterations} setMaxIterations={setMaxIterations} />
                     <div className="divider" />
-                    <ModelConfigSection managerModel={managerModel} setManagerModel={setManagerModel}
+                    <ModelConfigSection
+                        activeProvider={activeProvider}
+                        managerModel={managerModel} setManagerModel={setManagerModel}
                         workerModel={workerModel} setWorkerModel={setWorkerModel}
                         verifierModel={verifierModel} setVerifierModel={setVerifierModel}
                         clarifierModel={clarifierModel} setClarifierModel={setClarifierModel}
@@ -109,5 +117,3 @@ export function SettingsModal({
         </>
     );
 }
-
-

@@ -25,10 +25,13 @@ export default function Home() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
   const research = useResearch({
+    activeProvider: settings.activeProvider,
     apiKey: settings.apiKey,
     getNextApiKey: settings.getNextApiKey,
     resetApiKeyRotation: settings.resetApiKeyRotation,
     geminiBaseUrl: settings.geminiBaseUrl,
+    openaiApiKey: settings.openaiApiKey,
+    openaiApiHost: settings.openaiApiHost,
     managerModel: settings.managerModel, workerModel: settings.workerModel,
     verifierModel: settings.verifierModel, clarifierModel: settings.clarifierModel,
     researchMode: settings.researchMode, minIterations: settings.minIterations, maxIterations: settings.maxIterations
@@ -40,7 +43,11 @@ export default function Home() {
   }, [query, research]);
 
   const clarification = useClarification({
-    apiKey: settings.apiKey, clarifierModel: settings.clarifierModel,
+    activeProvider: settings.activeProvider,
+    apiKey: settings.apiKey,
+    openaiApiKey: settings.openaiApiKey,
+    openaiApiHost: settings.openaiApiHost,
+    clarifierModel: settings.clarifierModel,
     onClear: () => { }, onStartResearch: handleStartResearch
   });
 
@@ -76,7 +83,13 @@ export default function Home() {
   };
 
   const handleStart = () => {
-    const activeKey = settings.getActiveApiKey();
+    let activeKey: string;
+    if (settings.activeProvider === "openai") {
+      activeKey = settings.openaiApiKey;
+    } else {
+      activeKey = settings.getActiveApiKey();
+    }
+
     if (!activeKey || !query) { alert(t('alertApiKeyQuery')); setIsSettingsOpen(true); return; }
     if (research.isResearching) { research.stopResearch(); return; }
     clarification.run(query);

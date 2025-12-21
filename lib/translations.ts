@@ -28,6 +28,7 @@ export const translations = {
         openaiApiKey: "OpenAI API Key",
         apiHostOptional: "API Host (Optional)",
         openaiHint: "When OpenAI is configured, search will use DuckDuckGo instead of Google grounding.",
+        blocked: "Blocked",
 
         // Research Mode
         researchMode: "Research Mode",
@@ -39,11 +40,15 @@ export const translations = {
         maxIterations: "Max Iterations",
 
         // Model Config
-        modelConfig: "Model Configuration",
+        modelConfiguration: "Model Configuration",
         managerModel: "Manager",
         workerModel: "Worker",
         verifierModel: "Verifier",
         clarifierModel: "Clarifier",
+        managerAgent: "Manager Agent",
+        workerAgent: "Worker Agent",
+        verifierAgent: "Verifier Agent",
+        clarifierAgent: "Clarifier Agent",
         loadingModels: "Loading models...",
         noModelsFound: "No models found",
 
@@ -115,6 +120,7 @@ export const translations = {
         openaiApiKey: "OpenAI API 密钥",
         apiHostOptional: "API Host (可选)",
         openaiHint: "配置 OpenAI 后，搜索将使用 DuckDuckGo 而非 Google。",
+        blocked: "已屏蔽",
 
         // Research Mode
         researchMode: "研究模式",
@@ -126,11 +132,15 @@ export const translations = {
         maxIterations: "最大迭代次数",
 
         // Model Config
-        modelConfig: "模型配置",
+        modelConfiguration: "模型配置",
         managerModel: "管理者",
         workerModel: "执行者",
         verifierModel: "验证者",
         clarifierModel: "澄清者",
+        managerAgent: "管理者代理",
+        workerAgent: "执行者代理",
+        verifierAgent: "验证者代理",
+        clarifierAgent: "澄清者代理",
         loadingModels: "加载模型中...",
         noModelsFound: "未找到模型",
 

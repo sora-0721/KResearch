@@ -1,4 +1,6 @@
 import { GeminiClient } from "./gemini";
+import { OpenAIClient } from "./openai";
+import { searchDuckDuckGo, formatSearchResultsForPrompt } from "./duckduckgo";
 import {
     GlobalContext,
     ManagerOutput,
@@ -18,8 +20,15 @@ import {
 // Re-export types for convenience
 export type { GlobalContext, ManagerOutput, WorkerFinding, ClarifierOutput, ConflictItem };
 
+export type ProviderType = "gemini" | "openai";
+
+interface LLMClient {
+    generateText(modelName: string, prompt: string, systemInstruction?: string, jsonMode?: boolean, tools?: any[]): Promise<string>;
+}
+
 export class ResearchAgent {
-    private client: GeminiClient;
+    private client: LLMClient;
+    private provider: ProviderType;
     private managerModel: string;
     private workerModel: string;
 
@@ -27,11 +36,18 @@ export class ResearchAgent {
         apiKey: string,
         managerModel: string = "gemini-flash-latest",
         workerModel: string = "gemini-flash-latest",
-        baseUrl?: string
+        baseUrl?: string,
+        provider: ProviderType = "gemini"
     ) {
-        this.client = new GeminiClient(apiKey, baseUrl);
+        this.provider = provider;
         this.managerModel = managerModel;
         this.workerModel = workerModel;
+
+        if (provider === "openai") {
+            this.client = new OpenAIClient(apiKey, baseUrl);
+        } else {
+            this.client = new GeminiClient(apiKey, baseUrl);
+        }
     }
 
     async runManager(query: string, context: GlobalContext): Promise<ManagerOutput> {
@@ -54,12 +70,49 @@ export class ResearchAgent {
     }
 
     async runWorker(task: any): Promise<WorkerFinding[]> {
-        const tools = [{ googleSearch: {} }];
-        const prompt = `
-    Task: ${JSON.stringify(task)}
-    Using the Google Search tool, find high-quality information to answer this task.
-    `;
-        const response = await this.client.generateText(this.workerModel, prompt, WORKER_PROMPT, true, tools);
+        let prompt: string;
+        let response: string;
+
+        if (this.provider === "openai") {
+            // OpenAI: Use DuckDuckGo for search
+            // next_step contains task_description, search_queries, focus_area
+            const queries = task.search_queries && Array.isArray(task.search_queries) && task.search_queries.length > 0
+                ? task.search_queries
+                : [task.task_description || task.task || JSON.stringify(task)];
+
+            let allSearchResults: any[] = [];
+            // Run at most 2 queries to avoid too many requests and token bloat
+            for (const q of queries.slice(0, 2)) {
+                const results = await searchDuckDuckGo(q, 5);
+                allSearchResults = [...allSearchResults, ...results];
+            }
+
+            const searchContext = formatSearchResultsForPrompt(allSearchResults);
+
+            prompt = `
+You are currently using DuckDuckGo search results. 
+Task: ${task.task_description || task.task || JSON.stringify(task)}
+Focus Area: ${task.focus_area || "General"}
+
+INSTRUCTIONS:
+1. Examine each search snippet carefully.
+2. Even if the information is brief, extract any relevant facts, dates, numbers, or specific claims that help answer the task.
+3. If a snippet mentions a specific detail but is cut off, report what is available.
+4. If multiple sources mention the same fact, include them as separate entries or combine with multiple sources if your format allows (but stick to the requested JSON structure).
+5. RETURN A JSON ARRAY of findings. If NO relevant information is found AT ALL after careful reading, return an empty array [].
+
+Return a JSON array with objects containing: source_url, fact, context
+`;
+            response = await this.client.generateText(this.workerModel, prompt, WORKER_PROMPT, true);
+        } else {
+            // Gemini: Use Google Search grounding
+            const tools = [{ googleSearch: {} }];
+            prompt = `
+Task: ${JSON.stringify(task)}
+Using the Google Search tool, find high-quality information to answer this task.
+`;
+            response = await (this.client as GeminiClient).generateText(this.workerModel, prompt, WORKER_PROMPT, true, tools);
+        }
 
         try {
             return JSON.parse(response);

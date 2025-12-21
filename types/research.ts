@@ -56,10 +56,7 @@ export interface ResearchSettings {
     researchMode: "standard" | "deeper";
 }
 
-export const DEFAULT_MODELS: ModelOption[] = [
-    { name: "models/gemini-3-pro-preview", displayName: "gemini-3-pro-preview (Preview)" },
-    { name: "gemini-flash-latest", displayName: "gemini-flash-latest (Default)" },
-    { name: "gemini-2.0-flash-exp", displayName: "gemini-2.0-flash-exp" },
-    { name: "gemini-1.5-pro", displayName: "gemini-1.5-pro" },
-    { name: "gemini-1.5-flash", displayName: "gemini-1.5-flash" }
-];
+export type ProviderType = "gemini" | "openai";
+
+// No default models - models are fetched from API only
+export const DEFAULT_MODELS: ModelOption[] = [];
