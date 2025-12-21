@@ -27,6 +27,7 @@ export function useResearchSettings() {
     const [minIterations, setMinIterations] = useState(15);
     const [maxIterations, setMaxIterations] = useState(999);
     const [researchMode, setResearchMode] = useState<"standard" | "deeper">("standard");
+    const [modelProvider, setModelProvider] = useState<"gemini" | "openai">("gemini");
 
     // Multi-API key management functions
     const addGeminiApiKey = useCallback(() => {
@@ -47,6 +48,9 @@ export function useResearchSettings() {
 
     // Get next API key in rotation (round-robin)
     const getNextApiKey = useCallback(() => {
+        if (modelProvider === "openai") {
+            return { key: openaiApiKey, index: 0 };
+        }
         const validKeys = geminiApiKeys.filter((k: ApiKeyEntry) => k.key.length > 10);
         if (validKeys.length === 0) {
             // Fallback to legacy single key
@@ -55,7 +59,7 @@ export function useResearchSettings() {
         const index = currentApiKeyIndexRef.current % validKeys.length;
         currentApiKeyIndexRef.current = (currentApiKeyIndexRef.current + 1) % validKeys.length;
         return { key: validKeys[index].key, index };
-    }, [geminiApiKeys, apiKey]);
+    }, [geminiApiKeys, apiKey, modelProvider, openaiApiKey]);
 
     // Reset rotation index (call when starting new research)
     const resetApiKeyRotation = useCallback(() => {
@@ -64,9 +68,12 @@ export function useResearchSettings() {
 
     // Get active API key (first valid key or legacy key)
     const getActiveApiKey = useCallback(() => {
+        if (modelProvider === "openai") {
+            return openaiApiKey;
+        }
         const validKeys = geminiApiKeys.filter((k: ApiKeyEntry) => k.key.length > 10);
         return validKeys.length > 0 ? validKeys[0].key : apiKey;
-    }, [geminiApiKeys, apiKey]);
+    }, [geminiApiKeys, apiKey, modelProvider, openaiApiKey]);
 
     // Load from localStorage
     useEffect(() => {
@@ -111,6 +118,12 @@ export function useResearchSettings() {
         if (storedResearchMode === "standard" || storedResearchMode === "deeper") {
             setResearchMode(storedResearchMode);
         }
+
+        // Provider
+        const storedProvider = localStorage.getItem("kresearch_model_provider");
+        if (storedProvider === "gemini" || storedProvider === "openai") {
+            setModelProvider(storedProvider);
+        }
     }, []);
 
     // Save to localStorage
@@ -118,6 +131,7 @@ export function useResearchSettings() {
     useEffect(() => { localStorage.setItem("kresearch_gemini_base_url", geminiBaseUrl); }, [geminiBaseUrl]);
     useEffect(() => { localStorage.setItem("kresearch_openai_api_key", openaiApiKey); }, [openaiApiKey]);
     useEffect(() => { localStorage.setItem("kresearch_openai_api_host", openaiApiHost); }, [openaiApiHost]);
+    useEffect(() => { localStorage.setItem("kresearch_model_provider", modelProvider); }, [modelProvider]);
     useEffect(() => { localStorage.setItem("kresearch_manager_model", managerModel); }, [managerModel]);
     useEffect(() => { localStorage.setItem("kresearch_worker_model", workerModel); }, [workerModel]);
     useEffect(() => { localStorage.setItem("kresearch_verifier_model", verifierModel); }, [verifierModel]);
@@ -126,43 +140,95 @@ export function useResearchSettings() {
     useEffect(() => { localStorage.setItem("kresearch_max_iterations", String(maxIterations)); }, [maxIterations]);
     useEffect(() => { localStorage.setItem("kresearch_research_mode", researchMode); }, [researchMode]);
 
-    // Fetch models when API Key changes
-    useEffect(() => {
-        const fetchModels = async () => {
-            const activeKey = getActiveApiKey();
-            if (activeKey.length > 10) {
-                localStorage.setItem("gemini_api_key", activeKey);
-                setIsLoadingModels(true);
-                try {
-                    const models = await getAvailableModels(activeKey);
-                    if (models && models.length > 0) {
-                        const formattedModels = models
+    // Fetch models function
+    const refreshModels = useCallback(async () => {
+        setIsLoadingModels(true);
+        try {
+            if (modelProvider === "openai") {
+                // OpenAI Handling
+                if (openaiApiKey && openaiApiKey.length > 5) {
+                    const openaiModels = await getAvailableModels(openaiApiKey, openaiApiHost, "openai");
+                    if (openaiModels && openaiModels.length > 0) {
+                        const formattedModels = openaiModels.map((m: any) => ({
+                            name: m.name,
+                            displayName: m.displayName || m.name
+                        }));
+                        setAvailableModels(formattedModels);
+                    } else {
+                        setAvailableModels([
+                            { name: "gpt-4o", displayName: "GPT-4o" },
+                            { name: "gpt-3.5-turbo", displayName: "GPT-3.5 Turbo" }
+                        ]);
+                    }
+                } else {
+                    setAvailableModels([
+                        { name: "gpt-4o", displayName: "GPT-4o" },
+                        { name: "gpt-3.5-turbo", displayName: "GPT-3.5 Turbo" }
+                    ]);
+                }
+            } else {
+                // Gemini Handling
+                let keysToTest: string[] = [];
+                const validGeminiKeys = geminiApiKeys
+                    .filter(k => k.key.length > 10)
+                    .map(k => k.key);
+
+                if (validGeminiKeys.length > 0) {
+                    keysToTest = validGeminiKeys;
+                } else if (apiKey && apiKey.length > 10) {
+                    keysToTest = [apiKey];
+                }
+
+                if (keysToTest.length > 0) {
+                    // Fetch models for each key in parallel
+                    const results = await Promise.all(
+                        keysToTest.map(key => getAvailableModels(key, geminiBaseUrl, "gemini"))
+                    );
+
+                    const validResults = results.filter(r => Array.isArray(r) && r.length > 0);
+
+                    if (validResults.length > 0) {
+                        let commonModelNames = new Set(validResults[0].map((m: any) => m.name));
+                        for (let i = 1; i < validResults.length; i++) {
+                            const currentModelNames = new Set(validResults[i].map((m: any) => m.name));
+                            commonModelNames = new Set(
+                                [...commonModelNames].filter(x => currentModelNames.has(x))
+                            );
+                        }
+
+                        let finalModels = validResults[0].filter((m: any) => commonModelNames.has(m.name));
+
+                        const formattedModels = finalModels
                             .filter((m: any) => m.name.includes("gemini"))
                             .map((m: any) => ({
                                 name: m.name,
                                 displayName: m.displayName || m.name.replace("models/", "")
                             }));
-                        const modelsToPreserve = [
+
+                        setAvailableModels(formattedModels);
+                    } else {
+                        setAvailableModels([
                             { name: "models/gemini-3-pro-preview", displayName: "Gemini 3 Pro Preview (Recommended)" },
                             { name: "gemini-flash-latest", displayName: "Gemini Flash Latest (Fast)" }
-                        ];
-                        modelsToPreserve.forEach(preserved => {
-                            if (!formattedModels.find((m: any) => m.name === preserved.name)) {
-                                formattedModels.unshift(preserved);
-                            }
-                        });
-                        setAvailableModels(formattedModels);
+                        ]);
                     }
-                } catch (error) {
-                    console.error("Failed to fetch models", error);
-                } finally {
-                    setIsLoadingModels(false);
+                } else {
+                    setAvailableModels([]);
                 }
             }
-        };
-        const timeoutId = setTimeout(fetchModels, 1000);
+        } catch (error) {
+            console.error("Failed to fetch models", error);
+        } finally {
+            setIsLoadingModels(false);
+        }
+    }, [geminiApiKeys, apiKey, geminiBaseUrl, openaiApiKey, openaiApiHost, modelProvider]);
+
+    // Fetch models when API Key changes or Provider changes
+    useEffect(() => {
+        // Debounce to avoid spamming while typing
+        const timeoutId = setTimeout(refreshModels, 800);
         return () => clearTimeout(timeoutId);
-    }, [geminiApiKeys, apiKey, getActiveApiKey]);
+    }, [refreshModels]);
 
     return {
         // Legacy API key (backward compatibility)
@@ -175,12 +241,14 @@ export function useResearchSettings() {
         // OpenAI settings
         openaiApiKey, setOpenaiApiKey,
         openaiApiHost, setOpenaiApiHost,
+        // Provider
+        modelProvider, setModelProvider,
         // Model settings
         managerModel, setManagerModel,
         workerModel, setWorkerModel,
         verifierModel, setVerifierModel,
         clarifierModel, setClarifierModel,
-        availableModels, isLoadingModels,
+        availableModels, isLoadingModels, refreshModels,
         // Iteration settings
         minIterations, setMinIterations,
         maxIterations, setMaxIterations,

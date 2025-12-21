@@ -23,6 +23,9 @@ interface ApiKeySectionProps {
     setOpenaiApiKey: (val: string) => void;
     openaiApiHost: string;
     setOpenaiApiHost: (val: string) => void;
+    // Provider
+    modelProvider: "gemini" | "openai";
+    setModelProvider: (val: "gemini" | "openai") => void;
 }
 
 export function ApiKeySection({
@@ -30,10 +33,11 @@ export function ApiKeySection({
     geminiApiKeys, addGeminiApiKey, removeGeminiApiKey, updateGeminiApiKey,
     geminiBaseUrl, setGeminiBaseUrl,
     openaiApiKey, setOpenaiApiKey,
-    openaiApiHost, setOpenaiApiHost
+    openaiApiHost, setOpenaiApiHost,
+    modelProvider, setModelProvider
 }: ApiKeySectionProps) {
     const { t } = useLanguage();
-    const [activeProvider, setActiveProvider] = useState<"gemini" | "openai">("gemini");
+    // Removed local state: const [activeProvider, setActiveProvider] = useState<"gemini" | "openai">("gemini");
     const hasMultipleKeys = geminiApiKeys.length > 0;
 
     return (
@@ -43,15 +47,15 @@ export function ApiKeySection({
                 <label>{t('apiProvider')}</label>
                 <div className="flex gap-2 mt-2">
                     <Button
-                        variant={activeProvider === "gemini" ? "primary" : "secondary"}
-                        onClick={() => setActiveProvider("gemini")}
+                        variant={modelProvider === "gemini" ? "primary" : "secondary"}
+                        onClick={() => setModelProvider("gemini")}
                         className="flex-1"
                     >
                         {t('gemini')}
                     </Button>
                     <Button
-                        variant={activeProvider === "openai" ? "primary" : "secondary"}
-                        onClick={() => setActiveProvider("openai")}
+                        variant={modelProvider === "openai" ? "primary" : "secondary"}
+                        onClick={() => setModelProvider("openai")}
                         className="flex-1"
                     >
                         {t('openai')}
@@ -60,7 +64,7 @@ export function ApiKeySection({
             </div>
 
             {/* Gemini Configuration */}
-            {activeProvider === "gemini" && (
+            {modelProvider === "gemini" && (
                 <>
                     <div className="form-group">
                         <div className="flex justify-between items-center mb-2">
@@ -148,7 +152,7 @@ export function ApiKeySection({
             )}
 
             {/* OpenAI Configuration */}
-            {activeProvider === "openai" && (
+            {modelProvider === "openai" && (
                 <>
                     <div className="form-group">
                         <label>{t('openaiApiKey')}</label>
@@ -170,6 +174,9 @@ export function ApiKeySection({
                         />
                         <p className="text-xs mt-1" style={{ color: 'var(--text-color-secondary)' }}>
                             {t('openaiHint')}
+                        </p>
+                        <p className="text-xs mt-1 text-blue-500/80">
+                            Effective API Endpoint: {openaiApiHost || "https://api.openai.com/v1"}/chat/completions
                         </p>
                     </div>
                 </>

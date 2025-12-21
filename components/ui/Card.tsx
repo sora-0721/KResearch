@@ -7,7 +7,8 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 export function Card({ className = "", noHover = false, ...props }: CardProps) {
     return (
         <div
-            className={`card ${noHover ? 'hover:transform-none hover:scale-100' : ''} ${className}`}
+            className={`card ${className}`}
+            style={noHover ? { transform: 'none', boxShadow: 'var(--shadow-md)', transition: 'none' } : undefined}
             {...props}
         />
     );
