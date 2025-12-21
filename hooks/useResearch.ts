@@ -10,9 +10,6 @@ interface UseResearchProps {
     getNextApiKey: () => { key: string; index: number };
     resetApiKeyRotation: () => void;
     geminiBaseUrl: string;
-    modelProvider: "gemini" | "openai";
-    openaiApiKey: string;
-    openaiApiHost: string;
     managerModel: string;
     workerModel: string;
     verifierModel: string;
@@ -23,7 +20,7 @@ interface UseResearchProps {
 }
 
 export function useResearch(props: UseResearchProps) {
-    const { getNextApiKey, resetApiKeyRotation, geminiBaseUrl, modelProvider, openaiApiKey, openaiApiHost, managerModel, workerModel, verifierModel, researchMode, minIterations, maxIterations } = props;
+    const { getNextApiKey, resetApiKeyRotation, geminiBaseUrl, managerModel, workerModel, verifierModel, researchMode, minIterations, maxIterations } = props;
     const [isResearching, setIsResearching] = useState(false);
     const [agentState, setAgentState] = useState<AgentState>("idle");
     const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -48,9 +45,7 @@ export function useResearch(props: UseResearchProps) {
             // Get next API key in rotation for manager
             const managerApiKey = getNextApiKey();
             addLog("System", `Using API key #${managerApiKey.index + 1}`);
-            const providerConfig = { provider: modelProvider, openaiApiHost };
-
-            const managerOutput = await runManagerAction(managerApiKey.key, query, currentContext, managerModel, geminiBaseUrl || undefined, providerConfig);
+            const managerOutput = await runManagerAction(managerApiKey.key, query, currentContext, managerModel, geminiBaseUrl || undefined);
             addLog("Manager", `Assessment complete. Score: ${managerOutput.sufficiency_score}%`, managerOutput);
             setSufficiencyScore(managerOutput.sufficiency_score);
             let isFinished = managerOutput.is_finished || managerOutput.sufficiency_score >= 95;
@@ -61,17 +56,17 @@ export function useResearch(props: UseResearchProps) {
             if (isFinished) {
                 setAgentState("writer"); addLog("System", "Generating final report...");
                 const writerApiKey = getNextApiKey();
-                const report = await runWriterAction(writerApiKey.key, currentContext, managerModel, geminiBaseUrl || undefined, providerConfig);
+                const report = await runWriterAction(writerApiKey.key, currentContext, managerModel, geminiBaseUrl || undefined);
                 setFinalReport(report); setAgentState("complete"); setIsResearching(false); setEndTime(Date.now());
                 addLog("Writer", "Report generated."); return;
             }
             setAgentState("worker"); addLog("Worker", `Executing: ${managerOutput.next_step.task_description}`);
             const workerApiKey = getNextApiKey();
-            const findings = await runWorkerAction(workerApiKey.key, managerOutput.next_step, workerModel, geminiBaseUrl || undefined, providerConfig);
+            const findings = await runWorkerAction(workerApiKey.key, managerOutput.next_step, workerModel, geminiBaseUrl || undefined);
             addLog("Worker", `Found ${findings.length} new items.`, findings);
             setAgentState("verifier"); addLog("Verifier", "Verifying and deduplicating findings...");
             const verifierApiKey = getNextApiKey();
-            const verification = await runVerifierAction(verifierApiKey.key, findings, currentContext, verifierModel, geminiBaseUrl || undefined, providerConfig);
+            const verification = await runVerifierAction(verifierApiKey.key, findings, currentContext, verifierModel, geminiBaseUrl || undefined);
             addLog("Verifier", `Verification complete. ${verification.cleaned_findings.length} valid findings.`, verification);
             const newContext: GlobalContext = {
                 ...currentContext, iteration: currentContext.iteration + 1,
@@ -101,8 +96,7 @@ export function useResearch(props: UseResearchProps) {
         addLog("System", "Regenerating final report...");
         try {
             const writerApiKey = getNextApiKey();
-            const providerConfig = { provider: modelProvider, openaiApiHost };
-            const report = await runWriterAction(writerApiKey.key, globalContext, managerModel, geminiBaseUrl || undefined, providerConfig);
+            const report = await runWriterAction(writerApiKey.key, globalContext, managerModel, geminiBaseUrl || undefined);
             setFinalReport(report);
             addLog("Writer", "Report regenerated successfully.");
         } catch (error) { addLog("System", "Failed to regenerate report.", error); }

@@ -25,13 +25,10 @@ export default function Home() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
   const research = useResearch({
-    apiKey: settings.getActiveApiKey(),
+    apiKey: settings.apiKey,
     getNextApiKey: settings.getNextApiKey,
     resetApiKeyRotation: settings.resetApiKeyRotation,
     geminiBaseUrl: settings.geminiBaseUrl,
-    modelProvider: settings.modelProvider,
-    openaiApiKey: settings.openaiApiKey,
-    openaiApiHost: settings.openaiApiHost,
     managerModel: settings.managerModel, workerModel: settings.workerModel,
     verifierModel: settings.verifierModel, clarifierModel: settings.clarifierModel,
     researchMode: settings.researchMode, minIterations: settings.minIterations, maxIterations: settings.maxIterations
@@ -43,7 +40,7 @@ export default function Home() {
   }, [query, research]);
 
   const clarification = useClarification({
-    apiKey: settings.getActiveApiKey(), clarifierModel: settings.clarifierModel,
+    apiKey: settings.apiKey, clarifierModel: settings.clarifierModel,
     onClear: () => { }, onStartResearch: handleStartResearch
   });
 
@@ -91,7 +88,7 @@ export default function Home() {
 
   return (
     <div className="max-w-5xl mx-auto">
-      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} {...settings} availableModels={settings.availableModels} isLoadingModels={settings.isLoadingModels} refreshModels={settings.refreshModels} modelProvider={settings.modelProvider} setModelProvider={settings.setModelProvider} />
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} {...settings} availableModels={settings.availableModels} isLoadingModels={settings.isLoadingModels} />
       <HistoryDrawer isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} history={history} onSelect={loadSession} onClear={() => { setHistory([]); localStorage.removeItem("kresearch_history"); }} />
       <main className="space-y-8">
         <ResearchHeader onOpenHistory={() => setIsHistoryOpen(true)} onOpenSettings={() => setIsSettingsOpen(true)} />

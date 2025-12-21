@@ -4,8 +4,6 @@ import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { ModelOption } from "@/types/research";
 
-import { RotateCw } from "lucide-react";
-
 interface ModelConfigSectionProps {
     managerModel: string;
     setManagerModel: (val: string) => void;
@@ -17,31 +15,21 @@ interface ModelConfigSectionProps {
     setClarifierModel: (val: string) => void;
     availableModels: ModelOption[];
     isLoadingModels: boolean;
-    refreshModels: () => void;
 }
 
 export function ModelConfigSection({
     managerModel, setManagerModel, workerModel, setWorkerModel,
     verifierModel, setVerifierModel, clarifierModel, setClarifierModel,
-    availableModels, isLoadingModels, refreshModels
+    availableModels, isLoadingModels
 }: ModelConfigSectionProps) {
     const modelOptions = availableModels.map(m => ({ value: m.name, label: m.displayName }));
 
     return (
         <>
             <div className="form-group">
-                <label className="flex items-center justify-between">
-                    <span className="flex items-center gap-2">
-                        Model Configuration
-                        {isLoadingModels && <Spinner />}
-                    </span>
-                    <button
-                        onClick={refreshModels}
-                        className="p-1 hover:bg-[var(--glass-border)] rounded-full transition-colors"
-                        title="Refresh Models"
-                    >
-                        <RotateCw size={16} className={isLoadingModels ? "animate-spin" : ""} />
-                    </button>
+                <label className="flex items-center gap-2">
+                    Model Configuration
+                    {isLoadingModels && <Spinner />}
                 </label>
             </div>
 

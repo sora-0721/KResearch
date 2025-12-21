@@ -39,10 +39,6 @@ interface SettingsModalProps {
     setClarifierModel: (val: string) => void;
     availableModels: ModelOption[];
     isLoadingModels: boolean;
-    refreshModels: () => void;
-    // Provider
-    modelProvider: "gemini" | "openai";
-    setModelProvider: (val: "gemini" | "openai") => void;
     // Research settings
     researchMode: "standard" | "deeper";
     setResearchMode: (mode: "standard" | "deeper") => void;
@@ -60,8 +56,7 @@ export function SettingsModal({
     openaiApiKey, setOpenaiApiKey, openaiApiHost, setOpenaiApiHost,
     managerModel, setManagerModel, workerModel, setWorkerModel,
     verifierModel, setVerifierModel, clarifierModel, setClarifierModel,
-    availableModels, isLoadingModels, refreshModels,
-    modelProvider, setModelProvider,
+    availableModels, isLoadingModels,
     researchMode, setResearchMode, minIterations, setMinIterations, maxIterations, setMaxIterations
 }: SettingsModalProps) {
     const { t } = useLanguage();
@@ -98,8 +93,6 @@ export function SettingsModal({
                         setOpenaiApiKey={setOpenaiApiKey}
                         openaiApiHost={openaiApiHost}
                         setOpenaiApiHost={setOpenaiApiHost}
-                        modelProvider={modelProvider}
-                        setModelProvider={setModelProvider}
                     />
                     <div className="divider" />
                     <ResearchModeSection researchMode={researchMode} setResearchMode={setResearchMode}
@@ -110,8 +103,7 @@ export function SettingsModal({
                         workerModel={workerModel} setWorkerModel={setWorkerModel}
                         verifierModel={verifierModel} setVerifierModel={setVerifierModel}
                         clarifierModel={clarifierModel} setClarifierModel={setClarifierModel}
-                        availableModels={availableModels} isLoadingModels={isLoadingModels}
-                        refreshModels={refreshModels} />
+                        availableModels={availableModels} isLoadingModels={isLoadingModels} />
                 </Card>
             </div>
         </>

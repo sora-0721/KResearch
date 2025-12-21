@@ -1,5 +1,4 @@
 import { GeminiClient } from "./gemini";
-import { OpenAIClient } from "./openai";
 import {
     GlobalContext,
     ManagerOutput,
@@ -7,7 +6,6 @@ import {
     ConflictItem,
     ClarifierOutput
 } from "./types";
-
 import {
     CLARIFIER_PROMPT,
     MANAGER_PROMPT,
@@ -21,7 +19,7 @@ import {
 export type { GlobalContext, ManagerOutput, WorkerFinding, ClarifierOutput, ConflictItem };
 
 export class ResearchAgent {
-    private client: GeminiClient | OpenAIClient;
+    private client: GeminiClient;
     private managerModel: string;
     private workerModel: string;
 
@@ -29,18 +27,9 @@ export class ResearchAgent {
         apiKey: string,
         managerModel: string = "gemini-flash-latest",
         workerModel: string = "gemini-flash-latest",
-        baseUrl?: string,
-        providerConfig?: { provider: "gemini" | "openai", openaiApiHost?: string }
+        baseUrl?: string
     ) {
-        if (providerConfig?.provider === "openai") {
-            // Use OpenAI Client
-            // Note: OpenAI API key is passed as 'apiKey' here because upstream logic passes the active key
-            const host = providerConfig.openaiApiHost || baseUrl; // Fallback to baseUrl if host not explicit
-            this.client = new OpenAIClient(apiKey, host);
-        } else {
-            // Default to Gemini
-            this.client = new GeminiClient(apiKey, baseUrl);
-        }
+        this.client = new GeminiClient(apiKey, baseUrl);
         this.managerModel = managerModel;
         this.workerModel = workerModel;
     }
@@ -92,24 +81,13 @@ export class ResearchAgent {
     `;
         const response = await this.client.generateText(this.managerModel, prompt, VERIFIER_PROMPT, true);
 
-        const parseAndValidate = (text: string) => {
-            const parsed = JSON.parse(text);
-            if (!Array.isArray(parsed.cleaned_findings)) parsed.cleaned_findings = [];
-            if (!Array.isArray(parsed.conflicts)) parsed.conflicts = [];
-            return parsed;
-        };
-
         try {
-            return parseAndValidate(response);
+            return JSON.parse(response);
         } catch {
             console.log("Verifier returned invalid JSON, attempting repair...");
             const repairPrompt = `Fix this JSON:\n\n${response}`;
             const fixed = await this.client.generateText(this.managerModel, repairPrompt, "Return ONLY valid JSON.", true);
-            try {
-                return parseAndValidate(fixed);
-            } catch {
-                return { cleaned_findings: [], conflicts: [] }; // Fallback to safe empty state
-            }
+            return JSON.parse(fixed);
         }
     }
 
@@ -131,11 +109,7 @@ export class ResearchAgent {
             console.log("Clarifier returned invalid JSON, attempting repair...");
             const repairPrompt = `Fix this JSON:\n\n${response}`;
             const fixed = await this.client.generateText(this.workerModel, repairPrompt, "Return ONLY valid JSON.", true);
-            try {
-                return JSON.parse(fixed);
-            } catch {
-                return { is_clear: true, questions: [], reasoning: "Failed to parse clarification response." };
-            }
+            return JSON.parse(fixed);
         }
     }
 }
