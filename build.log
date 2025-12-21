@@ -1,0 +1,312 @@
+Building version 3.0.0
+#0 building with "mybuilder" instance using docker-container driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 2.68kB done
+#1 DONE 0.0s
+
+#2 [auth] library/node:pull token for registry-1.docker.io
+#2 DONE 0.0s
+
+#3 [linux/amd64 internal] load metadata for docker.io/library/node:22-alpine
+#3 DONE 1.8s
+
+#4 [linux/arm64 internal] load metadata for docker.io/library/node:22-alpine
+#4 DONE 1.8s
+
+#5 [internal] load .dockerignore
+#5 transferring context: 99B done
+#5 DONE 0.0s
+
+#6 [linux/amd64 base 1/1] FROM docker.io/library/node:22-alpine@sha256:0340fa682d72068edf603c305bfbc10e23219fb0e40df58d9ea4d6f33a9798bf
+#6 resolve docker.io/library/node:22-alpine@sha256:0340fa682d72068edf603c305bfbc10e23219fb0e40df58d9ea4d6f33a9798bf done
+#6 DONE 0.0s
+
+#7 [linux/arm64 base 1/1] FROM docker.io/library/node:22-alpine@sha256:0340fa682d72068edf603c305bfbc10e23219fb0e40df58d9ea4d6f33a9798bf
+#7 resolve docker.io/library/node:22-alpine@sha256:0340fa682d72068edf603c305bfbc10e23219fb0e40df58d9ea4d6f33a9798bf 0.0s done
+#7 DONE 0.0s
+
+#8 [internal] load build context
+#8 transferring context: 51.41kB 0.1s done
+#8 DONE 0.1s
+
+#9 [linux/amd64 deps 1/4] RUN apk add --no-cache libc6-compat
+#9 CACHED
+
+#10 [linux/amd64 deps 4/4] RUN   if [ -f yarn.lock ]; then yarn --frozen-lockfile;   elif [ -f package-lock.json ]; then npm ci;   elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile;   else echo "Lockfile not found." && exit 1;   fi
+#10 CACHED
+
+#11 [linux/amd64 deps 3/4] COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* .npmrc* ./
+#11 CACHED
+
+#12 [linux/amd64 deps 2/4] WORKDIR /app
+#12 CACHED
+
+#13 [linux/amd64 builder 1/5] WORKDIR /app
+#13 CACHED
+
+#14 [linux/amd64 builder 2/5] COPY --from=deps /app/node_modules ./node_modules
+#14 CACHED
+
+#15 [linux/arm64 deps 4/4] RUN   if [ -f yarn.lock ]; then yarn --frozen-lockfile;   elif [ -f package-lock.json ]; then npm ci;   elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile;   else echo "Lockfile not found." && exit 1;   fi
+#15 CACHED
+
+#16 [linux/arm64 deps 2/4] WORKDIR /app
+#16 CACHED
+
+#17 [linux/arm64 builder 1/5] WORKDIR /app
+#17 CACHED
+
+#18 [linux/arm64 deps 3/4] COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* .npmrc* ./
+#18 CACHED
+
+#19 [linux/arm64 deps 1/4] RUN apk add --no-cache libc6-compat
+#19 CACHED
+
+#20 [linux/arm64 builder 2/5] COPY --from=deps /app/node_modules ./node_modules
+#20 CACHED
+
+#21 [linux/arm64 builder 3/5] COPY . .
+#21 ...
+
+#22 [linux/amd64 builder 3/5] COPY . .
+#22 DONE 1.2s
+
+#21 [linux/arm64 builder 3/5] COPY . .
+#21 DONE 1.2s
+
+#23 [linux/arm64 builder 4/5] RUN echo "=== Build Environment ===" &&   pwd &&   echo "=== Files in /app ===" &&   ls -la &&   echo "=== Lockfiles ===" &&   ls -la | grep -E "lock|yarn" || echo "No lockfiles" &&   echo "=== Node version ===" &&   node --version &&   echo "=== NPM version ===" &&   npm --version
+#23 0.066 === Build Environment ===
+#23 0.066 /app
+#23 0.066 === Files in /app ===
+#23 0.069 total 428
+#23 0.069 drwxr-xr-x    1 root     root          4096 Dec 21 05:04 .
+#23 0.069 drwxr-xr-x    1 root     root          4096 Dec 21 05:04 ..
+#23 0.069 -rw-r--r--    1 root     root            35 Dec  9 04:13 .env.example
+#23 0.069 drwxr-xr-x    3 root     root          4096 Dec 21 03:47 .github
+#23 0.069 drwx------    9 root     root          4096 Dec 21 04:54 .next
+#23 0.069 -rw-r--r--    1 root     root            21 Dec  9 04:13 .npmrc
+#23 0.069 -rw-r--r--    1 root     root          4198 Dec  9 04:13 CODE_OF_CONDUCT.md
+#23 0.069 -rw-r--r--    1 root     root         18360 Dec  9 04:13 CONTRIBUTING.md
+#23 0.069 -rw-r--r--    1 root     root          1070 Dec  9 04:13 LICENSE
+#23 0.069 -rw-r--r--    1 root     root         11152 Dec  9 04:13 README.md
+#23 0.069 -rw-r--r--    1 root     root           469 Dec  9 04:13 SECURITY.md
+#23 0.069 drwxr-xr-x    2 root     root          4096 Dec  9 04:35 app
+#23 0.069 -rw-r--r--    1 root     root           439 Dec 21 05:04 build.log
+#23 0.069 drwxr-xr-x    4 root     root          4096 Dec  9 21:38 components
+#23 0.069 -rw-r--r--    1 root     root           218 Dec  9 04:13 docker-compose.yml
+#23 0.069 -rw-r--r--    1 root     root           465 Dec  9 04:13 eslint.config.mjs
+#23 0.069 drwxr-xr-x    2 root     root          4096 Dec  9 04:35 hooks
+#23 0.069 drwxr-xr-x    2 root     root          4096 Dec 21 04:23 lib
+#23 0.069 -rw-r--r--    1 root     root           247 Dec 21 03:59 next-env.d.ts
+#23 0.069 -rw-r--r--    1 root     root           129 Dec 21 04:57 next.config.ts
+#23 0.069 drwxr-xr-x  386 root     root         20480 Dec 21 04:48 node_modules
+#23 0.069 -rw-r--r--    1 root     root        286492 Dec 21 04:24 package-lock.json
+#23 0.069 -rw-r--r--    1 root     root           774 Dec 21 04:43 package.json
+#23 0.069 -rw-r--r--    1 root     root            94 Dec  9 04:13 postcss.config.mjs
+#23 0.069 drwxr-xr-x    2 root     root          4096 Dec  9 04:35 public
+#23 0.069 -rw-r--r--    1 root     root           666 Dec  9 04:13 tsconfig.json
+#23 0.069 drwxr-xr-x    2 root     root          4096 Dec  9 04:35 types
+#23 0.069 === Lockfiles ===
+#23 0.071 -rw-r--r--    1 root     root        286492 Dec 21 04:24 package-lock.json
+#23 0.071 === Node version ===
+#23 0.091 v22.21.1
+#23 0.092 === NPM version ===
+#23 0.196 10.9.4
+#23 DONE 0.2s
+
+#24 [linux/amd64 builder 4/5] RUN echo "=== Build Environment ===" &&   pwd &&   echo "=== Files in /app ===" &&   ls -la &&   echo "=== Lockfiles ===" &&   ls -la | grep -E "lock|yarn" || echo "No lockfiles" &&   echo "=== Node version ===" &&   node --version &&   echo "=== NPM version ===" &&   npm --version
+#24 0.087 === Build Environment ===
+#24 0.087 /app
+#24 0.087 === Files in /app ===
+#24 0.098 total 428
+#24 0.100 drwxr-xr-x    1 root     root          4096 Dec 21 05:04 .
+#24 0.100 drwxr-xr-x    1 root     root          4096 Dec 21 05:04 ..
+#24 0.100 -rw-r--r--    1 root     root            35 Dec  9 04:13 .env.example
+#24 0.100 drwxr-xr-x    3 root     root          4096 Dec 21 03:47 .github
+#24 0.100 drwx------    9 root     root          4096 Dec 21 04:54 .next
+#24 0.100 -rw-r--r--    1 root     root            21 Dec  9 04:13 .npmrc
+#24 0.100 -rw-r--r--    1 root     root          4198 Dec  9 04:13 CODE_OF_CONDUCT.md
+#24 0.100 -rw-r--r--    1 root     root         18360 Dec  9 04:13 CONTRIBUTING.md
+#24 0.100 -rw-r--r--    1 root     root          1070 Dec  9 04:13 LICENSE
+#24 0.100 -rw-r--r--    1 root     root         11152 Dec  9 04:13 README.md
+#24 0.100 -rw-r--r--    1 root     root           469 Dec  9 04:13 SECURITY.md
+#24 0.100 drwxr-xr-x    2 root     root          4096 Dec  9 04:35 app
+#24 0.100 -rw-r--r--    1 root     root           439 Dec 21 05:04 build.log
+#24 0.100 drwxr-xr-x    4 root     root          4096 Dec  9 21:38 components
+#24 0.100 -rw-r--r--    1 root     root           218 Dec  9 04:13 docker-compose.yml
+#24 0.100 -rw-r--r--    1 root     root           465 Dec  9 04:13 eslint.config.mjs
+#24 0.100 drwxr-xr-x    2 root     root          4096 Dec  9 04:35 hooks
+#24 0.100 drwxr-xr-x    2 root     root          4096 Dec 21 04:23 lib
+#24 0.100 -rw-r--r--    1 root     root           247 Dec 21 03:59 next-env.d.ts
+#24 0.100 -rw-r--r--    1 root     root           129 Dec 21 04:57 next.config.ts
+#24 0.100 drwxr-xr-x  386 root     root         20480 Dec 21 04:48 node_modules
+#24 0.100 -rw-r--r--    1 root     root        286492 Dec 21 04:24 package-lock.json
+#24 0.100 -rw-r--r--    1 root     root           774 Dec 21 04:43 package.json
+#24 0.100 -rw-r--r--    1 root     root            94 Dec  9 04:13 postcss.config.mjs
+#24 0.100 drwxr-xr-x    2 root     root          4096 Dec  9 04:35 public
+#24 0.100 -rw-r--r--    1 root     root           666 Dec  9 04:13 tsconfig.json
+#24 0.100 drwxr-xr-x    2 root     root          4096 Dec  9 04:35 types
+#24 0.101 === Lockfiles ===
+#24 0.115 -rw-r--r--    1 root     root        286492 Dec 21 04:24 package-lock.json
+#24 0.115 === Node version ===
+#24 0.156 v22.21.1
+#24 0.159 === NPM version ===
+#24 0.941 10.9.4
+#24 DONE 1.0s
+
+#25 [linux/amd64 builder 5/5] RUN set -ex &&   if [ -f yarn.lock ]; then     echo "Building with Yarn..." && yarn run build 2>&1;   elif [ -f package-lock.json ]; then     echo "Building with NPM..." && npm run build 2>&1;   elif [ -f pnpm-lock.yaml ]; then     echo "Building with PNPM..." && corepack enable pnpm && pnpm run build 2>&1;   else     echo "ERROR: Lockfile not found." && exit 1;   fi
+#25 0.096 + '[' -f yarn.lock ]
+#25 0.096 + '[' -f package-lock.json ]
+#25 0.096 + echo 'Building with NPM...'
+#25 0.096 + npm run build
+#25 0.097 Building with NPM...
+#25 3.555 
+#25 3.555 > build
+#25 3.555 > next build
+#25 3.555 
+#25 7.438 Attention: Next.js now collects completely anonymous telemetry regarding usage.
+#25 7.439 This information is used to shape Next.js' roadmap and prioritize features.
+#25 7.439 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+#25 7.439 https://nextjs.org/telemetry
+#25 7.439 
+#25 7.504    ▲ Next.js 16.0.6 (Turbopack)
+#25 7.512 
+#25 7.893    Creating an optimized production build ...
+#25 ...
+
+#26 [linux/arm64 builder 5/5] RUN set -ex &&   if [ -f yarn.lock ]; then     echo "Building with Yarn..." && yarn run build 2>&1;   elif [ -f package-lock.json ]; then     echo "Building with NPM..." && npm run build 2>&1;   elif [ -f pnpm-lock.yaml ]; then     echo "Building with PNPM..." && corepack enable pnpm && pnpm run build 2>&1;   else     echo "ERROR: Lockfile not found." && exit 1;   fi
+#26 0.056 + '[' -f yarn.lock ]
+#26 0.056 + '[' -f package-lock.json ]
+#26 0.056 + echo 'Building with NPM...'
+#26 0.056 + npm run build
+#26 0.056 Building with NPM...
+#26 0.375 
+#26 0.375 > build
+#26 0.375 > next build
+#26 0.375 
+#26 1.227 Attention: Next.js now collects completely anonymous telemetry regarding usage.
+#26 1.227 This information is used to shape Next.js' roadmap and prioritize features.
+#26 1.227 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+#26 1.227 https://nextjs.org/telemetry
+#26 1.227 
+#26 1.236    ▲ Next.js 16.0.6 (Turbopack)
+#26 1.236 
+#26 1.423    Creating an optimized production build ...
+#26 36.12  ✓ Compiled successfully in 33.4s
+#26 36.17    Running TypeScript ...
+#26 40.63    Collecting page data using 9 workers ...
+#26 41.11    Generating static pages using 9 workers (0/4) ...
+#26 41.55    Generating static pages using 9 workers (1/4) 
+#26 41.55    Generating static pages using 9 workers (2/4) 
+#26 41.55    Generating static pages using 9 workers (3/4) 
+#26 41.55  ✓ Generating static pages using 9 workers (4/4) in 441.8ms
+#26 41.57    Finalizing page optimization ...
+#26 41.96 
+#26 41.96 Route (app)
+#26 41.96 ┌ ○ /
+#26 41.96 └ ○ /_not-found
+#26 41.96 
+#26 41.96 
+#26 41.96 ○  (Static)  prerendered as static content
+#26 41.96 
+#26 42.01 npm notice
+#26 42.01 npm notice New major version of npm available! 10.9.4 -> 11.7.0
+#26 42.01 npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.7.0
+#26 42.01 npm notice To update run: npm install -g npm@11.7.0
+#26 42.01 npm notice
+#26 DONE 42.2s
+
+#25 [linux/amd64 builder 5/5] RUN set -ex &&   if [ -f yarn.lock ]; then     echo "Building with Yarn..." && yarn run build 2>&1;   elif [ -f package-lock.json ]; then     echo "Building with NPM..." && npm run build 2>&1;   elif [ -f pnpm-lock.yaml ]; then     echo "Building with PNPM..." && corepack enable pnpm && pnpm run build 2>&1;   else     echo "ERROR: Lockfile not found." && exit 1;   fi
+#25 ...
+
+#27 [linux/arm64 runner 4/8] COPY --from=builder /app/public ./public
+#27 CACHED
+
+#28 [linux/arm64 runner 2/8] RUN addgroup --system --gid 1001 nodejs
+#28 CACHED
+
+#29 [linux/arm64 runner 3/8] RUN adduser --system --uid 1001 nextjs
+#29 CACHED
+
+#30 [linux/arm64 runner 5/8] RUN mkdir .next
+#30 CACHED
+
+#31 [linux/arm64 runner 6/8] RUN chown nextjs:nodejs .next
+#31 CACHED
+
+#32 [linux/arm64 runner 7/8] COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+#32 DONE 0.5s
+
+#25 [linux/amd64 builder 5/5] RUN set -ex &&   if [ -f yarn.lock ]; then     echo "Building with Yarn..." && yarn run build 2>&1;   elif [ -f package-lock.json ]; then     echo "Building with NPM..." && npm run build 2>&1;   elif [ -f pnpm-lock.yaml ]; then     echo "Building with PNPM..." && corepack enable pnpm && pnpm run build 2>&1;   else     echo "ERROR: Lockfile not found." && exit 1;   fi
+#25 ...
+
+#33 [linux/arm64 runner 8/8] COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+#33 DONE 0.0s
+
+#25 [linux/amd64 builder 5/5] RUN set -ex &&   if [ -f yarn.lock ]; then     echo "Building with Yarn..." && yarn run build 2>&1;   elif [ -f package-lock.json ]; then     echo "Building with NPM..." && npm run build 2>&1;   elif [ -f pnpm-lock.yaml ]; then     echo "Building with PNPM..." && corepack enable pnpm && pnpm run build 2>&1;   else     echo "ERROR: Lockfile not found." && exit 1;   fi
+#25 46.10  ✓ Compiled successfully in 37.0s
+#25 46.20    Running TypeScript ...
+#25 54.31    Collecting page data using 9 workers ...
+#25 55.73    Generating static pages using 9 workers (0/4) ...
+#25 57.13    Generating static pages using 9 workers (1/4) 
+#25 57.14    Generating static pages using 9 workers (2/4) 
+#25 57.14    Generating static pages using 9 workers (3/4) 
+#25 57.14  ✓ Generating static pages using 9 workers (4/4) in 1419.1ms
+#25 57.17    Finalizing page optimization ...
+#25 57.54 
+#25 57.55 Route (app)
+#25 57.55 ┌ ○ /
+#25 57.55 └ ○ /_not-found
+#25 57.55 
+#25 57.55 
+#25 57.55 ○  (Static)  prerendered as static content
+#25 57.55 
+#25 57.64 npm notice
+#25 57.64 npm notice New major version of npm available! 10.9.4 -> 11.7.0
+#25 57.64 npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.7.0
+#25 57.64 npm notice To update run: npm install -g npm@11.7.0
+#25 57.64 npm notice
+#25 DONE 57.8s
+
+#34 [linux/amd64 runner 4/8] COPY --from=builder /app/public ./public
+#34 CACHED
+
+#35 [linux/amd64 runner 3/8] RUN adduser --system --uid 1001 nextjs
+#35 CACHED
+
+#36 [linux/amd64 runner 2/8] RUN addgroup --system --gid 1001 nodejs
+#36 CACHED
+
+#37 [linux/amd64 runner 5/8] RUN mkdir .next
+#37 CACHED
+
+#38 [linux/amd64 runner 6/8] RUN chown nextjs:nodejs .next
+#38 CACHED
+
+#39 [linux/amd64 runner 7/8] COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+#39 DONE 0.3s
+
+#40 [linux/amd64 runner 8/8] COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+#40 DONE 0.0s
+
+#41 exporting to image
+#41 exporting layers
+#41 exporting layers 1.8s done
+#41 exporting manifest sha256:b137f40b9d0571a587e52f746826b0e2b343abf596dbdaadea88678bc20882b1 done
+#41 exporting config sha256:c9c62d78aee9e9fa7de9b643d9b309de3b9ef51904925a0c0fa7951fd2e9679b done
+#41 exporting attestation manifest sha256:39643d1eaa586f26b09128a620c22e6e9491a34a05be0c048ddd7c9aa0592dba done
+#41 exporting manifest sha256:c73953a1592a06b1b0dc357175631095157a8bc1f9d47ce1f4d6f724be3c7164 done
+#41 exporting config sha256:61a737be9ad0a360e32ed82f42faa556122238bab8e256abd34a3e104ce81fb0 done
+#41 exporting attestation manifest sha256:a757811239d28e95bd0d3934fcc7483b10d8aca515bfdc02ba4601d9a458d9ec done
+#41 exporting manifest list sha256:7e2f56715bfecd3c63eb2c5ea763d55d4e19eb4ac3960228cff799eb1c0c2c1c done
+#41 pushing layers
+#41 ...
+
+#42 [auth] kuekhaoyang/kresearch:pull,push token for registry-1.docker.io
+#42 DONE 0.0s
+
+#41 exporting to image
+#41 pushing layers 12.4s done
+#41 CANCELED
+ERROR: failed to build: failed to solve: Canceled: context canceled
