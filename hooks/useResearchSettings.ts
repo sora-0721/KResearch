@@ -75,6 +75,9 @@ export function useResearchSettings() {
         return validKeys.length > 0 ? validKeys[0].key : apiKey;
     }, [geminiApiKeys, apiKey, modelProvider, openaiApiKey]);
 
+    // Initialization state
+    const [isInitialized, setIsInitialized] = useState(false);
+
     // Load from localStorage
     useEffect(() => {
         // Legacy API key
@@ -124,21 +127,70 @@ export function useResearchSettings() {
         if (storedProvider === "gemini" || storedProvider === "openai") {
             setModelProvider(storedProvider);
         }
+
+        setIsInitialized(true);
     }, []);
 
     // Save to localStorage
-    useEffect(() => { localStorage.setItem("kresearch_gemini_api_keys", JSON.stringify(geminiApiKeys)); }, [geminiApiKeys]);
-    useEffect(() => { localStorage.setItem("kresearch_gemini_base_url", geminiBaseUrl); }, [geminiBaseUrl]);
-    useEffect(() => { localStorage.setItem("kresearch_openai_api_key", openaiApiKey); }, [openaiApiKey]);
-    useEffect(() => { localStorage.setItem("kresearch_openai_api_host", openaiApiHost); }, [openaiApiHost]);
-    useEffect(() => { localStorage.setItem("kresearch_model_provider", modelProvider); }, [modelProvider]);
-    useEffect(() => { localStorage.setItem("kresearch_manager_model", managerModel); }, [managerModel]);
-    useEffect(() => { localStorage.setItem("kresearch_worker_model", workerModel); }, [workerModel]);
-    useEffect(() => { localStorage.setItem("kresearch_verifier_model", verifierModel); }, [verifierModel]);
-    useEffect(() => { localStorage.setItem("kresearch_clarifier_model", clarifierModel); }, [clarifierModel]);
-    useEffect(() => { localStorage.setItem("kresearch_min_iterations", String(minIterations)); }, [minIterations]);
-    useEffect(() => { localStorage.setItem("kresearch_max_iterations", String(maxIterations)); }, [maxIterations]);
-    useEffect(() => { localStorage.setItem("kresearch_research_mode", researchMode); }, [researchMode]);
+    useEffect(() => {
+        if (!isInitialized) return;
+        localStorage.setItem("kresearch_gemini_api_keys", JSON.stringify(geminiApiKeys));
+    }, [geminiApiKeys, isInitialized]);
+
+    useEffect(() => {
+        if (!isInitialized) return;
+        localStorage.setItem("kresearch_gemini_base_url", geminiBaseUrl);
+    }, [geminiBaseUrl, isInitialized]);
+
+    useEffect(() => {
+        if (!isInitialized) return;
+        localStorage.setItem("kresearch_openai_api_key", openaiApiKey);
+    }, [openaiApiKey, isInitialized]);
+
+    useEffect(() => {
+        if (!isInitialized) return;
+        localStorage.setItem("kresearch_openai_api_host", openaiApiHost);
+    }, [openaiApiHost, isInitialized]);
+
+    useEffect(() => {
+        if (!isInitialized) return;
+        localStorage.setItem("kresearch_model_provider", modelProvider);
+    }, [modelProvider, isInitialized]);
+
+    useEffect(() => {
+        if (!isInitialized) return;
+        localStorage.setItem("kresearch_manager_model", managerModel);
+    }, [managerModel, isInitialized]);
+
+    useEffect(() => {
+        if (!isInitialized) return;
+        localStorage.setItem("kresearch_worker_model", workerModel);
+    }, [workerModel, isInitialized]);
+
+    useEffect(() => {
+        if (!isInitialized) return;
+        localStorage.setItem("kresearch_verifier_model", verifierModel);
+    }, [verifierModel, isInitialized]);
+
+    useEffect(() => {
+        if (!isInitialized) return;
+        localStorage.setItem("kresearch_clarifier_model", clarifierModel);
+    }, [clarifierModel, isInitialized]);
+
+    useEffect(() => {
+        if (!isInitialized) return;
+        localStorage.setItem("kresearch_min_iterations", String(minIterations));
+    }, [minIterations, isInitialized]);
+
+    useEffect(() => {
+        if (!isInitialized) return;
+        localStorage.setItem("kresearch_max_iterations", String(maxIterations));
+    }, [maxIterations, isInitialized]);
+
+    useEffect(() => {
+        if (!isInitialized) return;
+        localStorage.setItem("kresearch_research_mode", researchMode);
+    }, [researchMode, isInitialized]);
 
     // Fetch models function
     const refreshModels = useCallback(async () => {
