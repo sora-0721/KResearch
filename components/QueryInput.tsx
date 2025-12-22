@@ -3,6 +3,7 @@
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { useLanguage } from "@/components/ui/LanguageContext";
 
 interface QueryInputProps {
     query: string;
@@ -17,12 +18,14 @@ interface QueryInputProps {
 export function QueryInput({
     query, setQuery, isResearching, isClarifying, canContinue, onStart, onContinue
 }: QueryInputProps) {
+    const { t } = useLanguage();
+
     return (
         <Card noHover className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex-grow">
                     <Input
-                        placeholder="What do you want to research?"
+                        placeholder={t('queryPlaceholder')}
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && !isResearching && !isClarifying && onStart()}
@@ -35,7 +38,7 @@ export function QueryInput({
                     className={`min-w-[100px] !h-12 !rounded-full font-semibold ${isResearching ? '!bg-red-500' : ''}`}
                     disabled={isClarifying && !isResearching}
                 >
-                    {isResearching ? "Stop" : "Start"}
+                    {isResearching ? t('stop') : t('start')}
                 </Button>
             </div>
 
@@ -46,10 +49,11 @@ export function QueryInput({
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        Continue Previous Session
+                        {t('continuePrevious')}
                     </Button>
                 </div>
             )}
         </Card>
     );
 }
+

@@ -3,6 +3,7 @@
 import { Card } from "@/components/ui/Card";
 import { LogEntry } from "@/types/research";
 import React from "react";
+import { useLanguage } from "@/components/ui/LanguageContext";
 
 interface LogsPanelProps {
     logs: LogEntry[];
@@ -19,6 +20,8 @@ const agentColors: Record<string, string> = {
 };
 
 export function LogsPanel({ logs, endRef }: LogsPanelProps) {
+    const { t } = useLanguage();
+
     return (
         <Card noHover className="h-[500px] overflow-hidden flex flex-col">
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -34,7 +37,7 @@ export function LogsPanel({ logs, endRef }: LogsPanelProps) {
                                 </span>
                             </div>
                             <p style={{ color: 'var(--text-color)' }}>{log.message}</p>
-                            {log.details && <LogDetails log={log} />}
+                            {log.details && <LogDetails log={log} t={t} />}
                         </div>
                     </div>
                 ))}
@@ -44,7 +47,6 @@ export function LogsPanel({ logs, endRef }: LogsPanelProps) {
     );
 }
 
-// SVG Icons
 const ThoughtIcon = () => (
     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
@@ -69,15 +71,15 @@ const CheckIcon = () => (
     </svg>
 );
 
-function LogDetails({ log }: { log: LogEntry }) {
+function LogDetails({ log, t }: { log: LogEntry; t: (key: any) => string }) {
     if (log.agent === "Manager" && log.details.thoughts) {
         return (
             <div className="mt-3 space-y-3">
-                <DetailCard icon={<ThoughtIcon />} title="Thoughts" color="blue">
+                <DetailCard icon={<ThoughtIcon />} title={t('thoughts')} color="blue">
                     <p className="text-sm leading-relaxed">{log.details.thoughts}</p>
                 </DetailCard>
                 {log.details.next_step?.task_description && (
-                    <DetailCard icon={<ArrowIcon />} title="Next Step" color="emerald">
+                    <DetailCard icon={<ArrowIcon />} title={t('nextStep')} color="emerald">
                         <p className="text-sm">{log.details.next_step.task_description}</p>
                         {log.details.next_step.search_queries?.length > 0 && (
                             <div className="mt-2 flex flex-wrap gap-1">
@@ -96,7 +98,7 @@ function LogDetails({ log }: { log: LogEntry }) {
 
     if (log.agent === "Worker" && Array.isArray(log.details)) {
         return (
-            <DetailCard icon={<SearchIcon />} title="Findings" color="amber" className="mt-3">
+            <DetailCard icon={<SearchIcon />} title={t('findings')} color="amber" className="mt-3">
                 <ul className="space-y-2">
                     {log.details.map((f: any, i: number) => (
                         <li key={i} className="text-sm">
@@ -111,10 +113,10 @@ function LogDetails({ log }: { log: LogEntry }) {
 
     if (log.agent === "Verifier") {
         return (
-            <DetailCard icon={<CheckIcon />} title="Verification" color="purple" className="mt-3">
+            <DetailCard icon={<CheckIcon />} title={t('verification')} color="purple" className="mt-3">
                 <div className="flex gap-4 text-sm">
-                    <span><strong>{log.details.cleaned_findings?.length || 0}</strong> valid findings</span>
-                    <span><strong>{log.details.conflicts?.length || 0}</strong> conflicts</span>
+                    <span><strong>{log.details.cleaned_findings?.length || 0}</strong> {t('validFindings')}</span>
+                    <span><strong>{log.details.conflicts?.length || 0}</strong> {t('conflicts')}</span>
                 </div>
             </DetailCard>
         );
@@ -138,3 +140,4 @@ function DetailCard({ icon, title, color, children, className = "" }: { icon: Re
         </div>
     );
 }
+

@@ -2,6 +2,8 @@
 
 import { Button } from "@/components/ui/Button";
 import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
+import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
+import { useLanguage } from "@/components/ui/LanguageContext";
 
 interface ResearchHeaderProps {
     onOpenHistory: () => void;
@@ -9,6 +11,8 @@ interface ResearchHeaderProps {
 }
 
 export function ResearchHeader({ onOpenHistory, onOpenSettings }: ResearchHeaderProps) {
+    const { t } = useLanguage();
+
     return (
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4">
             <div className="space-y-1">
@@ -16,11 +20,12 @@ export function ResearchHeader({ onOpenHistory, onOpenSettings }: ResearchHeader
                     KResearch
                 </h1>
                 <p className="text-sm font-light" style={{ color: 'var(--text-color-secondary)' }}>
-                    Autonomous Deep-Dive Agent
+                    {t('subtitle')}
                 </p>
             </div>
 
             <div className="flex items-center gap-3">
+                <LanguageSwitcher />
                 <ThemeSwitcher />
                 <Button variant="secondary" className="!rounded-full !p-2 !w-10 !h-10" onClick={onOpenHistory}>
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -37,3 +42,4 @@ export function ResearchHeader({ onOpenHistory, onOpenSettings }: ResearchHeader
         </div>
     );
 }
+

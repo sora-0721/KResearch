@@ -110,7 +110,9 @@ Return EXACTLY this JSON array structure:
   }
 ]
 
-Do NOT include any text before or after the JSON array. Start with [ and end with ].`;
+Do NOT include any text before or after the JSON array. Start with [ and end with ].
+CRITICAL: Ensure all strings are correctly escaped and do not contain unescaped control characters.
+CRITICAL: Do not include any trailing commas.`;
 
 export const VERIFIER_PROMPT = `You are the Fact Auditor. You receive new findings from the Worker.
 
@@ -128,7 +130,9 @@ CRITICAL: Respond with ONLY valid JSON. No preamble, no explanation. Start with 
   "conflicts": [
     { "point": "Conflict Topic", "claim_a": "Claim A", "claim_b": "Claim B", "status": "unresolved" }
   ]
-}`;
+}
+CRITICAL: Ensure all strings are correctly escaped and do not contain unescaped control characters.
+CRITICAL: Do not include any trailing commas.`;
 
 export const WRITER_PROMPT = `You are the Final Reporter. You receive the Global Context containing ALL research findings.
 Your job is to write an EXTREMELY COMPREHENSIVE and DETAILED report in Markdown format.

@@ -13,8 +13,10 @@ import { useResearchSettings } from "@/hooks/useResearchSettings";
 import { useResearch } from "@/hooks/useResearch";
 import { useClarification } from "@/hooks/useClarification";
 import { HistoryItem } from "@/types/research";
+import { useLanguage } from "@/components/ui/LanguageContext";
 
 export default function Home() {
+  const { t } = useLanguage();
   const settings = useResearchSettings();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -23,7 +25,14 @@ export default function Home() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
   const research = useResearch({
-    apiKey: settings.apiKey, managerModel: settings.managerModel, workerModel: settings.workerModel,
+    activeProvider: settings.activeProvider,
+    apiKey: settings.apiKey,
+    getNextApiKey: settings.getNextApiKey,
+    resetApiKeyRotation: settings.resetApiKeyRotation,
+    geminiBaseUrl: settings.geminiBaseUrl,
+    openaiApiKey: settings.openaiApiKey,
+    openaiApiHost: settings.openaiApiHost,
+    managerModel: settings.managerModel, workerModel: settings.workerModel,
     verifierModel: settings.verifierModel, clarifierModel: settings.clarifierModel,
     researchMode: settings.researchMode, minIterations: settings.minIterations, maxIterations: settings.maxIterations
   });
@@ -34,7 +43,11 @@ export default function Home() {
   }, [query, research]);
 
   const clarification = useClarification({
-    apiKey: settings.apiKey, clarifierModel: settings.clarifierModel,
+    activeProvider: settings.activeProvider,
+    apiKey: settings.apiKey,
+    openaiApiKey: settings.openaiApiKey,
+    openaiApiHost: settings.openaiApiHost,
+    clarifierModel: settings.clarifierModel,
     onClear: () => { }, onStartResearch: handleStartResearch
   });
 
@@ -70,7 +83,14 @@ export default function Home() {
   };
 
   const handleStart = () => {
-    if (!settings.apiKey || !query) { alert("Please provide an API Key and a Query."); setIsSettingsOpen(true); return; }
+    let activeKey: string;
+    if (settings.activeProvider === "openai") {
+      activeKey = settings.openaiApiKey;
+    } else {
+      activeKey = settings.getActiveApiKey();
+    }
+
+    if (!activeKey || !query) { alert(t('alertApiKeyQuery')); setIsSettingsOpen(true); return; }
     if (research.isResearching) { research.stopResearch(); return; }
     clarification.run(query);
   };

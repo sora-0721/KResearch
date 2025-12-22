@@ -3,16 +3,18 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 export class GeminiClient {
     private genAI: GoogleGenerativeAI;
     private apiKey: string;
+    private baseUrl: string;
 
-    constructor(apiKey: string) {
+    constructor(apiKey: string, baseUrl?: string) {
         this.apiKey = apiKey;
+        this.baseUrl = baseUrl || "https://generativelanguage.googleapis.com";
         this.genAI = new GoogleGenerativeAI(apiKey);
     }
 
     async listModels() {
         try {
             // Using REST API directly as the SDK's listModels might vary by version or require specific setup
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${this.apiKey}`);
+            const response = await fetch(`${this.baseUrl}/v1beta/models?key=${this.apiKey}`);
             if (!response.ok) {
                 throw new Error(`Failed to fetch models: ${response.statusText}`);
             }

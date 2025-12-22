@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
 import { ClarificationMessage } from "@/types/research";
+import { useLanguage } from "@/components/ui/LanguageContext";
 
 interface ClarificationDialogProps {
     messages: ClarificationMessage[];
@@ -20,17 +21,19 @@ interface ClarificationDialogProps {
 export function ClarificationDialog({
     messages, input, setInput, isWaiting, onSend, onSkip, endRef
 }: ClarificationDialogProps) {
+    const { t } = useLanguage();
+
     return (
         <Card noHover className="animate-fade-in">
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                    <Badge variant="secondary">Clarifying</Badge>
+                    <Badge variant="secondary">{t('clarifying')}</Badge>
                     <span className="text-sm" style={{ color: 'var(--text-color-secondary)' }}>
-                        {isWaiting ? "Thinking..." : "Awaiting your response"}
+                        {isWaiting ? t('thinking') : t('awaitingResponse')}
                     </span>
                 </div>
                 <Button variant="secondary" onClick={onSkip} className="text-sm">
-                    Skip & Start Research
+                    {t('skipStartResearch')}
                 </Button>
             </div>
 
@@ -54,7 +57,7 @@ export function ClarificationDialog({
                 {isWaiting && messages.length > 0 && (
                     <div className="flex items-center gap-2" style={{ color: 'var(--text-color-secondary)' }}>
                         <Spinner />
-                        <span className="text-sm">Analyzing response...</span>
+                        <span className="text-sm">{t('analyzingResponse')}</span>
                     </div>
                 )}
                 <div ref={endRef} />
@@ -63,15 +66,16 @@ export function ClarificationDialog({
             {!isWaiting && messages.length > 0 && (
                 <div className="flex gap-2">
                     <Input
-                        placeholder="Type your response..."
+                        placeholder={t('typeResponse')}
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && onSend()}
                         className="flex-grow"
                     />
-                    <Button onClick={onSend}>Send</Button>
+                    <Button onClick={onSend}>{t('send')}</Button>
                 </div>
             )}
         </Card>
     );
 }
+

@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { BrainVisualization } from "@/components/ui/BrainVisualization";
 import { AgentState } from "@/types/research";
+import { useLanguage } from "@/components/ui/LanguageContext";
 
 interface ResearchPanelProps {
     isResearching: boolean;
@@ -29,9 +30,9 @@ function formatTime(ms: number): string {
 export function ResearchPanel({
     isResearching, agentState, iteration, researchMode, minIterations, maxIterations, startTime, endTime
 }: ResearchPanelProps) {
+    const { t } = useLanguage();
     const [liveElapsed, setLiveElapsed] = useState(0);
 
-    // Live timer while researching
     useEffect(() => {
         if (!isResearching || !startTime) {
             setLiveElapsed(0);
@@ -41,7 +42,6 @@ export function ResearchPanel({
         return () => clearInterval(interval);
     }, [isResearching, startTime]);
 
-    // Calculate display time
     const getTimeDisplay = () => {
         if (isResearching && startTime) return formatTime(liveElapsed);
         if (startTime !== null && endTime !== null) return formatTime(endTime - startTime);
@@ -56,30 +56,29 @@ export function ResearchPanel({
 
             <div className="space-y-2 w-full px-4">
                 <div className="flex justify-between text-sm">
-                    <span style={{ color: 'var(--text-color-secondary)' }}>Iteration</span>
+                    <span style={{ color: 'var(--text-color-secondary)' }}>{t('iteration')}</span>
                     <span className="font-mono" style={{ color: 'var(--text-color)' }}>{iteration}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                    <span style={{ color: 'var(--text-color-secondary)' }}>Status</span>
+                    <span style={{ color: 'var(--text-color-secondary)' }}>{t('status')}</span>
                     <Badge variant={isComplete ? 'primary' : 'secondary'} className="capitalize">{agentState}</Badge>
                 </div>
                 <div className="flex justify-between text-sm">
-                    <span style={{ color: 'var(--text-color-secondary)' }}>Mode</span>
+                    <span style={{ color: 'var(--text-color-secondary)' }}>{t('mode')}</span>
                     <Badge variant={researchMode === 'deeper' ? 'primary' : 'secondary'} className="capitalize">
-                        {researchMode}
+                        {researchMode === 'deeper' ? t('deeper') : t('standard')}
                     </Badge>
                 </div>
-                {/* Only show target during active research in deeper mode */}
                 {researchMode === 'deeper' && !isComplete && (
                     <div className="flex justify-between text-sm">
-                        <span style={{ color: 'var(--text-color-secondary)' }}>Target</span>
+                        <span style={{ color: 'var(--text-color-secondary)' }}>{t('target')}</span>
                         <span className="text-xs" style={{ color: 'var(--text-color-secondary)' }}>
                             {minIterations} - {maxIterations === 999 ? '∞' : maxIterations}
                         </span>
                     </div>
                 )}
                 <div className="flex justify-between text-sm">
-                    <span style={{ color: 'var(--text-color-secondary)' }}>Time Used</span>
+                    <span style={{ color: 'var(--text-color-secondary)' }}>{t('timeUsed')}</span>
                     <span className="font-mono text-xs" style={{ color: 'var(--accent-color)' }}>
                         {getTimeDisplay()}
                     </span>
@@ -88,3 +87,4 @@ export function ResearchPanel({
         </Card>
     );
 }
+
