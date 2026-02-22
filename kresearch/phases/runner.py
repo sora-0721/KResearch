@@ -83,8 +83,8 @@ class PhaseRunner:
             console = Console()
             stats = session.get_summary()
             body = (
-                f"Phases completed: {stats['current_phase']}/5\n"
-                f"Mind map nodes: {stats.get('mind_map_nodes', 0)}\n"
+                f"Phases completed: {stats['phase_index']}/5\n"
+                f"Mind map nodes: {stats.get('mind_map_stats', {}).get('total_nodes', 0)}\n"
                 f"Time: {elapsed:.1f}s"
             )
             console.print(Panel(body, title="Research Complete",
