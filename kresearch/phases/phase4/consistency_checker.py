@@ -78,7 +78,7 @@ async def _check_level(
     try:
         response = await llm_provider.complete(
             messages=[{"role": "user", "content": user_msg}],
-            model=None,
+            model=llm_provider.available_models[0],
             temperature=0.2,
             max_tokens=2048,
             json_mode=True,

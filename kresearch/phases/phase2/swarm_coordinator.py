@@ -31,15 +31,13 @@ class SwarmCoordinator(Phase):
 
     async def execute(self) -> None:
         """Walk the task graph layer-by-layer, executing tasks concurrently."""
-        await self.event_bus.publish(
-            "phase.start",
-            {"phase": self.phase_number, "name": self.phase_name},
-        )
+        concurrency = getattr(self.config, "concurrency", None)
+        per_limits = getattr(concurrency, "per_provider_limits", {}) if concurrency else {}
         self._search_sem = asyncio.Semaphore(
-            self.config.get("search_concurrency", _DEFAULT_SEARCH_CONCURRENCY),
+            per_limits.get("search", _DEFAULT_SEARCH_CONCURRENCY),
         )
         self._llm_sem = asyncio.Semaphore(
-            self.config.get("llm_concurrency", _DEFAULT_LLM_CONCURRENCY),
+            per_limits.get("llm", _DEFAULT_LLM_CONCURRENCY),
         )
         layers = self.session.task_graph.get_topological_layers()
         for layer_idx, layer in enumerate(layers):
@@ -53,11 +51,6 @@ class SwarmCoordinator(Phase):
                 {"layer": layer_idx + 1,
                  "progress": self.session.task_graph.get_progress()},
             )
-        await self.event_bus.publish(
-            "phase.complete",
-            {"phase": self.phase_number,
-             "progress": self.session.task_graph.get_progress()},
-        )
 
     async def _process_layer(self, tasks: list[TaskNode]) -> None:
         """Execute all tasks in a single dependency layer concurrently."""
@@ -94,6 +87,7 @@ class SwarmCoordinator(Phase):
             insights = await run_discourse(
                 task, self.session.perspectives, llm_provider,
                 self.session.retrieved_documents, self.event_bus,
+                model=self.config.llm.model,
             )
         self._update_mind_map_from_discourse(task, insights)
         return insights

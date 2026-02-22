@@ -42,17 +42,20 @@ def create_provider(
     return cls(api_key=api_key, **kwargs)
 
 
-def get_llm_provider(config: dict[str, Any]) -> LLMProvider:
+def get_llm_provider(config: Any) -> LLMProvider:
     """
     Convenience helper that reads provider name and optional api_key from a
-    configuration dict, then delegates to :func:`create_provider`.
+    configuration object or dict, then delegates to :func:`create_provider`.
 
-    Expected config keys:
-        - provider (str): e.g. "openai"
-        - api_key  (str, optional)
-        - Any additional kwargs are forwarded to the provider constructor.
+    Accepts either a dict with "provider" key or a Pydantic model with
+    ``provider`` attribute (e.g. ``LLMConfig``).
     """
-    config = dict(config)  # shallow copy so we don't mutate the caller's dict
-    provider_name: str = config.pop("provider")
-    api_key: str | None = config.pop("api_key", None)
-    return create_provider(provider_name, api_key=api_key, **config)
+    if isinstance(config, dict):
+        config = dict(config)
+        provider_name: str = config.pop("provider")
+        api_key: str | None = config.pop("api_key", None)
+        return create_provider(provider_name, api_key=api_key, **config)
+    # Pydantic model or object with attributes
+    provider_name = getattr(config, "provider", "openai")
+    api_key = getattr(config, "api_key", None)
+    return create_provider(provider_name, api_key=api_key)

@@ -109,7 +109,7 @@ async def _resolve_single(
     try:
         response = await llm_provider.complete(
             messages=[{"role": "user", "content": user_msg}],
-            model=None, temperature=0.1, max_tokens=512,
+            model=llm_provider.available_models[0], temperature=0.1, max_tokens=512,
             json_mode=True, system_prompt=_RESOLVE_PROMPT,
         )
         raw = response["content"]

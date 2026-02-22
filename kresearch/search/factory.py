@@ -49,27 +49,28 @@ def create_provider(
     return cls(api_key=api_key, **kwargs)
 
 
-def get_search_provider(config: dict | None = None) -> SearchProvider:
+def get_search_provider(config: Any = None) -> SearchProvider:
     """
     Return a ready-to-use search provider based on *config*.
 
-    *config* may contain:
-        - provider (str): Provider name. Defaults to ``"duckduckgo"``.
-        - api_key (str | None): Explicit API key override.
-        - Any additional kwargs forwarded to the provider constructor.
-
+    Accepts either a dict or a Pydantic model with a ``provider`` attribute.
     If no config is given the free DuckDuckGo provider is returned.
     """
-    if config is None:
-        config = {}
-
-    name = config.pop("provider", "duckduckgo")
-    api_key = config.pop("api_key", None)
-
-    # Ensure all provider modules are imported so the registry is populated.
     _ensure_providers_loaded()
 
-    return create_provider(name, api_key=api_key, **config)
+    if config is None:
+        return create_provider("duckduckgo")
+
+    if isinstance(config, dict):
+        config = dict(config)
+        name = config.pop("provider", "duckduckgo")
+        api_key = config.pop("api_key", None)
+        return create_provider(name, api_key=api_key, **config)
+
+    # Pydantic model or object with attributes
+    name = getattr(config, "provider", "duckduckgo")
+    api_key = getattr(config, "api_key", None)
+    return create_provider(name, api_key=api_key)
 
 
 def _ensure_providers_loaded() -> None:

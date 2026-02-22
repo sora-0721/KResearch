@@ -50,8 +50,6 @@ class DiffusionWriter(Phase):
 
     async def execute(self) -> None:
         """Run the full Phase-5 pipeline."""
-        await self.event_bus.publish("phase.start", {"phase": self.phase_number})
-
         llm = await self._get_llm()
         mind_map = self.session.mind_map
         query = self.session.original_query
@@ -93,11 +91,6 @@ class DiffusionWriter(Phase):
         await self.event_bus.publish("report.export", {
             "session_id": self.session.id, "report_length": len(final),
         })
-        self.session.advance_phase()
-        await self.event_bus.publish("phase.complete", {
-            "phase": self.phase_number,
-            "iterations": len(self.session.draft_iterations),
-        })
 
     @staticmethod
     def _all_scores_pass(scores: dict[str, int], threshold: float) -> bool:
@@ -109,7 +102,7 @@ class DiffusionWriter(Phase):
         skeleton_text = json.dumps(skeleton, indent=2, default=str)
         response = await llm.complete(
             messages=[{"role": "user", "content": f"Report skeleton:\n{skeleton_text}"}],
-            model=getattr(llm, "_default_model", "gpt-4o"),
+            model=self.config.llm.model,
             temperature=0.5, max_tokens=4096,
             system_prompt=_ROUGH_DRAFT_PROMPT,
         )
@@ -127,7 +120,7 @@ class DiffusionWriter(Phase):
         )
         response = await llm.complete(
             messages=[{"role": "user", "content": user_msg}],
-            model=getattr(llm, "_default_model", "gpt-4o"),
+            model=self.config.llm.model,
             temperature=0.4, max_tokens=4096,
             system_prompt=_DENOISE_PROMPT,
         )

@@ -27,12 +27,14 @@ _INTERROGATOR_SYSTEM = (
 async def run_discourse(
     task: TaskNode, perspectives: list[dict], llm_provider: Any,
     context_docs: list[Any], event_bus: Any, num_turns: int = _MAX_TURNS,
+    model: str | None = None,
 ) -> dict:
     """Simulate a multi-turn debate between an expert and interrogator.
 
     Returns dict with ``findings`` (list of claims) and ``transcript``.
     """
     num_turns = max(_MIN_TURNS, min(num_turns, _MAX_TURNS))
+    _model = model or llm_provider.available_models[0]
     task.mark_running()
     await event_bus.publish("discourse.start",
                             {"task_id": task.id, "query": task.query})
@@ -47,7 +49,7 @@ async def run_discourse(
         for turn in range(num_turns):
             # Expert turn
             expert_reply = await llm_provider.complete(
-                messages=expert_msgs,
+                messages=expert_msgs, model=_model,
                 system_prompt=_EXPERT_SYSTEM.format(perspective=perspective_label),
                 temperature=0.7, max_tokens=600,
             )
@@ -58,7 +60,8 @@ async def run_discourse(
             interr_msgs.append({"role": "user", "content": expert_text})
             # Interrogator turn
             interr_reply = await llm_provider.complete(
-                messages=interr_msgs, system_prompt=_INTERROGATOR_SYSTEM,
+                messages=interr_msgs, model=_model,
+                system_prompt=_INTERROGATOR_SYSTEM,
                 temperature=0.6, max_tokens=400,
             )
             interr_text = interr_reply["content"]
@@ -66,7 +69,7 @@ async def run_discourse(
             transcript.append({"turn": turn + 1, "role": "interrogator", "text": interr_text})
             expert_msgs.append({"role": "user", "content": interr_text})
 
-        findings = await _synthesise(llm_provider, transcript, task.query)
+        findings = await _synthesise(llm_provider, transcript, task.query, _model)
         result = {"findings": findings, "transcript": transcript}
         task.mark_completed([result])
         await event_bus.publish("discourse.complete",
@@ -114,7 +117,7 @@ def _seed_interrogator(query: str) -> list[dict]:
     )}]
 
 
-async def _synthesise(llm_provider: Any, transcript: list[dict], query: str) -> list[dict]:
+async def _synthesise(llm_provider: Any, transcript: list[dict], query: str, model: str) -> list[dict]:
     condensed = "\n".join(
         f"[{t['role']} turn {t['turn']}]: {t['text'][:300]}" for t in transcript
     )
@@ -125,7 +128,7 @@ async def _synthesise(llm_provider: Any, transcript: list[dict], query: str) -> 
         "\"perspectives\" (list of strings)."
     )}]
     resp = await llm_provider.complete(
-        messages=messages, temperature=0.3, max_tokens=800, json_mode=True,
+        messages=messages, model=model, temperature=0.3, max_tokens=800, json_mode=True,
     )
     try:
         parsed = json.loads(resp["content"])

@@ -15,6 +15,7 @@ async def compact_context(
     documents: list[dict],
     llm_provider: Any,
     max_tokens: int = 4000,
+    model: str | None = None,
 ) -> str:
     """Produce a condensed summary of *documents* within *max_tokens*.
 
@@ -39,7 +40,7 @@ async def compact_context(
     input_budget = (max_tokens // 2) * _CHARS_PER_TOKEN
     combined = _join_within_budget(snippets, input_budget)
 
-    summary = await _llm_summarise(llm_provider, combined, max_tokens)
+    summary = await _llm_summarise(llm_provider, combined, max_tokens, model)
     return summary
 
 
@@ -119,6 +120,7 @@ async def _llm_summarise(
     llm_provider: Any,
     combined_text: str,
     max_tokens: int,
+    model: str | None = None,
 ) -> str:
     """Ask the LLM to condense *combined_text*."""
     messages = [
@@ -136,6 +138,7 @@ async def _llm_summarise(
     try:
         resp = await llm_provider.complete(
             messages=messages,
+            model=model or llm_provider.available_models[0],
             temperature=0.2,
             max_tokens=max_tokens // 2,
         )

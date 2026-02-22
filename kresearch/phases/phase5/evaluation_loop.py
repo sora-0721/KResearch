@@ -44,7 +44,7 @@ async def evaluate_draft(
 
     response = await llm_provider.complete(
         messages=[{"role": "user", "content": user_msg}],
-        model=getattr(llm_provider, "_default_model", "gpt-4o"),
+        model=llm_provider.available_models[0],
         temperature=0.2,
         max_tokens=1024,
         json_mode=True,

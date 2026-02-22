@@ -33,9 +33,6 @@ class ConflictDetector(Phase):
 
     async def execute(self) -> None:
         """Run the full Phase-4 pipeline."""
-        await self.event_bus.publish(
-            "phase.start", {"phase": self.phase_number}
-        )
         mind_map = self.session.mind_map
         llm = await self._get_llm()
 
@@ -64,16 +61,6 @@ class ConflictDetector(Phase):
 
         # Step 7 -- store conflicts in session
         self.session.conflicts = resolutions
-
-        self.session.advance_phase()
-        await self.event_bus.publish(
-            "phase.complete",
-            {
-                "phase": self.phase_number,
-                "conflicts_found": len(conflicts),
-                "conflicts_resolved": len(resolutions),
-            },
-        )
 
     # ------------------------------------------------------------------
     # Internal helpers

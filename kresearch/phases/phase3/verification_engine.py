@@ -35,9 +35,6 @@ class VerificationEngine(Phase):
 
     async def execute(self) -> None:
         """Run the full Phase-3 verification pipeline."""
-        await self.event_bus.publish(
-            "phase.start", {"phase": self.phase_number},
-        )
         llm = await self._get_llm()
         search = await self._get_search()
         sandbox = await self._get_sandbox()
@@ -117,13 +114,12 @@ class VerificationEngine(Phase):
 
     async def _get_sandbox(self) -> Any:
         """Get the configured sandbox instance."""
-        from kresearch.sandbox.base import Sandbox
-        return Sandbox(self.config)
+        from kresearch.sandbox.factory import create_sandbox
+        return await create_sandbox(self.config)
 
     async def _finish(self, verified: int, failed: int) -> None:
-        """Publish completion event and advance session phase."""
-        self.session.advance_phase()
-        await self.event_bus.publish("phase.complete", {
+        """Publish completion stats."""
+        await self.event_bus.publish("phase.progress", {
             "phase": self.phase_number,
             "verified": verified,
             "failed": failed,

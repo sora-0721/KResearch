@@ -47,10 +47,6 @@ class IntentParser(Phase):
 
     async def execute(self) -> None:
         """Run the full Phase-1 pipeline."""
-        await self.event_bus.publish(
-            "phase.start", {"phase": self.phase_number}
-        )
-
         query = self.session.original_query
 
         # Step 1 -- structured intent parsing
@@ -84,16 +80,6 @@ class IntentParser(Phase):
         )
         self.session.mind_map = mind_map
 
-        self.session.advance_phase()
-        await self.event_bus.publish(
-            "phase.complete",
-            {
-                "phase": self.phase_number,
-                "perspectives": len(perspectives),
-                "tasks": task_graph.get_progress()["total"],
-            },
-        )
-
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
@@ -101,7 +87,7 @@ class IntentParser(Phase):
     async def _parse_intent(self, query: str) -> dict[str, Any]:
         """Send the query to the LLM and return structured intent JSON."""
         llm = await self._get_llm()
-        model = self.config.get("default_model", "gpt-4o")
+        model = self.config.llm.model
 
         response = await llm.complete(
             messages=[{"role": "user", "content": query}],

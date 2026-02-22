@@ -28,7 +28,7 @@ async def discover_perspectives(
     query: str,
     intent: dict[str, Any],
     llm_provider: Any,
-    config: dict[str, Any],
+    config: Any,
 ) -> list[dict[str, Any]]:
     """Use an LLM to generate 3-6 expert perspectives for *query*.
 
@@ -49,7 +49,7 @@ async def discover_perspectives(
         A list of perspective dicts, each containing *name*, *role*,
         *expertise*, and *questions*.
     """
-    model = config.get("default_model", "gpt-4o")
+    model = config.llm.model
 
     user_content = (
         f"Research query: {query}\n\n"
