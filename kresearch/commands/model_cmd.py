@@ -9,7 +9,7 @@ from rich.table import Table
 
 from kresearch.commands.registry import command
 from kresearch.llm.factory import _ENV_KEY_MAP
-from kresearch.llm.models import ALL_MODELS, DEFAULT_MODELS
+from kresearch.llm.models import ALL_MODELS, DEFAULT_MODELS, fetch_available_models
 
 console = Console()
 
@@ -20,26 +20,26 @@ async def handle_model(args: str, ctx: dict) -> None:
     parts = args.strip().split()
 
     if not parts or parts[0] == "list":
-        _show_providers(ctx)
+        await _show_providers(ctx)
         return
 
     provider = parts[0].lower()
+
+    if provider not in ALL_MODELS:
+        available = ", ".join(sorted(ALL_MODELS.keys()))
+        console.print(
+            f"[red]Unknown provider:[/red] {provider}\n"
+            f"Available: {available}"
+        )
+        return
+
     model = parts[1] if len(parts) > 1 else None
-    _switch_provider(provider, model, ctx)
+    await _switch_provider(provider, model, ctx)
 
 
-# ------------------------------------------------------------------
-# Sub-commands
-# ------------------------------------------------------------------
-
-
-def _show_providers(ctx: dict) -> None:
+async def _show_providers(ctx: dict) -> None:
     """Print a Rich table of all LLM providers and their models."""
-    table = Table(
-        title="LLM Providers",
-        show_header=True,
-        header_style="bold cyan",
-    )
+    table = Table(title="LLM Providers", show_header=True, header_style="bold cyan")
     table.add_column("Provider", style="bold")
     table.add_column("Models")
     table.add_column("Default")
@@ -49,12 +49,15 @@ def _show_providers(ctx: dict) -> None:
     current_provider = config.llm.provider
     current_model = config.llm.model
 
-    for provider, models in sorted(ALL_MODELS.items()):
+    for provider, suggested in sorted(ALL_MODELS.items()):
         env_var = _ENV_KEY_MAP.get(provider)
-        has_key = (
-            env_var is None  # e.g. ollama needs no key
-            or os.environ.get(env_var) is not None
-        )
+        api_key = os.environ.get(env_var) if env_var else None
+        has_key = env_var is None or api_key is not None
+
+        # Try live fetch, fall back to suggested list
+        live = await fetch_available_models(provider, api_key) if has_key else None
+        models = live if live else suggested
+
         avail = "[green]Yes[/green]" if has_key else "[red]No[/red]"
         default = DEFAULT_MODELS.get(provider, models[0] if models else "")
 
@@ -65,41 +68,30 @@ def _show_providers(ctx: dict) -> None:
             else:
                 model_strs.append(m)
 
-        prov_label = provider
-        if provider == current_provider:
-            prov_label = f"[bold green]{provider} *[/bold green]"
+        prov_label = f"[bold green]{provider} *[/bold green]" if provider == current_provider else provider
 
-        table.add_row(
-            prov_label,
-            "\n".join(model_strs),
-            default,
-            avail,
-        )
+        display_models = "\n".join(model_strs[:15])
+        if len(model_strs) > 15:
+            display_models += f"\n[dim]... +{len(model_strs) - 15} more[/dim]"
+
+        table.add_row(prov_label, display_models, default, avail)
 
     console.print(table)
 
 
-def _switch_provider(provider: str, model: str | None, ctx: dict) -> None:
+async def _switch_provider(provider: str, model: str | None, ctx: dict) -> None:
     """Switch the active LLM provider and (optionally) model."""
-    if provider not in ALL_MODELS:
-        available = ", ".join(sorted(ALL_MODELS.keys()))
-        console.print(
-            f"[red]Unknown provider:[/red] {provider}\n"
-            f"Available: {available}"
-        )
-        return
-
     config = ctx["config"]
     config.llm.provider = provider
 
     if model is not None:
-        if model not in ALL_MODELS[provider]:
-            valid = ", ".join(ALL_MODELS[provider])
+        # Accept any model name -- just warn if not in known list
+        known = ALL_MODELS.get(provider, [])
+        if model not in known:
             console.print(
-                f"[red]Unknown model:[/red] {model}\n"
-                f"Valid models for {provider}: {valid}"
+                f"[yellow]Note:[/yellow] '{model}' is not in the suggested "
+                f"list for {provider}. It will be passed directly to the API."
             )
-            return
         config.llm.model = model
     else:
         config.llm.model = DEFAULT_MODELS.get(
@@ -107,6 +99,5 @@ def _switch_provider(provider: str, model: str | None, ctx: dict) -> None:
         )
 
     console.print(
-        f"[green]Switched to[/green] {config.llm.provider} / "
-        f"{config.llm.model}"
+        f"[green]Switched to[/green] {config.llm.provider} / {config.llm.model}"
     )

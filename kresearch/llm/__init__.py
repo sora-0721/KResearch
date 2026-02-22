@@ -2,7 +2,7 @@
 
 from .base import LLMProvider
 from .factory import create_provider, get_llm_provider
-from .models import ALL_MODELS, DEFAULT_MODELS
+from .models import ALL_MODELS, DEFAULT_MODELS, fetch_available_models
 from .registry import get_provider_class, list_providers, register
 
 # Import each provider module so that they self-register via register().
@@ -27,4 +27,5 @@ __all__ = [
     "register",
     "ALL_MODELS",
     "DEFAULT_MODELS",
+    "fetch_available_models",
 ]
