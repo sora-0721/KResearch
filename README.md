@@ -1,244 +1,649 @@
 # KResearch
 
-![KResearch Banner](public/icon.png)
+**AI-Powered Deep Research Agent with the Omega Workflow**
 
-> A modern AI-powered deep research platform built with Next.js. Featuring the unique "Liquid Glass" design language, it delivers a fluid visual experience and powerful research capabilities.
->
-> 一个基于 Next.js 构建的现代化 AI 驱动深度研究平台。采用独特的 "Liquid Glass" 设计语言，提供流畅的视觉体验和强大的研究功能。
-
-**🌐 Live Demo | 在线体验：[https://kvideo.pages.dev/](https://kvideo.pages.dev/)**
-
-[![Next.js](https://img.shields.io/badge/Next.js-16.0-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-19.2-blue?style=for-the-badge&logo=react)](https://react.dev/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.0-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
-[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
-
-## 📖 About | 项目简介
-
-**KResearch** is a high-performance, modern AI-powered research application focused on providing exceptional user experience and visual design. This project leverages the latest features of Next.js 16, combined with React 19 and Tailwind CSS v4, to create both a beautiful and powerful research platform.
-
-**KResearch** 是一个高性能、现代化的 AI 驱动研究应用，专注于提供极致的用户体验和视觉设计。本项目利用 Next.js 16 的最新特性，结合 React 19 和 Tailwind CSS v4，打造了一个既美观又强大的研究平台。
-
-### Core Design Philosophy | 核心设计理念：Liquid Glass（液态玻璃）
-
-The project's visual design is based on the **"Liquid Glass"** design system, a modern UI design language that combines:
-
-项目的视觉设计基于 **"Liquid Glass"** 设计系统，这是一套融合了以下特性的现代化 UI 设计语言：
-
-- **Glassmorphism Effect** | **玻璃拟态效果**：Frosted translucent effects via `backdrop-filter` | 通过 `backdrop-filter` 实现的磨砂半透明效果
-- **Universal Softness** | **通用柔和度**：Unified use of `rounded-2xl` and `rounded-full` | 统一使用两种圆角半径
-- **Light Interaction** | **光影交互**：Inner glow effects on hover and focus states | 悬停和聚焦状态下的内发光效果
-- **Fluid Animation** | **流畅动画**：Physics-based `cubic-bezier` curves | 基于物理的过渡曲线
-- **Depth Hierarchy** | **深度层级**：Clear z-axis hierarchy | 清晰的层次结构
-
-## ✨ Core Features | 核心功能
-
-### 🧠 AI-Powered Deep Research | AI 驱动深度研究
-
-- **Multi-Step Research** | **多步骤研究**：Iterative research process with intelligent planning | 智能规划的迭代研究过程
-- **Google Search Grounding** | **谷歌搜索落地**：Real-time web search integration via Gemini API | 通过 Gemini API 实现实时网络搜索
-- **Auto-Generated Reports** | **自动生成报告**：Comprehensive research reports with citations | 带引用的综合研究报告
-- **Research Logs** | **研究日志**：Real-time visibility into research process | 研究过程的实时可见性
-
-### 🔍 Intelligent Research Agent | 智能研究代理
-
-- **Planner Agent** | **规划代理**：Designs research strategy and next steps | 设计研究策略和下一步行动
-- **Worker Agent** | **工作代理**：Executes searches and gathers information | 执行搜索和收集信息
-- **Writer Agent** | **写作代理**：Synthesizes findings into coherent reports | 将发现整合成连贯的报告
-- **Verifier Agent** | **验证代理**：Validates research completeness | 验证研究的完整性
-
-### 📱 Responsive Design | 响应式设计
-
-- **Full Platform Support** | **全平台支持**：Perfect support for desktop, tablet, and mobile | 完美支持桌面、平板和移动设备
-- **Mobile First** | **移动优先**：Dedicated mobile components and interactions | 专门的移动端组件和交互
-- **Touch Optimized** | **触摸优化**：Touch-optimized gestures and interactions | 针对触摸屏优化
-
-### 🌙 Theme System | 主题系统
-
-- **Dark/Light Mode** | **深色/浅色模式**：System-level theme switching support | 支持系统级主题切换
-- **Dynamic Theming** | **动态主题**：CSS Variables based dynamic theme system | 基于 CSS Variables 的动态主题系统
-- **Seamless Transitions** | **无缝过渡**：Smooth transition animations on theme switch | 主题切换时的平滑过渡动画
-
-### ⌨️ Accessibility | 无障碍设计
-
-- **Keyboard Navigation** | **键盘导航**：Full keyboard shortcut support | 完整的键盘快捷键支持
-- **ARIA Labels**：WCAG 2.2 compliant accessibility | 符合 WCAG 2.2 标准的无障碍实现
-- **Semantic HTML** | **语义化 HTML**：Semantic tags for improved accessibility | 使用语义化标签提升可访问性
-
-## 🛠 Tech Stack | 技术栈
-
-### Frontend Core | 前端核心
-
-| Technology | Version | Purpose |
-|------|------|------|
-| **[Next.js](https://nextjs.org/)** | 16.0.3 | React framework with App Router |
-| **[React](https://react.dev/)** | 19.2.0 | UI component library |
-| **[TypeScript](https://www.typescriptlang.org/)** | 5.x | Type-safe JavaScript |
-| **[Tailwind CSS](https://tailwindcss.com/)** | 4.x | Utility-first CSS framework |
-| **[Zustand](https://github.com/pmndrs/zustand)** | 5.0.2 | Lightweight state management |
-
-### Development Tools | 开发工具
-
-- **ESLint 9**：Code quality checking | 代码质量检查
-- **PostCSS 8**：CSS processor | CSS 处理器
-- **Vercel Analytics**：Performance monitoring | 性能监控和分析
-
-## 🚀 Quick Deployment | 快速部署
-
-### Live Demo | 在线体验
-
-Visit **[https://kvideo.pages.dev/](https://kvideo.pages.dev/)** to try now, no installation required!
-
-访问 **[https://kvideo.pages.dev/](https://kvideo.pages.dev/)** 立即体验，无需安装！
-
-### Deploy to Your Server | 部署到自己的服务器
-
-#### Option 1: Vercel One-Click Deploy | Vercel 一键部署（推荐）
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/KuekHaoYang/KResearch)
-
-1. Click the button above | 点击上方按钮
-2. Connect your GitHub account | 连接你的 GitHub 账号
-3. Vercel will auto-detect and deploy | Vercel 会自动检测并部署
-4. Access your own KResearch instance in minutes | 几分钟后即可访问
-
-#### Option 2: Docker Deployment | Docker 部署
-
-**Pull from Docker Hub (Easiest) | 从 Docker Hub 拉取（最简单）：**
-
-```bash
-# Pull latest version | 拉取最新版本
-docker pull kuekhaoyang/kresearch:latest
-docker run -d -p 3000:3000 --name kresearch kuekhaoyang/kresearch:latest
-```
-
-The app will start at `http://localhost:3000`.
-
-应用将在 `http://localhost:3000` 启动。
-
-> **✨ Multi-Architecture Support | 多架构支持**：Images support 2 major platforms:
-> - `linux/amd64` - Intel/AMD 64-bit (most servers, PCs, Intel Mac)
-> - `linux/arm64` - ARM 64-bit (Apple Silicon Mac, AWS Graviton, Raspberry Pi 4/5)
-
-**Build your own image | 自己构建镜像：**
-
-```bash
-git clone https://github.com/KuekHaoYang/KResearch.git
-cd KResearch
-docker build -t kresearch .
-docker run -d -p 3000:3000 --name kresearch kresearch
-```
-
-**Using Docker Compose：**
-
-```bash
-docker-compose up -d
-```
-
-#### Option 3: Traditional Node.js Deployment | 传统 Node.js 部署
-
-```bash
-# 1. Clone repository | 克隆仓库
-git clone https://github.com/KuekHaoYang/KResearch.git
-cd KResearch
-
-# 2. Install dependencies | 安装依赖
-npm install
-
-# 3. Build project | 构建项目
-npm run build
-
-# 4. Start production server | 启动生产服务器
-npm start
-```
-
-The app will start at `http://localhost:3000`.
-
-应用将在 `http://localhost:3000` 启动。
-
-## 🔄 How to Update | 如何更新
-
-### Vercel Deployment | Vercel 部署
-
-Vercel will auto-detect GitHub repository updates and redeploy, no manual action needed.
-
-Vercel 会自动检测 GitHub 仓库的更新并重新部署，无需手动操作。
-
-### Docker Deployment | Docker 部署
-
-When a new version is released | 当有新版本发布时：
-
-```bash
-# Stop and remove old container | 停止并删除旧容器
-docker stop kresearch
-docker rm kresearch
-
-# Pull latest image | 拉取最新镜像
-docker pull kuekhaoyang/kresearch:latest
-
-# Run new container | 运行新容器
-docker run -d -p 3000:3000 --name kresearch kuekhaoyang/kresearch:latest
-```
-
-### Node.js Deployment | Node.js 部署
-
-```bash
-cd KResearch
-git pull origin main
-npm install
-npm run build
-npm start
-```
-
-> **🔄 Automated Deployment | 自动化部署**：This project uses GitHub Actions to auto-build and publish Docker images. Each push to main triggers multi-architecture image builds to Docker Hub.
->
-> 本项目使用 GitHub Actions 自动构建和发布 Docker 镜像。每次代码推送到 main 分支时，会自动构建多架构镜像并推送到 Docker Hub。
-
-## 🤝 Contributing | 贡献代码
-
-We welcome all forms of contributions! Whether it's reporting bugs, suggesting new features, improving documentation, or submitting code, every contribution makes this project better.
-
-我们非常欢迎各种形式的贡献！无论是报告 Bug、提出新功能建议、改进文档，还是提交代码，你的每一份贡献都让这个项目变得更好。
-
-**Want to contribute? Check out the [Contributing Guide](CONTRIBUTING.md) for detailed development guidelines and processes.**
-
-**想要参与开发？请查看 [贡献指南](CONTRIBUTING.md) 了解详细的开发规范和流程。**
-
-Quick Start | 快速开始：
-1. **Report Bugs | 报告 Bug**：[Submit Issue](https://github.com/KuekHaoYang/KResearch/issues)
-2. **Feature Suggestions | 功能建议**：Share your ideas in Issues
-3. **Code Contribution | 代码贡献**：Fork → Branch → PR
-4. **Documentation | 文档改进**：Submit PR directly
-
-## 📄 License | 许可证
-
-This project is open source under the [MIT License](LICENSE).
-
-本项目基于 [MIT 许可证](LICENSE) 开源。
-
-## 🙏 Acknowledgments | 致谢
-
-Thanks to these open source projects | 感谢以下开源项目：
-
-- [Next.js](https://nextjs.org/) - React Framework
-- [Tailwind CSS](https://tailwindcss.com/) - CSS Framework
-- [Zustand](https://github.com/pmndrs/zustand) - State Management
-- [React](https://react.dev/) - UI Library
-- [Google Gemini](https://ai.google.dev/) - AI Model
-
-## 📞 Contact | 联系方式
-
-- **Author | 作者**：[KuekHaoYang](https://github.com/KuekHaoYang)
-- **Project Homepage | 项目主页**：[https://github.com/KuekHaoYang/KResearch](https://github.com/KuekHaoYang/KResearch)
-- **Issue Feedback | 问题反馈**：[GitHub Issues](https://github.com/KuekHaoYang/KResearch/issues)
+KResearch is a terminal-based deep research agent that implements a full 5-phase "Omega Workflow" to produce comprehensive, citation-backed research reports. It supports 7 LLM providers, 7 search engines, local RAG with ChromaDB, code sandbox verification, Telegram bot integration, and a beautiful Rich terminal UI.
 
 ---
 
-<div align="center">
-  Made with ❤️ by <a href="https://github.com/KuekHaoYang">KuekHaoYang</a>
-  <br>
-  If this project helps you, please consider giving a ⭐️
-  <br>
-  如果这个项目对你有帮助，请考虑给一个 ⭐️
-</div>
+## Table of Contents
+
+- [Features](#features)
+- [Architecture](#architecture)
+- [The Omega Workflow](#the-omega-workflow)
+- [Quickstart](#quickstart)
+- [Configuration](#configuration)
+- [Slash Commands](#slash-commands)
+- [LLM Providers](#llm-providers)
+- [Search Providers](#search-providers)
+- [RAG (Local Knowledge Base)](#rag-local-knowledge-base)
+- [Code Sandbox](#code-sandbox)
+- [Telegram Integration](#telegram-integration)
+- [Project Structure](#project-structure)
+- [Configuration Reference](#configuration-reference)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
+## Features
+
+- **5-Phase Omega Workflow** -- Intent parsing, swarm retrieval, verification, conflict resolution, and diffusion synthesis
+- **7 LLM Providers** -- OpenAI, Anthropic, Google Gemini, Grok (xAI), Perplexity, DeepSeek, Ollama (local)
+- **7 Search Providers** -- Tavily, DuckDuckGo (free), Jina (free), SerpAPI, Google CSE, BeautifulSoup scraper (free), Gemini Grounding
+- **Epistemic Mind Map** -- Directed graph of claims, concepts, and evidence with confidence tracking
+- **Task Graph DAG** -- Parallelizable research tasks with dependency chains
+- **Code Sandbox Verification** -- Execute Python to verify numerical and statistical claims (Docker or subprocess)
+- **Local RAG** -- Ingest documents into ChromaDB for retrieval-augmented research
+- **Telegram Bot** -- Monitor research progress and receive reports via Telegram
+- **Rich Terminal UI** -- Colored panels, progress bars, tree visualizations, and styled tables
+- **Export** -- Markdown and JSON report export with bibliography and metadata
+- **Async-First** -- Built on `asyncio` with per-provider semaphores and concurrent task execution
+- **Modular Architecture** -- Hexagonal (ports & adapters) design; every file stays under 150 lines
+
+---
+
+## Architecture
+
+KResearch follows a **hexagonal (ports & adapters)** architecture:
+
+```
+                        +-------------------+
+                        |   Terminal REPL   |
+                        |   (Rich UI)       |
+                        +--------+----------+
+                                 |
+                        +--------v----------+
+                        |   App / Commands  |
+                        +--------+----------+
+                                 |
+              +------------------+------------------+
+              |                  |                  |
+     +--------v------+  +-------v-------+  +-------v-------+
+     | LLM Providers |  | Search Provs  |  |   EventBus    |
+     | (7 adapters)  |  | (7 adapters)  |  | (pub/sub)     |
+     +--------+------+  +-------+-------+  +-------+-------+
+              |                  |                  |
+              +------------------+------------------+
+                                 |
+                        +--------v----------+
+                        |   Phase Runner    |
+                        | (5-phase pipeline)|
+                        +--------+----------+
+                                 |
+         +-----------+-----------+-----------+-----------+
+         |           |           |           |           |
+    +----v---+  +----v---+  +----v---+  +----v---+  +----v---+
+    |Phase 1 |  |Phase 2 |  |Phase 3 |  |Phase 4 |  |Phase 5 |
+    |Intent  |  |Swarm   |  |Verify  |  |Conflict|  |Synth   |
+    +--------+  +--------+  +----+---+  +--------+  +--------+
+                                 |
+                            +----v----+
+                            | Sandbox |
+                            +---------+
+```
+
+**Shared State**: A `ResearchSession` object flows through all 5 phases, carrying the mind map, task graph, and accumulated evidence.
+
+**Event Bus**: Async pub/sub decouples UI rendering and Telegram notifications from core logic.
+
+---
+
+## The Omega Workflow
+
+### Phase 1: Metacognitive Intent Parsing
+
+1. LLM analyzes the query to extract structured intent (topic, sub-questions, complexity, research type)
+2. STORM-style perspective discovery generates 3--6 expert viewpoints with persona-specific questions
+3. Builds a TaskGraph DAG with SEARCH, DISCOURSE, and VERIFY tasks linked by dependencies
+4. Initializes the Epistemic Mind Map skeleton (root node, perspectives, sub-questions -- all UNVERIFIED)
+
+### Phase 2: Decentralized Swarm Retrieval
+
+1. SwarmCoordinator processes the TaskGraph in topological layers
+2. `asyncio.gather(return_exceptions=True)` provides partial-failure tolerance
+3. Per-provider semaphores enforce rate limits (e.g., Tavily=5, DuckDuckGo=10) with a global cap (15)
+4. Complex nodes trigger multi-turn discourse (expert vs. interrogator, 3--5 turns)
+5. Context compactor summarizes and deduplicates results into the Mind Map
+
+### Phase 3: Turing-Complete Verification
+
+1. Extracts verifiable claims from the Mind Map (numerical, computational, statistical, factual)
+2. Routes claims to specialized verifiers:
+   - **Numerical/Computational** -- LLM generates Python code, executed in sandbox
+   - **Statistical** -- Standard-library stats verification in sandbox
+   - **Factual** -- Cross-reference via web search
+3. RL-style retry: if verification code errors, the error is fed back to the LLM for code rewriting (up to 3 attempts)
+4. Updates Mind Map confidence levels based on verification outcomes
+
+### Phase 4: Epistemic Conflict Resolution
+
+1. Detects contradictions across Mind Map nodes (conflicting claims from different sources)
+2. Runs a 7-level consistency check: logical, temporal, numerical, source, perspective, evidential, inferential
+3. Source hierarchy ranking: peer-reviewed (5) > government (4) > news (3) > blogs (2) > social/forums (1)
+4. Markov-style resolution using transition probabilities from credibility, recency, and corroboration
+5. Winning claims gain higher confidence; rejected claims are marked CONTESTED with explanations
+
+### Phase 5: Draft-Centric Diffusion Synthesis
+
+1. Builds a structural skeleton by grouping Mind Map nodes into thematic clusters
+2. Iterative "denoising" loop: rough draft, expand with evidence, improve flow, add citations
+3. External evaluation model scores each iteration on 5 dimensions (accuracy, completeness, coherence, citations, balance)
+4. Loops until all scores meet the configurable threshold (default: 7.0/10) or max iterations reached
+5. Finalizer compiles the report with bibliography, metadata header, and numbered citations
+
+---
+
+## Quickstart
+
+### Prerequisites
+
+- Python 3.11 or later
+- At least one LLM API key (or Ollama running locally)
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/kresearch.git
+cd kresearch
+
+# Create a virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install dependencies
+pip install -e .
+# Or: pip install -r requirements.txt
+```
+
+### Set Up API Keys
+
+```bash
+# Copy the environment template
+cp .env.example .env
+
+# Edit .env and add your API keys
+# At minimum, set one LLM provider key (e.g., OPENAI_API_KEY)
+# DuckDuckGo search works without any key
+```
+
+### Run
+
+```bash
+# Start the REPL
+python -m kresearch
+
+# Or use the installed command
+kresearch
+```
+
+You will see the KResearch banner:
+
+```
+╭──────────────────────────────────────────────────────────────╮
+│                                                              │
+│  KResearch v0.1.0                                            │
+│  Deep Research Agent -- Omega Workflow                       │
+│                                                              │
+│  Type a research query to begin, or /help for commands.      │
+│                                                              │
+╰──────────────────────────────────────────────────────────────╯
+```
+
+### Run Your First Research
+
+Simply type a research question:
+
+```
+kresearch> What are the environmental and economic trade-offs of nuclear fusion energy?
+```
+
+KResearch will execute all 5 phases automatically, showing real-time progress in the terminal, and produce a comprehensive report.
+
+---
+
+## Configuration
+
+KResearch uses a layered configuration system:
+
+```
+Hardcoded Defaults  -->  ~/.kresearch/config.yaml  -->  .env  -->  Environment Variables  -->  Runtime /commands
+```
+
+Each layer overrides the previous one.
+
+### Config File
+
+Create `~/.kresearch/config.yaml`:
+
+```yaml
+llm:
+  provider: openai
+  model: gpt-4o
+  temperature: 0.2
+  max_tokens: 4096
+
+search:
+  provider: duckduckgo
+  max_results: 10
+  timeout: 30
+
+rag:
+  collection_name: kresearch
+  chunk_size: 1000
+  chunk_overlap: 200
+  top_k: 5
+
+sandbox:
+  prefer_docker: true
+  timeout: 60
+  max_retries: 3
+
+concurrency:
+  global_limit: 15
+  per_provider_limits:
+    tavily: 5
+    duckduckgo: 10
+
+eval:
+  min_score: 7.0
+  max_iterations: 5
+
+output_dir: output
+```
+
+### Environment Variable Overrides
+
+Use the `KRESEARCH_` prefix:
+
+```bash
+export KRESEARCH_LLM_MODEL=gpt-4o-mini
+export KRESEARCH_SEARCH_PROVIDER=tavily
+export KRESEARCH_OUTPUT_DIR=/path/to/reports
+```
+
+---
+
+## Slash Commands
+
+| Command | Description | Example |
+|---|---|---|
+| `/model list` | List all LLM providers and models | `/model list` |
+| `/model <provider> [model]` | Switch LLM provider/model | `/model anthropic claude-sonnet-4-20250514` |
+| `/search list` | List all search providers | `/search list` |
+| `/search <provider>` | Switch search provider | `/search duckduckgo` |
+| `/config` | View current configuration | `/config` |
+| `/config <key> <value>` | Set a config value | `/config eval.min_score 8.0` |
+| `/export md [path]` | Export report as Markdown | `/export md ./report.md` |
+| `/export json [path]` | Export report as JSON | `/export json` |
+| `/rag ingest <path>` | Ingest files into ChromaDB | `/rag ingest ./papers/` |
+| `/rag search <query>` | Query local vector store | `/rag search "fusion energy"` |
+| `/rag status` | Show RAG store statistics | `/rag status` |
+| `/status` | Show current session progress | `/status` |
+| `/session info` | Current session details | `/session info` |
+| `/session export` | Export session state to JSON | `/session export` |
+| `/session reset` | Clear current session | `/session reset` |
+| `/help` | Show all commands | `/help` |
+| `/quit` | Exit KResearch | `/quit` |
+
+---
+
+## LLM Providers
+
+| Provider | SDK | Models | API Key Env Var | Special |
+|---|---|---|---|---|
+| **OpenAI** | `openai` | gpt-4o, gpt-4o-mini, o3-mini | `OPENAI_API_KEY` | JSON mode |
+| **Anthropic** | `anthropic` | claude-sonnet-4-20250514, claude-haiku-4-5-20251001 | `ANTHROPIC_API_KEY` | -- |
+| **Gemini** | `google-generativeai` | gemini-2.0-flash, gemini-2.5-pro | `GOOGLE_API_KEY` | Grounding, JSON mode |
+| **Grok** | `httpx` (OpenAI-compat) | grok-3, grok-3-mini | `XAI_API_KEY` | -- |
+| **Perplexity** | `httpx` (OpenAI-compat) | sonar, sonar-pro | `PERPLEXITY_API_KEY` | Search-augmented |
+| **DeepSeek** | `httpx` (OpenAI-compat) | deepseek-chat, deepseek-reasoner | `DEEPSEEK_API_KEY` | JSON mode |
+| **Ollama** | `ollama` | llama3, mistral, phi3, gemma | *(none -- local)* | Local inference |
+
+### Switching Providers at Runtime
+
+```
+kresearch> /model openai gpt-4o-mini
+Switched to openai / gpt-4o-mini
+
+kresearch> /model ollama llama3
+Switched to ollama / llama3
+```
+
+---
+
+## Search Providers
+
+| Provider | Cost | API Key | Description |
+|---|---|---|---|
+| **DuckDuckGo** | Free | *(none)* | Default. No API key needed. Includes retry and back-off. |
+| **Jina Reader** | Free tier | `JINA_API_KEY` *(optional)* | Web reader/search via Jina AI |
+| **Scraper** | Free | *(none)* | Direct scraping with aiohttp + BeautifulSoup4 |
+| **Tavily** | Paid | `TAVILY_API_KEY` | AI-optimized search API |
+| **SerpAPI** | Paid | `SERPAPI_KEY` | Google results proxy |
+| **Google CSE** | Paid | `GOOGLE_API_KEY` + `GOOGLE_CSE_ID` | Google Custom Search Engine |
+| **Gemini Grounding** | Paid | `GOOGLE_API_KEY` | Search via Gemini API grounding |
+
+### Zero-Cost Setup
+
+KResearch works with zero API spend using:
+- **Ollama** for LLM (runs locally)
+- **DuckDuckGo** for search (free, no key)
+
+```bash
+# Install Ollama (https://ollama.com)
+ollama pull llama3
+
+# Run KResearch with free providers
+python -m kresearch
+/model ollama llama3
+/search duckduckgo
+```
+
+---
+
+## RAG (Local Knowledge Base)
+
+Ingest your own documents into a local ChromaDB vector store for retrieval-augmented research.
+
+### Supported Formats
+
+- `.txt` -- Plain text
+- `.md` -- Markdown
+- `.json` -- JSON documents
+- `.pdf` -- PDF text extraction
+
+### Usage
+
+```
+# Ingest a single file
+kresearch> /rag ingest ./papers/fusion_energy.pdf
+
+# Ingest an entire directory (recursive)
+kresearch> /rag ingest ./research_papers/
+
+# Search the local store
+kresearch> /rag search "tokamak confinement time"
+
+# Check store statistics
+kresearch> /rag status
+```
+
+Documents are chunked (default: 1000 chars, 200 overlap) and embedded using `all-MiniLM-L6-v2` via sentence-transformers. The store persists at `~/.kresearch/chromadb/`.
+
+---
+
+## Code Sandbox
+
+Phase 3 executes LLM-generated Python to verify claims. The sandbox supports two modes:
+
+| Mode | Isolation | Setup |
+|---|---|---|
+| **Docker** (preferred) | Full container isolation, network disabled, 256MB memory limit | `docker` must be installed and running |
+| **Subprocess** (fallback) | Process-level isolation with timeout | No setup needed |
+
+Auto-detection: KResearch checks if Docker is available at startup. If not, it falls back to subprocess.
+
+```yaml
+# config.yaml
+sandbox:
+  prefer_docker: true   # Set false to always use subprocess
+  timeout: 60           # Execution timeout in seconds
+  max_retries: 3        # Retry count for failed verifications
+```
+
+---
+
+## Telegram Integration
+
+Receive real-time research updates and reports via Telegram.
+
+### Setup
+
+1. Create a bot via [@BotFather](https://t.me/BotFather) and get the token
+2. Get your chat ID (message [@userinfobot](https://t.me/userinfobot))
+3. Add to `.env`:
+
+```bash
+TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_CHAT_ID=your_chat_id
+```
+
+4. Enable in config:
+
+```yaml
+telegram:
+  enabled: true
+```
+
+### Bot Commands
+
+- `/start` -- Welcome message
+- `/research <query>` -- Start a research session
+- `/status` -- Check current progress
+- `/cancel` -- Cancel current research
+
+The bot sends updates for each phase start/complete and delivers a summary of the final report.
+
+---
+
+## Project Structure
+
+```
+kresearch/
+├── pyproject.toml                  # Project metadata and dependencies
+├── requirements.txt                # Pip requirements
+├── .env.example                    # API key template
+├── README.md                       # This file
+├── LICENSE                         # MIT License
+├── CONTRIBUTING.md                 # Contribution guidelines
+│
+└── kresearch/
+    ├── __init__.py                 # Package version
+    ├── __main__.py                 # Entry point (python -m kresearch)
+    ├── app.py                      # Async REPL and orchestrator
+    ├── constants.py                # Enums and constants
+    │
+    ├── config/                     # Configuration management
+    │   ├── schema.py               #   Pydantic config models
+    │   ├── loader.py               #   YAML/env/defaults merger
+    │   └── defaults.py             #   Default values
+    │
+    ├── core/                       # Core data structures
+    │   ├── session.py              #   ResearchSession container
+    │   ├── mind_map.py             #   EpistemicMindMap (directed graph)
+    │   ├── mind_map_node.py        #   MindMapNode with confidence levels
+    │   ├── task_graph.py           #   TaskGraph DAG
+    │   ├── task_node.py            #   TaskNode with dependencies
+    │   ├── evidence.py             #   Source and Evidence models
+    │   ├── message.py              #   LLM message types
+    │   └── event_bus.py            #   Async pub/sub event bus
+    │
+    ├── llm/                        # LLM provider adapters (7)
+    │   ├── base.py                 #   Abstract LLMProvider
+    │   ├── factory.py              #   Provider factory
+    │   ├── registry.py             #   Provider registry
+    │   ├── models.py               #   Model name constants
+    │   ├── openai_provider.py      #   OpenAI (AsyncOpenAI SDK)
+    │   ├── anthropic_provider.py   #   Anthropic (AsyncAnthropic SDK)
+    │   ├── gemini_provider.py      #   Google Gemini (generativeai SDK)
+    │   ├── grok_provider.py        #   xAI Grok (httpx, OpenAI-compat)
+    │   ├── perplexity_provider.py  #   Perplexity (httpx, OpenAI-compat)
+    │   ├── deepseek_provider.py    #   DeepSeek (httpx, OpenAI-compat)
+    │   └── ollama_provider.py      #   Ollama (ollama SDK, local)
+    │
+    ├── search/                     # Search provider adapters (7)
+    │   ├── base.py                 #   Abstract SearchProvider
+    │   ├── factory.py              #   Provider factory
+    │   ├── registry.py             #   Provider registry
+    │   ├── models.py               #   SearchResult model
+    │   ├── tavily_provider.py      #   Tavily (paid)
+    │   ├── duckduckgo_provider.py  #   DuckDuckGo (free, default)
+    │   ├── jina_provider.py        #   Jina Reader (free tier)
+    │   ├── serpapi_provider.py     #   SerpAPI (paid)
+    │   ├── google_cse_provider.py  #   Google CSE (paid)
+    │   ├── scraper_provider.py     #   BeautifulSoup scraper (free)
+    │   └── gemini_grounding.py     #   Gemini Grounding (paid)
+    │
+    ├── phases/                     # 5-phase Omega Workflow
+    │   ├── base.py                 #   Abstract Phase class
+    │   ├── runner.py               #   PhaseRunner orchestrator
+    │   ├── phase1/                 #   Metacognitive Intent Parsing
+    │   │   ├── intent_parser.py
+    │   │   ├── perspective_discovery.py
+    │   │   ├── task_graph_builder.py
+    │   │   └── mind_map_initializer.py
+    │   ├── phase2/                 #   Decentralized Swarm Retrieval
+    │   │   ├── swarm_coordinator.py
+    │   │   ├── retrieval_agent.py
+    │   │   ├── discourse_engine.py
+    │   │   ├── context_compactor.py
+    │   │   └── mcp_retrieval.py
+    │   ├── phase3/                 #   Turing-Complete Verification
+    │   │   ├── verification_engine.py
+    │   │   ├── claim_extractor.py
+    │   │   ├── code_verifier.py
+    │   │   ├── data_verifier.py
+    │   │   └── statistical_analyzer.py
+    │   ├── phase4/                 #   Epistemic Conflict Resolution
+    │   │   ├── conflict_detector.py
+    │   │   ├── consistency_checker.py
+    │   │   ├── source_hierarchy.py
+    │   │   └── markov_resolver.py
+    │   └── phase5/                 #   Draft-Centric Diffusion Synthesis
+    │       ├── skeleton_builder.py
+    │       ├── diffusion_writer.py
+    │       ├── evaluation_loop.py
+    │       └── finalizer.py
+    │
+    ├── rag/                        # Retrieval-Augmented Generation
+    │   ├── store.py                #   ChromaDB vector store
+    │   ├── embeddings.py           #   Embedding functions
+    │   ├── chunker.py              #   Text chunking
+    │   ├── ingester.py             #   File/directory ingestion
+    │   └── retriever.py            #   RAG query interface
+    │
+    ├── sandbox/                    # Code execution sandbox
+    │   ├── base.py                 #   Abstract Sandbox + ExecutionResult
+    │   ├── detector.py             #   Docker auto-detection
+    │   ├── subprocess_sandbox.py   #   Subprocess-based sandbox
+    │   ├── docker_sandbox.py       #   Docker-based sandbox
+    │   └── factory.py              #   Sandbox factory
+    │
+    ├── ui/                         # Rich terminal UI
+    │   ├── theme.py                #   Color theme
+    │   ├── console.py              #   Singleton console
+    │   ├── display.py              #   DisplayManager (event-driven)
+    │   ├── panels.py               #   Rich panel builders
+    │   ├── progress.py             #   Progress bars
+    │   ├── phase_display.py        #   Phase-specific rendering
+    │   ├── mind_map_display.py     #   Mind map tree visualization
+    │   └── input_handler.py        #   Input handling
+    │
+    ├── commands/                   # Slash command handlers
+    │   ├── registry.py             #   Command registry + @command decorator
+    │   ├── model_cmd.py            #   /model
+    │   ├── search_cmd.py           #   /search
+    │   ├── config_cmd.py           #   /config
+    │   ├── export_cmd.py           #   /export
+    │   ├── status_cmd.py           #   /status
+    │   ├── help_cmd.py             #   /help
+    │   ├── rag_cmd.py              #   /rag
+    │   └── session_cmd.py          #   /session
+    │
+    ├── export/                     # Report exporters
+    │   ├── base.py                 #   Abstract Exporter
+    │   ├── markdown_exporter.py    #   Markdown with TOC + bibliography
+    │   ├── json_exporter.py        #   Full JSON session export
+    │   └── manager.py              #   ExportManager
+    │
+    ├── telegram/                   # Telegram bot integration
+    │   ├── bot.py                  #   TelegramBot class
+    │   ├── handlers.py             #   Command handlers
+    │   ├── formatter.py            #   Message formatting
+    │   └── bridge.py               #   EventBus-to-Telegram bridge
+    │
+    └── utils/                      # Shared utilities
+        ├── text.py                 #   Text processing (truncate, slugify, JSON extraction)
+        ├── async_helpers.py        #   Async utilities (gather_with_limit, semaphores)
+        ├── retry.py                #   Retry with exponential back-off
+        ├── rate_limiter.py         #   Rate limiter + token bucket
+        ├── logger.py               #   Rich-powered logging
+        └── validators.py           #   Input validation
+```
+
+**119 Python files** -- every single file is **150 lines or fewer**.
+
+---
+
+## Configuration Reference
+
+### LLMConfig
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `provider` | `str` | `"openai"` | LLM provider name |
+| `model` | `str` | `"gpt-4o"` | Model identifier |
+| `temperature` | `float` | `0.2` | Sampling temperature (0.0--2.0) |
+| `max_tokens` | `int` | `4096` | Maximum tokens in response |
+| `api_base` | `str \| null` | `null` | Custom API base URL |
+
+### SearchConfig
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `provider` | `str` | `"tavily"` | Search provider name |
+| `max_results` | `int` | `10` | Max results per query |
+| `timeout` | `int` | `30` | Request timeout in seconds |
+
+### RAGConfig
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `collection_name` | `str` | `"kresearch"` | ChromaDB collection name |
+| `chunk_size` | `int` | `1000` | Chunk size in characters |
+| `chunk_overlap` | `int` | `200` | Overlap between chunks |
+| `top_k` | `int` | `5` | Number of chunks to retrieve |
+
+### SandboxConfig
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `prefer_docker` | `bool` | `true` | Prefer Docker over subprocess |
+| `timeout` | `int` | `60` | Execution timeout in seconds |
+| `max_retries` | `int` | `3` | Max retries on failure |
+
+### EvalConfig
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `min_score` | `float` | `7.0` | Minimum acceptable evaluation score (1--10) |
+| `max_iterations` | `int` | `5` | Max draft refinement iterations |
+
+### ConcurrencyConfig
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `global_limit` | `int` | `15` | Maximum concurrent tasks |
+| `per_provider_limits` | `dict` | `{}` | Per-provider limits (e.g., `{tavily: 5}`) |
+
+### TelegramConfig
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `bot_token` | `str \| null` | `null` | Telegram bot token |
+| `chat_id` | `str \| null` | `null` | Default chat ID |
+| `enabled` | `bool` | `false` | Enable Telegram integration |
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to KResearch.
+
+---
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
