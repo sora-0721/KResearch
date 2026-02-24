@@ -12,7 +12,7 @@ from .registry import get_provider_class
 _ENV_KEY_MAP: dict[str, str] = {
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
-    "gemini": "GOOGLE_API_KEY",
+    "gemini": "GEMINI_API_KEY",
     "grok": "XAI_API_KEY",
     "perplexity": "PERPLEXITY_API_KEY",
     "deepseek": "DEEPSEEK_API_KEY",
