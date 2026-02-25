@@ -8,7 +8,8 @@ class LLMProvider(ABC):
     """Abstract base class that all LLM providers must implement."""
 
     def __init__(self, api_key: str | None = None, **kwargs):
-        self._api_key = api_key
+        # Treat empty strings as None to prevent confusing auth errors
+        self._api_key = api_key if api_key else None
 
     @property
     @abstractmethod
