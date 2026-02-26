@@ -43,10 +43,10 @@ class Phase(abc.ABC):
 
     async def _get_llm(self):
         """Convenience: get the configured LLM provider."""
-        from kresearch.llm.factory import get_llm_provider
-        return get_llm_provider(self.config)
+        from kresearch.llm.factory import create_provider
+        return create_provider(self.config.llm.provider)
 
     async def _get_search(self):
         """Convenience: get the configured search provider."""
-        from kresearch.search.factory import get_search_provider
-        return get_search_provider(self.config)
+        from kresearch.search.factory import create_provider
+        return create_provider(self.config.search.provider)
