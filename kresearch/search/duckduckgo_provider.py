@@ -11,6 +11,16 @@ from .registry import register
 logger = logging.getLogger(__name__)
 
 
+def _import_ddgs():
+    """Import DDGS from the new ``ddgs`` package, falling back to legacy."""
+    try:
+        from ddgs import DDGS
+        return DDGS
+    except ImportError:
+        from duckduckgo_search import DDGS
+        return DDGS
+
+
 class DuckDuckGoSearchProvider(SearchProvider):
     """Free web search using the ``duckduckgo_search`` SDK.
 
@@ -43,10 +53,14 @@ class DuckDuckGoSearchProvider(SearchProvider):
     def is_available(self) -> bool:
         """Always available -- no key needed. Just checks for the SDK."""
         try:
-            from duckduckgo_search import DDGS  # noqa: F401
+            from ddgs import DDGS  # noqa: F401
             return True
         except ImportError:
-            return False
+            try:
+                from duckduckgo_search import DDGS  # noqa: F401
+                return True
+            except ImportError:
+                return False
 
     # ------------------------------------------------------------------
     # Search
@@ -62,7 +76,7 @@ class DuckDuckGoSearchProvider(SearchProvider):
         self, query: str, max_results: int, _retries: int = 3,
     ) -> list[dict]:
         """Synchronous search with basic retry/back-off."""
-        from duckduckgo_search import DDGS
+        DDGS = _import_ddgs()
         import time
 
         last_err: Exception | None = None
@@ -116,7 +130,7 @@ class DuckDuckGoSearchProvider(SearchProvider):
         return await asyncio.to_thread(self._sync_news, query, max_results)
 
     def _sync_news(self, query: str, max_results: int) -> list[dict]:
-        from duckduckgo_search import DDGS
+        DDGS = _import_ddgs()
 
         with DDGS() as ddgs:
             raw = list(
