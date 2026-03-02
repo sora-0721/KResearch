@@ -26,10 +26,27 @@ async def handle_model(args: str, ctx: dict) -> None:
     provider = parts[0].lower()
 
     if provider not in ALL_MODELS:
+        # Maybe the user passed a model name directly — find its provider
+        for prov, models in ALL_MODELS.items():
+            if provider in models:
+                await _switch_provider(prov, provider, ctx)
+                return
+        # Try prefix-based inference (gemini-*, gpt-*, claude-*, grok-*, etc.)
+        _PREFIX_MAP = {
+            "gemini-": "gemini", "gpt-": "openai", "o3-": "openai",
+            "o4-": "openai", "claude-": "anthropic", "grok-": "grok",
+            "sonar": "perplexity", "deepseek-": "deepseek",
+            "deep-research": "gemini",
+        }
+        for prefix, prov in _PREFIX_MAP.items():
+            if provider.startswith(prefix):
+                await _switch_provider(prov, provider, ctx)
+                return
         available = ", ".join(sorted(ALL_MODELS.keys()))
         console.print(
-            f"[red]Unknown provider:[/red] {provider}\n"
-            f"Available: {available}"
+            f"[red]Unknown provider or model:[/red] {provider}\n"
+            f"Available providers: {available}\n"
+            f"Usage: /model <provider> [model]  (e.g. /model gemini gemini-2.5-flash)"
         )
         return
 
@@ -51,8 +68,8 @@ async def _show_providers(ctx: dict) -> None:
 
     for provider, suggested in sorted(ALL_MODELS.items()):
         env_var = _ENV_KEY_MAP.get(provider)
-        api_key = os.environ.get(env_var) if env_var else None
-        has_key = env_var is None or api_key is not None
+        api_key = (os.environ.get(env_var, "") or "").strip() if env_var else None
+        has_key = env_var is None or bool(api_key)
 
         # Try live fetch, fall back to suggested list
         live = await fetch_available_models(provider, api_key) if has_key else None
